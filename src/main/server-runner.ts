@@ -1,0 +1,401 @@
+import { ChildProcessWithoutNullStreams, spawn, exec } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import { BrowserWindow } from 'electron';
+import { updateServer, ServerProfile } from './server-store';
+import { getEffectiveJavaCommand } from './java-manager';
+
+export interface ServerLogEntry {
+  id: string;
+  serverId: string;
+  timestamp: string;
+  level: 'info' | 'error';
+  text: string;
+}
+
+export interface ServerStats {
+  serverId: string;
+  cpuPercent: number;
+  memoryMb: number;
+  memoryPercent: number;
+  uptimeSeconds: number;
+}
+
+interface RunningInstance {
+  process: ChildProcessWithoutNullStreams;
+  server: ServerProfile;
+  players: Set<string>;
+  startTime: number;
+  lastCpuSec?: number;
+  lastSampleTime?: number;
+  currentStats: ServerStats;
+}
+
+const activeServers = new Map<string, RunningInstance>();
+const serverLogs = new Map<string, ServerLogEntry[]>();
+
+function sendToWindow(channel: string, ...args: any[]) {
+  const windows = BrowserWindow.getAllWindows();
+  for (const win of windows) {
+    if (!win.isDestroyed()) {
+      win.webContents.send(channel, ...args);
+    }
+  }
+}
+
+export function appendServerLog(serverId: string, text: string, isError = false): void {
+  let list = serverLogs.get(serverId);
+  if (!list) {
+    list = [];
+    serverLogs.set(serverId, list);
+  }
+  const entry: ServerLogEntry = {
+    id: `${Date.now()}_${Math.random()}`,
+    serverId,
+    timestamp: new Date().toLocaleTimeString(),
+    level: isError ? 'error' : 'info',
+    text,
+  };
+  list.push(entry);
+  if (list.length > 500) {
+    list.shift();
+  }
+  sendToWindow('server-log', entry);
+}
+
+export function getServerLogs(serverId: string): ServerLogEntry[] {
+  return serverLogs.get(serverId) || [];
+}
+
+export function getServerStats(serverId: string): ServerStats | null {
+  const instance = activeServers.get(serverId);
+  return instance ? instance.currentStats : null;
+}
+
+function queryPidUsage(pid: number): Promise<{ memoryMb: number; cpuSec: number }> {
+  return new Promise((resolve) => {
+    if (!pid) return resolve({ memoryMb: 0, cpuSec: 0 });
+
+    if (process.platform === 'win32') {
+      exec(
+        `powershell -NoProfile -NonInteractive -Command "try { $p = Get-Process -Id ${pid} -ErrorAction Stop; [math]::Round($p.WorkingSet64/1MB,1).ToString() + '|' + [math]::Round($p.CPU,2).ToString() } catch { '0|0' }"`,
+        { timeout: 2000 },
+        (err, stdout) => {
+          if (err || !stdout) return resolve({ memoryMb: 0, cpuSec: 0 });
+          const parts = stdout.trim().split('|');
+          resolve({
+            memoryMb: parseFloat(parts[0]) || 0,
+            cpuSec: parseFloat(parts[1]) || 0,
+          });
+        }
+      );
+    } else {
+      exec(`ps -p ${pid} -o %cpu,rss`, { timeout: 2000 }, (err, stdout) => {
+        if (err || !stdout) return resolve({ memoryMb: 0, cpuSec: 0 });
+        const lines = stdout.trim().split('\n');
+        if (lines.length < 2) return resolve({ memoryMb: 0, cpuSec: 0 });
+        const [cpu, rss] = lines[1].trim().split(/\s+/);
+        resolve({
+          memoryMb: Math.round(parseInt(rss, 10) / 1024),
+          cpuSec: parseFloat(cpu) || 0,
+        });
+      });
+    }
+  });
+}
+
+// Background sampler for active server CPU and RAM metrics
+setInterval(async () => {
+  if (activeServers.size === 0) return;
+  const numCores = os.cpus().length || 1;
+  const now = Date.now();
+
+  for (const [serverId, instance] of activeServers.entries()) {
+    const pid = instance.process?.pid;
+    if (!pid) continue;
+
+    try {
+      const { memoryMb, cpuSec } = await queryPidUsage(pid);
+      let cpuPercent = 0;
+
+      if (instance.lastSampleTime && instance.lastCpuSec !== undefined) {
+        const deltaSec = (now - instance.lastSampleTime) / 1000;
+        if (deltaSec > 0) {
+          const cpuDelta = Math.max(0, cpuSec - instance.lastCpuSec);
+          cpuPercent = Math.min(100, Math.max(0, Math.round(((cpuDelta / deltaSec) / numCores) * 100)));
+        }
+      }
+
+      instance.lastSampleTime = now;
+      instance.lastCpuSec = cpuSec;
+
+      const allocatedMb = (instance.server.allocatedRamGb || 4) * 1024;
+      // OS Working Set includes JVM non-heap (Metaspace, JIT cache, threads ~350MB)
+      const expectedCeilingMb = allocatedMb + 384;
+      const memoryPercent = Math.min(100, Math.max(0, Math.round((memoryMb / expectedCeilingMb) * 100)));
+      const uptimeSeconds = Math.floor((now - instance.startTime) / 1000);
+
+      instance.currentStats = {
+        serverId,
+        cpuPercent,
+        memoryMb,
+        memoryPercent,
+        uptimeSeconds,
+      };
+
+      sendToWindow('server-stats-updated', instance.currentStats);
+    } catch (e) {}
+  }
+}, 2000);
+
+export function autoAcceptEula(serverDir: string) {
+  const eulaPath = path.join(serverDir, 'eula.txt');
+  const content = `# Generated by CraftDock Server Manager\n# By changing the setting below to TRUE you are indicating your agreement to the Mojang EULA.\neula=true\n`;
+  fs.writeFileSync(eulaPath, content, 'utf-8');
+}
+
+export function updateServerProperties(serverDir: string, port: number, motd?: string) {
+  const propPath = path.join(serverDir, 'server.properties');
+  let content = '';
+  if (fs.existsSync(propPath)) {
+    content = fs.readFileSync(propPath, 'utf-8');
+    content = content.replace(/^server-port=.*$/m, `server-port=${port}`);
+    if (motd) {
+      content = content.replace(/^motd=.*$/m, `motd=${motd}`);
+    }
+  } else {
+    // Default to online-mode=false (Cracked friendly) or true, let's keep false as an option or true with easy toggle
+    content = `server-port=${port}\nmotd=${motd || 'CraftDock Minecraft Server'}\nquery.port=${port}\nonline-mode=false\nmax-players=20\n`;
+  }
+  fs.writeFileSync(propPath, content, 'utf-8');
+}
+
+export async function startServer(server: ServerProfile): Promise<boolean> {
+  if (activeServers.has(server.id)) {
+    console.warn(`Server ${server.id} is already running.`);
+    return false;
+  }
+
+  const serverDir = server.path;
+  const jarPath = path.join(serverDir, 'server.jar');
+
+  if (!fs.existsSync(jarPath)) {
+    throw new Error(`Server jar not found at ${jarPath}. Make sure the server files are downloaded.`);
+  }
+
+  // Ensure EULA is accepted
+  autoAcceptEula(serverDir);
+  updateServerProperties(serverDir, server.port, server.motd);
+
+  updateServer(server.id, { status: 'starting' });
+  sendToWindow('server-status-changed', { serverId: server.id, status: 'starting' });
+
+  appendServerLog(server.id, `[CraftDock] Проверка на съвместима Java среда за Minecraft v${server.version}...`);
+
+  let javaExe = 'java';
+  try {
+    javaExe = await getEffectiveJavaCommand(server.version, (percent, msg) => {
+      sendToWindow('download-progress', {
+        percent,
+        downloadedMb: 0,
+        totalMb: 0,
+        message: msg,
+      });
+      appendServerLog(server.id, `[CraftDock] ${msg}`);
+    });
+
+    appendServerLog(server.id, `[CraftDock] Успешно подготвена Java среда: ${javaExe}`);
+  } catch (javaErr: any) {
+    appendServerLog(server.id, `[CraftDock Грешка] Неуспешно стартиране на Java: ${javaErr.message}`, true);
+    updateServer(server.id, { status: 'error' });
+    sendToWindow('server-status-changed', { serverId: server.id, status: 'error', error: javaErr.message });
+    return false;
+  }
+
+  const ramGb = Math.max(1, server.allocatedRamGb);
+  const minRam = ramGb <= 2 ? '512M' : `${Math.floor(ramGb / 2)}G`;
+  const javaArgs = [
+    `-Xms${minRam}`,
+    `-Xmx${ramGb}G`,
+    '-XX:+UseG1GC',
+    '-XX:+ParallelRefProcEnabled',
+    '-XX:MaxGCPauseMillis=200',
+    '-XX:+UnlockExperimentalVMOptions',
+    '-XX:+DisableExplicitGC',
+    '-XX:MaxMetaspaceSize=256M',
+    '-jar',
+    'server.jar',
+    'nogui',
+  ];
+
+  try {
+    const child = spawn(javaExe, javaArgs, {
+      cwd: serverDir,
+      shell: false,
+    });
+
+    const instance: RunningInstance = {
+      process: child,
+      server,
+      players: new Set<string>(),
+      startTime: Date.now(),
+      currentStats: {
+        serverId: server.id,
+        cpuPercent: 0,
+        memoryMb: 0,
+        memoryPercent: 0,
+        uptimeSeconds: 0,
+      },
+    };
+    activeServers.set(server.id, instance);
+
+    child.stdout.on('data', (data: Buffer) => {
+      const text = data.toString();
+      const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
+
+      for (const line of lines) {
+        appendServerLog(server.id, line);
+
+        // Detect server ready
+        if (line.includes('Done (') || (line.includes('Done') && line.includes('help'))) {
+          updateServer(server.id, { status: 'running', lastPlayedAt: new Date().toISOString() });
+          sendToWindow('server-status-changed', { serverId: server.id, status: 'running' });
+          sendToWindow('server-profile-updated', { id: server.id, status: 'running' });
+        }
+
+        // Detect player join
+        const joinMatch = line.match(/([a-zA-Z0-9_.*~-]{2,24}) joined the game/i);
+        if (joinMatch) {
+          const playerName = joinMatch[1];
+          instance.players.add(playerName);
+          updateServer(server.id, { playerCount: instance.players.size });
+          sendToWindow('server-players-changed', {
+            serverId: server.id,
+            players: Array.from(instance.players),
+          });
+          sendToWindow('server-profile-updated', {
+            id: server.id,
+            playerCount: instance.players.size,
+          });
+        }
+
+        // Detect player leave
+        const leaveMatch = line.match(/([a-zA-Z0-9_.*~-]{2,24}) left the game/i);
+        if (leaveMatch) {
+          const playerName = leaveMatch[1];
+          instance.players.delete(playerName);
+          updateServer(server.id, { playerCount: instance.players.size });
+          sendToWindow('server-players-changed', {
+            serverId: server.id,
+            players: Array.from(instance.players),
+          });
+          sendToWindow('server-profile-updated', {
+            id: server.id,
+            playerCount: instance.players.size,
+          });
+        }
+      }
+    });
+
+    child.stderr.on('data', (data: Buffer) => {
+      const text = data.toString();
+      const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
+      for (const line of lines) {
+        appendServerLog(server.id, line, true);
+      }
+    });
+
+    child.on('close', (code) => {
+      console.log(`Server ${server.id} process exited with code ${code}`);
+      activeServers.delete(server.id);
+      updateServer(server.id, { status: 'stopped', playerCount: 0 });
+      sendToWindow('server-status-changed', { serverId: server.id, status: 'stopped' });
+      sendToWindow('server-players-changed', { serverId: server.id, players: [] });
+      sendToWindow('server-profile-updated', { id: server.id, status: 'stopped', playerCount: 0 });
+      sendToWindow('server-stats-updated', {
+        serverId: server.id,
+        cpuPercent: 0,
+        memoryMb: 0,
+        memoryPercent: 0,
+        uptimeSeconds: 0,
+      });
+    });
+
+    child.on('error', (err) => {
+      console.error(`Server ${server.id} error:`, err);
+      activeServers.delete(server.id);
+      updateServer(server.id, { status: 'error', playerCount: 0 });
+      sendToWindow('server-status-changed', { serverId: server.id, status: 'error', error: err.message });
+      sendToWindow('server-profile-updated', { id: server.id, status: 'error', playerCount: 0 });
+      sendToWindow('server-stats-updated', {
+        serverId: server.id,
+        cpuPercent: 0,
+        memoryMb: 0,
+        memoryPercent: 0,
+        uptimeSeconds: 0,
+      });
+    });
+
+    return true;
+  } catch (err: any) {
+    console.error('Failed to spawn java process:', err);
+    updateServer(server.id, { status: 'error' });
+    sendToWindow('server-status-changed', { serverId: server.id, status: 'error', error: err.message });
+    return false;
+  }
+}
+
+export function stopServer(serverId: string): boolean {
+  const instance = activeServers.get(serverId);
+  if (!instance) return false;
+
+  updateServer(serverId, { status: 'stopping' });
+  sendToWindow('server-status-changed', { serverId, status: 'stopping' });
+
+  try {
+    instance.process.stdin.write('stop\n');
+
+    setTimeout(() => {
+      if (activeServers.has(serverId)) {
+        try {
+          instance.process.kill();
+        } catch (e) {}
+      }
+    }, 15000);
+
+    return true;
+  } catch (err) {
+    console.error(`Failed to gracefully stop server ${serverId}:`, err);
+    try {
+      instance.process.kill();
+    } catch (e) {}
+    return false;
+  }
+}
+
+export function sendServerCommand(serverId: string, command: string): boolean {
+  const instance = activeServers.get(serverId);
+  if (!instance) return false;
+  try {
+    const cleanCmd = command.startsWith('/') ? command.slice(1) : command;
+    instance.process.stdin.write(cleanCmd + '\n');
+    return true;
+  } catch (err) {
+    console.error(`Failed to send command to ${serverId}:`, err);
+    return false;
+  }
+}
+
+export function getActiveServerIds(): string[] {
+  return Array.from(activeServers.keys());
+}
+
+export function getServerPlayers(serverId: string): string[] {
+  const instance = activeServers.get(serverId);
+  return instance ? Array.from(instance.players) : [];
+}
+
+export function isServerRunning(serverId: string): boolean {
+  return activeServers.has(serverId);
+}
