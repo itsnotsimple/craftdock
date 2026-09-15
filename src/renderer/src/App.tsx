@@ -255,7 +255,12 @@ export const App: React.FC = () => {
   const activeServer = servers.find((s) => s.id === activeServerId) || servers[0];
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
+    <div className="flex h-screen bg-[#070C16] text-slate-100 overflow-hidden font-sans relative selection:bg-sky-500/30 selection:text-sky-200">
+      {/* Ambient Background Glows for authentic Glassmorphic Refraction */}
+      <div className="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] rounded-full bg-sky-600/10 blur-[130px] pointer-events-none z-0" />
+      <div className="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] rounded-full bg-blue-700/10 blur-[150px] pointer-events-none z-0" />
+      <div className="absolute top-[35%] right-[25%] w-[400px] h-[400px] rounded-full bg-cyan-500/5 blur-[120px] pointer-events-none z-0" />
+
       {/* Sidebar Navigation */}
       <Sidebar
         currentTab={currentTab}

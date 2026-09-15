@@ -93,12 +93,12 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
   const localAddress = `${networkInfo?.localIp || '127.0.0.1'}:${server.port}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-2xl p-4">
+      <div className="w-full max-w-lg glass-panel rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+        <div className="px-6 py-4 border-b border-white/[0.08] flex items-center justify-between bg-slate-950/40">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+            <div className="p-2 rounded-lg bg-sky-500/15 text-sky-400 border border-sky-400/20">
               <Globe className="w-5 h-5" />
             </div>
             <div>
@@ -108,7 +108,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-all"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-white/[0.06] transition-all cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -117,16 +117,16 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
         {/* Content */}
         <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
           {/* Method 1: Zero-Config Playit.gg 1-Click Tunnel */}
-          <div className="p-4 rounded-xl bg-indigo-950/40 border border-indigo-500/40 space-y-3">
+          <div className="p-4 rounded-xl glass-card space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-indigo-400" /> Playit.gg Вграден Тунел (100% Работещ)
+              <span className="text-xs font-bold text-sky-300 flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-sky-400" /> Playit.gg Вграден Тунел (100% Работещ)
               </span>
               <span
                 className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${
                   tunnelStatus.isRunning
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 animate-pulse'
-                    : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                    ? 'bg-sky-500/20 text-sky-300 border-sky-400/30 animate-pulse'
+                    : 'bg-white/[0.04] text-slate-400 border-white/[0.08]'
                 }`}
               >
                 {tunnelStatus.isRunning ? '🟢 Активен' : 'Препоръчително за аверите'}
@@ -141,8 +141,8 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
             {tunnelStatus.isRunning ? (
               <div className="space-y-2.5">
                 {tunnelStatus.address ? (
-                  <div className="p-3 rounded-xl bg-slate-950 border border-emerald-500/40 space-y-2">
-                    <span className="text-[11px] text-emerald-400 font-bold block">
+                  <div className="p-3 rounded-xl bg-slate-950/60 border border-sky-400/40 space-y-2">
+                    <span className="text-[11px] text-sky-400 font-bold block">
                       🎮 Адрес за игра (Копирай и прати на приятелите):
                     </span>
                     <div className="flex items-center justify-between">
@@ -151,7 +151,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
                       </span>
                       <button
                         onClick={() => copyToClipboard(tunnelStatus.address!, 'tunnel')}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition-all shadow-sm"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-xs transition-all shadow-sm glow-ice cursor-pointer"
                       >
                         {copiedType === 'tunnel' ? (
                           <>
@@ -273,26 +273,26 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
           </div>
 
           {/* Method 2: Public Internet IP */}
-          <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2.5">
+          <div className="p-4 rounded-xl glass-card space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Globe className="w-3.5 h-3.5" /> Директен публичен IP
               </span>
               <span className="text-[11px] text-slate-400">Изисква Port Forward</span>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-900 border border-slate-800">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950/50 border border-white/[0.08]">
               <span className="font-mono text-sm font-semibold text-slate-100 select-all">
                 {loading ? 'Откриване на публичен IP...' : publicAddress}
               </span>
               <button
                 onClick={() => copyToClipboard(publicAddress, 'public')}
                 disabled={loading}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 border border-white/[0.08] font-bold text-xs transition-all cursor-pointer"
               >
                 {copiedType === 'public' ? (
                   <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" /> Копирано!
+                    <Check className="w-3.5 h-3.5 text-sky-400" /> Копирано!
                   </>
                 ) : (
                   <>
@@ -307,25 +307,25 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
           </div>
 
           {/* Method 3: Local LAN */}
-          <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2.5">
+          <div className="p-4 rounded-xl glass-card space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Wifi className="w-3.5 h-3.5" /> За игра в една стая (LAN / Wi-Fi)
               </span>
               <span className="text-[11px] text-slate-400">Еднаква мрежа</span>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-900 border border-slate-800">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950/50 border border-white/[0.08]">
               <span className="font-mono text-sm font-semibold text-slate-100 select-all">
                 {localAddress}
               </span>
               <button
                 onClick={() => copyToClipboard(localAddress, 'local')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 border border-white/[0.08] font-bold text-xs transition-all cursor-pointer"
               >
                 {copiedType === 'local' ? (
                   <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" /> Копирано!
+                    <Check className="w-3.5 h-3.5 text-sky-400" /> Копирано!
                   </>
                 ) : (
                   <>
@@ -338,10 +338,10 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 bg-slate-950/80 border-t border-slate-800 flex justify-end">
+        <div className="px-6 py-3.5 bg-slate-950/40 border-t border-white/[0.08] flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all"
+            className="px-4 py-2 rounded-xl glass-card hover:bg-white/[0.08] text-slate-200 text-xs font-semibold transition-all cursor-pointer"
           >
             Затвори
           </button>

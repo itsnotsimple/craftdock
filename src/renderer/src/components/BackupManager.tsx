@@ -30,12 +30,12 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ server }) => {
   };
 
   return (
-    <div className="h-full bg-slate-900/60 rounded-2xl border border-slate-800 p-6 overflow-y-auto space-y-6">
+    <div className="h-full glass-panel rounded-2xl p-6 overflow-y-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+      <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
         <div>
           <h3 className="text-lg font-black text-slate-100 flex items-center gap-2">
-            <Archive className="w-5 h-5 text-emerald-400" />
+            <Archive className="w-5 h-5 text-sky-400" />
             Резервни Копия на Света (Backups)
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -46,7 +46,7 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ server }) => {
         <button
           onClick={handleCreateBackup}
           disabled={creating}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs transition-all shadow-lg shadow-emerald-950/50 glow-green disabled:opacity-50"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-xs transition-all shadow-lg shadow-sky-950/50 glow-ice disabled:opacity-50 cursor-pointer"
         >
           <Save className="w-4 h-4" />
           {creating ? 'Архивиране...' : 'Създай Нов Backup (1 Клик)'}
@@ -54,18 +54,18 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ server }) => {
       </div>
 
       {lastBackup && (
-        <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-3">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+        <div className="p-4 rounded-xl bg-sky-950/30 border border-sky-400/40 text-sky-200 text-xs flex items-center gap-3 backdrop-blur-xl">
+          <CheckCircle2 className="w-5 h-5 text-sky-400 shrink-0" />
           <div>
-            <strong>Успешно създаден архив!</strong> Файлът <code className="bg-emerald-950/80 px-1.5 py-0.5 rounded text-emerald-200">{lastBackup}</code> е запазен в папката <code className="text-slate-300">backups/</code>.
+            <strong>Успешно създаден архив!</strong> Файлът <code className="bg-sky-950/80 px-1.5 py-0.5 rounded text-sky-200">{lastBackup}</code> е запазен в папката <code className="text-slate-300">backups/</code>.
           </div>
         </div>
       )}
 
       {/* Info card */}
-      <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+      <div className="p-5 rounded-2xl glass-card space-y-3">
         <div className="flex items-center gap-2 text-sm font-bold text-slate-200">
-          <ShieldCheck className="w-5 h-5 text-cyan-400" />
+          <ShieldCheck className="w-5 h-5 text-sky-400" />
           Защо да правиш бекъпи?
         </div>
         <p className="text-xs text-slate-400 leading-relaxed">
@@ -74,7 +74,7 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ server }) => {
         <div className="pt-2">
           <button
             onClick={() => (window as any).api?.openServerFolder(server.id)}
-            className="flex items-center gap-2 text-xs text-cyan-400 hover:underline font-semibold"
+            className="flex items-center gap-2 text-xs text-sky-400 hover:underline font-semibold cursor-pointer"
           >
             <FolderOpen className="w-4 h-4" /> Отвори папката на сървъра в Explorer
           </button>

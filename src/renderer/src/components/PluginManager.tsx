@@ -317,12 +317,12 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
   };
 
   return (
-    <div className="h-full bg-slate-900/60 rounded-2xl border border-slate-800 p-6 overflow-y-auto space-y-6">
+    <div className="h-full glass-panel rounded-2xl p-6 overflow-y-auto space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800 gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-white/[0.08] gap-3">
         <div>
           <h3 className="text-lg font-black text-slate-100 flex items-center gap-2">
-            <Package className="w-5 h-5 text-pink-400" />
+            <Package className="w-5 h-5 text-sky-400" />
             Плъгини & Ресурс Пакети
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -334,33 +334,33 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           <button
             type="button"
             onClick={() => (window as any).api?.openPluginsFolder(server.id)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all border border-slate-700 shadow-sm cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-card hover:bg-white/[0.08] text-slate-200 text-xs font-semibold transition-all border border-white/[0.08] shadow-sm cursor-pointer"
             title="Отвори папка за .jar плъгини"
           >
-            <FolderOpen className="w-4 h-4 text-cyan-400" />
+            <FolderOpen className="w-4 h-4 text-sky-400" />
             <span>Папка plugins</span>
           </button>
 
           <button
             type="button"
             onClick={() => (window as any).api?.openResourcePacksFolder(server.id)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all border border-slate-700 shadow-sm cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-card hover:bg-white/[0.08] text-slate-200 text-xs font-semibold transition-all border border-white/[0.08] shadow-sm cursor-pointer"
             title="Отвори папка за локални ресурс пакети"
           >
-            <FolderOpen className="w-4 h-4 text-pink-400" />
+            <FolderOpen className="w-4 h-4 text-sky-400" />
             <span>Папка resourcepacks</span>
           </button>
         </div>
       </div>
 
       {/* Sub-tab Pill Switcher */}
-      <div className="flex items-center gap-2 p-1 bg-slate-950/80 rounded-xl border border-slate-800/80 w-fit">
+      <div className="flex items-center gap-2 p-1 glass-card rounded-xl border border-white/[0.08] w-fit">
         <button
           type="button"
           onClick={() => setSubTab('plugins')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             subTab === 'plugins'
-              ? 'bg-slate-800 text-emerald-400 shadow-sm border border-slate-700'
+              ? 'bg-sky-500/20 text-sky-200 border border-sky-400/40 shadow-sm'
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -373,7 +373,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           onClick={() => setSubTab('resourcepacks')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             subTab === 'resourcepacks'
-              ? 'bg-slate-800 text-pink-400 shadow-sm border border-slate-700'
+              ? 'bg-sky-500/20 text-sky-200 border border-sky-400/40 shadow-sm'
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -381,8 +381,8 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           <span>Сървърни Ресурс Пакети ({savedPacks.length})</span>
           {activePackUrl && (
             <span className="flex h-2 w-2 relative ml-1">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
             </span>
           )}
         </button>
@@ -390,8 +390,8 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
 
       {/* Feedback Banner */}
       {saveFeedback && (
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-2 animate-in fade-in">
-          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="p-3 rounded-xl bg-sky-950/40 border border-sky-400/30 text-sky-200 text-xs font-bold flex items-center gap-2 backdrop-blur-xl animate-in fade-in">
+          <Check className="w-4 h-4 text-sky-400 shrink-0" />
           <span>{saveFeedback}</span>
         </div>
       )}
@@ -411,7 +411,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
               <p className="text-xs text-amber-300/80 leading-relaxed">
                 Официалният чист <strong>Vanilla</strong> Minecraft не поддържа плъгини от папка <code>plugins/</code>. Затова бутоните за инсталиране на плъгини са деактивирани тук.
               </p>
-              <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 space-y-1.5">
+              <div className="p-3.5 rounded-xl glass-card text-xs text-slate-300 space-y-1.5">
                 <span className="font-bold text-slate-100 flex items-center gap-1.5">
                   💡 Искаш да ползваш SkinsRestorer, Geyser (кросплей) и команди?
                 </span>
@@ -424,7 +424,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <Sparkles className="w-3.5 h-3.5 text-sky-400" />
                   Препоръчани плъгини за игра с приятели
                 </span>
                 <span className="text-[11px] text-slate-500">100% съвместими и тествани</span>
@@ -438,7 +438,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                   return (
                     <div
                       key={plugin.id}
-                      className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800/80 hover:border-slate-700 flex flex-col justify-between transition-all"
+                      className="p-4 rounded-2xl glass-card hover:border-white/[0.15] flex flex-col justify-between transition-all"
                     >
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
@@ -447,7 +447,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                             <span className="font-extrabold text-sm text-slate-100">{plugin.name}</span>
                           </div>
                           {plugin.recommended && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-400/30 font-bold">
                               Топ избор
                             </span>
                           )}
@@ -455,18 +455,18 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                         <p className="text-xs text-slate-400 leading-relaxed mb-4">{plugin.description}</p>
                       </div>
 
-                      <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between">
+                      <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between">
                         <span className="text-[11px] text-slate-500 font-mono">{plugin.fileName}</span>
 
                         {installedState ? (
-                          <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
+                          <span className="flex items-center gap-1.5 text-xs font-bold text-sky-400">
                             <CheckCircle2 className="w-4 h-4" /> Инсталиран
                           </span>
                         ) : (
                           <button
                             onClick={() => handleInstall(plugin)}
                             disabled={isProcessing}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition-all shadow-md shadow-emerald-950/40 disabled:opacity-50 cursor-pointer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-xs transition-all shadow-md shadow-sky-950/40 glow-ice disabled:opacity-50 cursor-pointer"
                           >
                             <Download className="w-3.5 h-3.5" />
                             {isProcessing ? 'Сваляне...' : 'Инсталирай (1 Клик)'}
@@ -563,21 +563,21 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
               <button
                 type="button"
                 onClick={() => (window as any).api?.openExternal('https://modrinth.com/plugins')}
-                className="p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all text-left group flex flex-col justify-between cursor-pointer"
+                className="p-3.5 rounded-xl glass-card hover:border-sky-400/40 hover:bg-sky-500/5 transition-all text-left group flex flex-col justify-between cursor-pointer"
               >
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
-                      <span className="text-xs font-bold text-slate-200 group-hover:text-emerald-300">Modrinth</span>
+                      <Layers className="w-4 h-4 text-sky-400 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-bold text-slate-200 group-hover:text-sky-300">Modrinth</span>
                     </div>
-                    <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400" />
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-sky-400" />
                   </div>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
                     Модерен, бърз каталог с отворен код за плъгини и оптимизации.
                   </p>
                 </div>
-                <span className="text-[10px] text-emerald-400/80 font-mono mt-3 inline-flex items-center gap-1">
+                <span className="text-[10px] text-sky-400/80 font-mono mt-3 inline-flex items-center gap-1">
                   Отвори modrinth.com &rarr;
                 </span>
               </button>
@@ -586,7 +586,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
               <button
                 type="button"
                 onClick={() => (window as any).api?.openExternal('https://www.spigotmc.org/resources/')}
-                className="p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 hover:border-amber-500/50 hover:bg-amber-500/5 transition-all text-left group flex flex-col justify-between cursor-pointer"
+                className="p-3.5 rounded-xl glass-card hover:border-sky-400/40 hover:bg-sky-500/5 transition-all text-left group flex flex-col justify-between cursor-pointer"
               >
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
@@ -609,21 +609,21 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
               <button
                 type="button"
                 onClick={() => (window as any).api?.openExternal('https://hangar.papermc.io/')}
-                className="p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all text-left group flex flex-col justify-between cursor-pointer"
+                className="p-3.5 rounded-xl glass-card hover:border-sky-400/40 hover:bg-sky-500/5 transition-all text-left group flex flex-col justify-between cursor-pointer"
               >
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
-                      <span className="text-xs font-bold text-slate-200 group-hover:text-cyan-300">Hangar (PaperMC)</span>
+                      <Sparkles className="w-4 h-4 text-sky-400 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-bold text-slate-200 group-hover:text-sky-300">Hangar (PaperMC)</span>
                     </div>
-                    <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-cyan-400" />
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-sky-400" />
                   </div>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
                     Официален портал на PaperMC за проверени и безопасни добавки.
                   </p>
                 </div>
-                <span className="text-[10px] text-cyan-400/80 font-mono mt-3 inline-flex items-center gap-1">
+                <span className="text-[10px] text-sky-400/80 font-mono mt-3 inline-flex items-center gap-1">
                   Отвори hangar.papermc.io &rarr;
                 </span>
               </button>
@@ -639,15 +639,15 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           <div
             className={`p-5 rounded-2xl border transition-all ${
               activePackUrl
-                ? 'bg-gradient-to-r from-emerald-950/40 via-slate-950 to-slate-950 border-emerald-500/40 shadow-lg shadow-emerald-950/30'
-                : 'bg-slate-950/80 border-slate-800'
+                ? 'bg-gradient-to-r from-sky-950/40 via-slate-950/70 to-slate-950/70 border-sky-400/40 shadow-lg shadow-sky-950/30 backdrop-blur-xl'
+                : 'glass-card'
             }`}
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
               <div className="flex items-center gap-3">
                 <div
                   className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    activePackUrl ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-900 text-slate-500'
+                    activePackUrl ? 'bg-sky-500/20 text-sky-300' : 'bg-white/[0.04] text-slate-400'
                   }`}
                 >
                   <Palette className="w-5 h-5" />
@@ -658,7 +658,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                       {activePackUrl ? '🟢 Активен Сървърен Ресурс Пакет' : '⚪ Няма активен ресурс пакет'}
                     </h4>
                     {activePackUrl && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30 font-mono">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-bold border border-sky-400/30 font-mono">
                         Записан в server.properties
                       </span>
                     )}
@@ -676,10 +676,10 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                   <button
                     type="button"
                     onClick={() => (window as any).api?.openExternal(activePackUrl)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-card hover:bg-white/[0.08] text-slate-200 text-xs font-semibold border border-white/[0.08] transition-all cursor-pointer"
                     title="Свали и провери файла"
                   >
-                    <Download className="w-3.5 h-3.5 text-cyan-400" />
+                    <Download className="w-3.5 h-3.5 text-sky-400" />
                     <span>Тествай линка</span>
                   </button>
 
@@ -699,29 +699,29 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
 
             {activePackUrl && (
               <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-                  <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Директен линк:</span>
+                <div className="p-3 rounded-xl glass-card">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Директен линк:</span>
                   <p className="font-mono text-slate-200 text-[11px] truncate" title={activePackUrl}>
                     {activePackUrl}
                   </p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-                  <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Задължителен за играчите:</span>
-                  <span className={`font-bold text-[11px] ${activePackRequired ? 'text-amber-400' : 'text-emerald-400'}`}>
+                <div className="p-3 rounded-xl glass-card">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Задължителен за играчите:</span>
+                  <span className={`font-bold text-[11px] ${activePackRequired ? 'text-amber-400' : 'text-sky-400'}`}>
                     {activePackRequired ? '🔒 ДА (Задължителен)' : '🟢 НЕ (По избор на играча)'}
                   </span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-                  <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Съобщение при запитване:</span>
+                <div className="p-3 rounded-xl glass-card">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Съобщение при запитване:</span>
                   <span className="text-slate-200 text-[11px] italic">
                     {activePackPrompt || 'Стандартно питане от Minecraft'}
                   </span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-                  <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Кеш Хеш (SHA-1):</span>
+                <div className="p-3 rounded-xl glass-card">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Кеш Хеш (SHA-1):</span>
                   <span className="font-mono text-slate-400 text-[11px] truncate block" title={activePackSha1 || 'Не е зададен'}>
                     {activePackSha1 ? `${activePackSha1.slice(0, 16)}...` : 'Автоматичен кеш'}
                   </span>
@@ -735,10 +735,10 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <FileArchive className="w-3.5 h-3.5 text-pink-400" />
+                  <FileArchive className="w-3.5 h-3.5 text-sky-400" />
                   Запазени Ресурс Пакети в Библиотеката ({savedPacks.length})
                 </span>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[11px] text-slate-400 mt-0.5">
                   Можеш да запазваш множество пакети и да ги сменяш с 1 клик според това коя игра играете
                 </p>
               </div>
@@ -749,7 +749,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
             </div>
 
             {savedPacks.length === 0 ? (
-              <div className="p-6 rounded-2xl bg-slate-950/40 border border-dashed border-slate-800 text-center text-xs text-slate-500">
+              <div className="p-6 rounded-2xl glass-card border border-dashed border-white/[0.1] text-center text-xs text-slate-400">
                 Все още нямаш запазени ресурс пакети в списъка. Добави първия чрез формата по-долу!
               </div>
             ) : (
@@ -762,23 +762,23 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                       key={pack.id}
                       className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
                         isActive
-                          ? 'bg-slate-950 border-emerald-500/60 shadow-md shadow-emerald-950/40 ring-1 ring-emerald-500/30'
-                          : 'bg-slate-950/80 border-slate-800 hover:border-slate-700'
+                          ? 'glass-card border-sky-400/60 shadow-md shadow-sky-950/40 ring-1 ring-sky-400/30'
+                          : 'glass-card hover:border-white/[0.15]'
                       }`}
                     >
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <Palette className={`w-4 h-4 ${isActive ? 'text-emerald-400' : 'text-pink-400'}`} />
+                            <Palette className={`w-4 h-4 ${isActive ? 'text-sky-400' : 'text-slate-400'}`} />
                             <span className="font-extrabold text-sm text-slate-100">{pack.name}</span>
                           </div>
 
                           {isActive ? (
-                            <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold flex items-center gap-1">
+                            <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/40 font-bold flex items-center gap-1">
                               <CheckCircle2 className="w-3 h-3" /> Активен в момента
                             </span>
                           ) : (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] text-slate-400 border border-white/[0.08]">
                               В наличност
                             </span>
                           )}
@@ -788,24 +788,24 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                           🔗 {pack.url}
                         </p>
 
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 mb-4">
-                          <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800">
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 mb-4">
+                          <span className="px-2 py-0.5 rounded-md glass-card">
                             {pack.required ? '🔒 Задължителен' : '🟢 По избор'}
                           </span>
                           {pack.prompt && (
-                            <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 truncate max-w-[200px]" title={pack.prompt}>
+                            <span className="px-2 py-0.5 rounded-md glass-card truncate max-w-[200px]" title={pack.prompt}>
                               💬 {pack.prompt}
                             </span>
                           )}
                         </div>
                       </div>
 
-                      <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                      <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => (window as any).api?.openExternal(pack.url)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] transition-all cursor-pointer"
                             title="Свали пакета за тест"
                           >
                             <Download className="w-3.5 h-3.5" />
@@ -822,7 +822,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                         </div>
 
                         {isActive ? (
-                          <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                          <span className="text-xs font-bold text-sky-400 flex items-center gap-1">
                             <Check className="w-3.5 h-3.5" /> Зареден на сървъра
                           </span>
                         ) : (
@@ -830,7 +830,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                             type="button"
                             onClick={() => handleActivatePack(pack)}
                             disabled={savingAction}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-pink-600 hover:bg-pink-500 text-slate-950 font-extrabold text-xs transition-all shadow-md shadow-pink-950/40 cursor-pointer disabled:opacity-50"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold text-xs transition-all shadow-md shadow-sky-950/40 cursor-pointer disabled:opacity-50 glow-ice"
                           >
                             <Radio className="w-3 h-3" />
                             <span>Активирай на този сървър</span>
@@ -847,11 +847,11 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           {/* 3. ADD NEW RESOURCE PACK FORM */}
           <form
             onSubmit={handleAddNewPack}
-            className="p-5 rounded-2xl bg-slate-950/90 border border-slate-800 space-y-4"
+            className="p-5 rounded-2xl glass-card space-y-4"
           >
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
               <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Plus className="w-4 h-4 text-pink-400" />
+                <Plus className="w-4 h-4 text-sky-400" />
                 Добави нов ресурс пакет чрез линк
               </span>
               <span className="text-[11px] text-slate-500">
@@ -870,7 +870,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                   value={newPack.name}
                   onChange={(e) => setNewPack({ ...newPack, name: e.target.value })}
                   placeholder="напр. Faithful 32x, Bare Bones или PvP Pack"
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-pink-500"
+                  className="w-full px-3.5 py-2 rounded-xl glass-input text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-sky-400"
                 />
               </div>
 
@@ -878,7 +878,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
                   <span>Директен линк за сваляне на .zip файла *</span>
-                  <span className="text-[10px] text-pink-400 font-mono">.zip URL</span>
+                  <span className="text-[10px] text-sky-400 font-mono">.zip URL</span>
                 </label>
                 <input
                   type="url"
@@ -886,7 +886,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                   value={newPack.url}
                   onChange={(e) => setNewPack({ ...newPack, url: e.target.value })}
                   placeholder="https://download.mc-packs.net/pack/...zip"
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 font-mono placeholder:text-slate-600 focus:outline-none focus:border-pink-500"
+                  className="w-full px-3.5 py-2 rounded-xl glass-input text-xs text-slate-200 font-mono placeholder:text-slate-600 focus:outline-none focus:border-sky-400"
                 />
               </div>
             </div>
@@ -900,8 +900,8 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                   onClick={() => setNewPack({ ...newPack, required: !newPack.required })}
                   className={`w-full py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer text-center ${
                     newPack.required
-                      ? 'bg-pink-500/20 border-pink-500/60 text-pink-300'
-                      : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'
+                      ? 'bg-sky-500/20 border-sky-400/50 text-sky-200'
+                      : 'bg-white/[0.03] border-white/[0.08] text-slate-400 hover:text-slate-200'
                   }`}
                 >
                   {newPack.required ? '🔒 Задължителен' : '🟢 По избор (Препоръчително)'}
@@ -916,7 +916,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                   value={newPack.prompt}
                   onChange={(e) => setNewPack({ ...newPack, prompt: e.target.value })}
                   placeholder="Официален текстурен пакет за сървъра"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-pink-500"
+                  className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 focus:outline-none focus:border-sky-400"
                 />
               </div>
 
@@ -928,20 +928,20 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                   value={newPack.sha1}
                   onChange={(e) => setNewPack({ ...newPack, sha1: e.target.value })}
                   placeholder="40-знаков sha1 код"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 font-mono focus:outline-none focus:border-pink-500"
+                  className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 font-mono focus:outline-none focus:border-sky-400"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-              <p className="text-[11px] text-slate-500">
+            <div className="flex items-center justify-between pt-3 border-t border-white/[0.08]">
+              <p className="text-[11px] text-slate-400">
                 * При Vanilla сървър направи рестарт (Спри 🛑 и Пусни ▶️), за да влезе новият пакет в сила.
               </p>
 
               <button
                 type="submit"
                 disabled={savingAction}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-slate-950 font-black text-xs transition-all shadow-lg shadow-pink-950/50 cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-xs transition-all shadow-lg shadow-sky-950/50 glow-ice cursor-pointer disabled:opacity-50"
               >
                 <Save className="w-4 h-4" />
                 <span>Запази и Активирай в Сървъра</span>
@@ -950,9 +950,9 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           </form>
 
           {/* 4. MULTIPLE PACKS EXPLANATION & FREE HOSTING */}
-          <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3">
+          <div className="p-4 rounded-2xl glass-card space-y-3">
             <div className="flex items-center gap-2">
-              <Globe className="w-4 h-4 text-cyan-400" />
+              <Globe className="w-4 h-4 text-sky-400" />
               <span className="text-xs font-bold text-slate-200">
                 Как да ползваш няколко ресурс пакета едновременно в Minecraft?
               </span>
@@ -963,21 +963,21 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
-                <span className="text-xs font-bold text-emerald-400">1. Обедини ги онлайн</span>
+              <div className="p-3 rounded-xl glass-card space-y-1.5">
+                <span className="text-xs font-bold text-sky-400">1. Обедини ги онлайн</span>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
                   Използвай безплатния инструмент за обединяване на пакети.
                 </p>
                 <button
                   type="button"
                   onClick={() => (window as any).api?.openExternal('https://merge.elmakers.com/')}
-                  className="text-[11px] text-pink-400 hover:underline flex items-center gap-1 cursor-pointer font-bold"
+                  className="text-[11px] text-sky-300 hover:underline flex items-center gap-1 cursor-pointer font-bold"
                 >
                   merge.elmakers.com <ExternalLink className="w-3 h-3" />
                 </button>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+              <div className="p-3 rounded-xl glass-card space-y-1.5">
                 <span className="text-xs font-bold text-cyan-400">2. Качи готовия .zip</span>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
                   Качи обединения пакет в безплатен хостинг, за да вземеш директен линк.
@@ -991,7 +991,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                 </button>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+              <div className="p-3 rounded-xl glass-card space-y-1.5">
                 <span className="text-xs font-bold text-amber-400">3. Добави го тук</span>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
                   Постави новия линк във формата горе и цъкни „Запази и Активирай“.

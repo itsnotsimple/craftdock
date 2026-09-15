@@ -132,9 +132,9 @@ export const WizardView: React.FC<WizardViewProps> = ({
     <div className="flex-1 overflow-y-auto p-8 max-w-4xl mx-auto w-full relative">
       {/* Download / Creation Overlay */}
       {isCreating && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-6">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5 text-center animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/30">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-2xl p-6">
+          <div className="w-full max-w-md glass-panel rounded-3xl p-6 shadow-2xl space-y-5 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-2xl bg-sky-500/15 text-sky-400 flex items-center justify-center mx-auto border border-sky-400/30 glow-ice">
               <DownloadCloud className="w-8 h-8 animate-bounce" />
             </div>
 
@@ -149,9 +149,9 @@ export const WizardView: React.FC<WizardViewProps> = ({
 
             {/* Progress bar */}
             <div className="space-y-2">
-              <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden p-0.5">
+              <div className="w-full h-3 bg-slate-800/80 rounded-full overflow-hidden p-0.5 border border-white/[0.08]">
                 <div
-                  className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full transition-all duration-300 shadow-md shadow-emerald-500/30"
+                  className="h-full bg-gradient-to-r from-sky-400 to-blue-500 rounded-full transition-all duration-300 shadow-md shadow-sky-500/30"
                   style={{ width: `${downloadProgress?.percent || 15}%` }}
                 />
               </div>
@@ -171,11 +171,11 @@ export const WizardView: React.FC<WizardViewProps> = ({
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800/80" style={{ paddingRight: '145px' }}>
+      <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/[0.08]" style={{ paddingRight: '145px' }}>
         <div className="flex items-center gap-3">
           <button
             onClick={onCancel}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-all"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-white/[0.06] transition-all cursor-pointer"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -193,7 +193,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Step 1: Server Name & Software */}
         <section className="space-y-4">
-          <div className="flex items-center gap-2 text-sm font-extrabold text-emerald-400 uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-sm font-extrabold text-sky-400 uppercase tracking-wider">
             <span>Стъпка 1</span> • Име и Тип Сървър
           </div>
 
@@ -205,7 +205,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="напр. Survival с Аверите"
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+              className="w-full px-4 py-2.5 rounded-xl glass-input text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-400 transition-colors"
             />
           </div>
 
@@ -215,10 +215,10 @@ export const WizardView: React.FC<WizardViewProps> = ({
                 key={opt.id}
                 type="button"
                 onClick={() => setSoftware(opt.id)}
-                className={`p-4 rounded-2xl text-left border transition-all duration-200 relative ${
+                className={`p-4 rounded-2xl text-left border transition-all duration-200 relative cursor-pointer ${
                   software === opt.id
-                    ? 'bg-emerald-950/20 border-emerald-500/70 shadow-lg shadow-emerald-950/30'
-                    : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                    ? 'bg-sky-500/15 border-sky-400/60 shadow-lg shadow-sky-950/40 glow-ice'
+                    : 'glass-card hover:border-white/[0.15]'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
@@ -226,8 +226,8 @@ export const WizardView: React.FC<WizardViewProps> = ({
                   <span
                     className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       software === opt.id
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                        : 'bg-slate-800 text-slate-400'
+                        ? 'bg-sky-500/20 text-sky-200 border border-sky-400/40'
+                        : 'bg-white/[0.04] text-slate-400 border border-white/[0.08]'
                     }`}
                   >
                     {opt.badge}
@@ -242,20 +242,20 @@ export const WizardView: React.FC<WizardViewProps> = ({
         {/* Step 2: Minecraft Version (Loaded live via API) */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-extrabold text-emerald-400 uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-sm font-extrabold text-sky-400 uppercase tracking-wider">
               <span>Стъпка 2</span> • Версия на Minecraft (Онлайн API)
             </div>
             {loadingVersions && (
               <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" /> Зареждане на версии на живо...
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-400" /> Зареждане на версии на живо...
               </span>
             )}
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-3">
+          <div className="p-4 rounded-2xl glass-card space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-slate-300">
-                Избери версия за <strong className="text-emerald-400">{software.toUpperCase()}</strong>:
+                Избери версия за <strong className="text-sky-400">{software.toUpperCase()}</strong>:
               </label>
               <span className="text-[11px] text-slate-500">Дърпа се директно от официалното API</span>
             </div>
@@ -264,7 +264,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
               value={version}
               onChange={(e) => setVersion(e.target.value)}
               disabled={loadingVersions}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 font-mono transition-colors"
+              className="w-full px-4 py-2.5 rounded-xl glass-input text-sm text-slate-100 focus:outline-none focus:border-sky-400 font-mono transition-colors cursor-pointer"
             >
               {versionsList.map((v) => (
                 <option key={v.version} value={v.version}>
@@ -277,11 +277,11 @@ export const WizardView: React.FC<WizardViewProps> = ({
 
         {/* Step 3: RAM Slider & Intelligent Capacity Advisor */}
         <section className="space-y-4">
-          <div className="flex items-center gap-2 text-sm font-extrabold text-emerald-400 uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-sm font-extrabold text-sky-400 uppercase tracking-wider">
             <span>Стъпка 3</span> • RAM Памет & Капацитет за Играчи
           </div>
 
-          <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800">
+          <div className="p-6 rounded-2xl glass-card">
             <RamSlider
               ramGb={ramGb}
               onRamChange={setRamGb}
@@ -299,10 +299,10 @@ export const WizardView: React.FC<WizardViewProps> = ({
           {/* Hardcore Toggle Card */}
           <div
             onClick={() => setHardcore(!hardcore)}
-            className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 select-none ${
+            className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 select-none backdrop-blur-2xl ${
               hardcore
-                ? 'bg-gradient-to-r from-rose-950/60 via-slate-950 to-slate-950 border-rose-500/50 glow-crimson'
-                : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                ? 'bg-gradient-to-r from-rose-950/40 via-slate-950/70 to-slate-950/70 border-rose-500/40 glow-crimson shadow-2xl'
+                : 'glass-card hover:border-white/[0.15]'
             }`}
           >
             <div className="flex items-center gap-3">
@@ -310,7 +310,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
                 className={`p-2.5 rounded-xl border ${
                   hardcore
                     ? 'bg-rose-500/20 border-rose-500/40 text-rose-400'
-                    : 'bg-slate-950 border-slate-800 text-slate-400'
+                    : 'bg-white/[0.04] border-white/[0.08] text-slate-400'
                 }`}
               >
                 <Skull className={`w-5 h-5 ${hardcore ? 'animate-pulse text-rose-400' : ''}`} />
@@ -336,7 +336,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
 
             <div
               className={`w-12 h-6 rounded-full transition-colors relative flex items-center p-0.5 shrink-0 ${
-                hardcore ? 'bg-rose-600' : 'bg-slate-800 border border-slate-700'
+                hardcore ? 'bg-rose-600' : 'bg-white/[0.08] border border-white/[0.1]'
               }`}
             >
               <div
@@ -348,9 +348,9 @@ export const WizardView: React.FC<WizardViewProps> = ({
           </div>
 
           {/* Optional Settings (Port, MOTD) */}
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80 space-y-4">
+          <div className="p-5 rounded-2xl glass-card space-y-4">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
-              <Settings className="w-4 h-4 text-slate-400" /> Допълнителни мрежови настройки
+              <Settings className="w-4 h-4 text-sky-400" /> Допълнителни мрежови настройки
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -360,7 +360,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
                   type="number"
                   value={port}
                   onChange={(e) => setPort(parseInt(e.target.value, 10) || 25565)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 font-mono focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 font-mono focus:outline-none focus:border-sky-400"
                 />
               </div>
               <div className="space-y-1">
@@ -369,7 +369,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
                   type="text"
                   value={motd}
                   onChange={(e) => setMotd(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 focus:outline-none focus:border-sky-400"
                 />
               </div>
             </div>
@@ -377,11 +377,11 @@ export const WizardView: React.FC<WizardViewProps> = ({
         </section>
 
         {/* Submit Bar */}
-        <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+        <div className="flex items-center justify-between pt-4 border-t border-white/[0.08]">
           <button
             type="button"
             onClick={onCancel}
-            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-all"
+            className="px-5 py-2.5 rounded-xl glass-card hover:bg-white/[0.08] text-slate-300 font-semibold text-xs transition-all cursor-pointer"
           >
             Отказ
           </button>
@@ -389,7 +389,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
           <button
             type="submit"
             disabled={isCreating || loadingVersions}
-            className="flex items-center gap-2 px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-sm transition-all shadow-xl shadow-emerald-950/60 glow-green disabled:opacity-50"
+            className="flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-sm transition-all shadow-xl shadow-sky-950/60 glow-ice cursor-pointer disabled:opacity-50"
           >
             <Sparkles className="w-4 h-4" />
             Създай и Изтегли Сървъра (1 Клик)
