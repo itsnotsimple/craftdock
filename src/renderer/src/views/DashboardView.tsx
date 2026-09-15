@@ -132,7 +132,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-transparent relative z-1">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-transparent relative z-1">
       {/* Top Bar Header */}
       <header
         className="h-16 px-6 border-b border-white/[0.08] flex items-center justify-between bg-slate-950/40 backdrop-blur-2xl shrink-0"

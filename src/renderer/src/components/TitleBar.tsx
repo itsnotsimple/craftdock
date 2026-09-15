@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import craftDockLogo from '../assets/icon.png';
 import { ServerProfile } from '../types';
 
@@ -9,7 +9,7 @@ interface TitleBarProps {
 export const TitleBar: React.FC<TitleBarProps> = ({ activeServer }) => {
   return (
     <header
-      className="h-[38px] w-full bg-[#070a14]/90 backdrop-blur-2xl border-b border-white/[0.08] flex items-center justify-between px-3.5 select-none shrink-0 z-50 relative"
+      className="h-[38px] min-h-[38px] max-h-[38px] w-full bg-[#070a14] border-b border-white/[0.08] flex items-center justify-between px-3.5 select-none shrink-0 z-50 relative"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
       {/* Left: App Logo, Name & Version */}

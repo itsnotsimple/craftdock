@@ -16,11 +16,13 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
   serverStatus,
 }) => {
   const [command, setCommand] = useState('');
-  const logsEndRef = useRef<HTMLDivElement>(null);
+  const logsContainerRef = useRef<HTMLDivElement>(null);
   const isRunning = serverStatus === 'running';
 
   const scrollToBottom = () => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (logsContainerRef.current) {
+      logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight;
+    }
   };
 
   useEffect(() => {
@@ -113,7 +115,10 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
       </div>
 
       {/* Logs Output Screen */}
-      <div className="flex-1 p-4 overflow-y-auto font-mono-code text-xs space-y-1 select-text bg-black/30 backdrop-blur-sm">
+      <div
+        ref={logsContainerRef}
+        className="flex-1 p-4 overflow-y-auto font-mono-code text-xs space-y-1 select-text bg-black/30 backdrop-blur-sm"
+      >
         {logs.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-slate-500 text-xs gap-3">
             <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.08]">
@@ -129,7 +134,6 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
             </div>
           ))
         )}
-        <div ref={logsEndRef} />
       </div>
 
       {/* Console Input Bar */}

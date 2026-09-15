@@ -1,6 +1,19 @@
 @import "tailwindcss";
 
 @layer base {
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden !important;
+    position: fixed;
+    inset: 0;
+    user-select: none;
+  }
+
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;

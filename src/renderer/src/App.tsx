@@ -72,6 +72,17 @@ export const App: React.FC = () => {
     });
   }, [activeServerId]);
 
+  // Prevent viewport shifting or scrolling under any circumstances
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY !== 0 || window.scrollX !== 0) {
+        window.scrollTo(0, 0);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Initialize System Info, Server List & persistent IPC subscriptions
   useEffect(() => {
     const api = (window as any).api;
@@ -256,7 +267,7 @@ export const App: React.FC = () => {
   const activeServer = servers.find((s) => s.id === activeServerId) || servers[0];
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#060913] text-slate-100 overflow-hidden font-sans relative selection:bg-sky-500/30 selection:text-sky-200">
+    <div className="flex flex-col h-full w-full fixed inset-0 bg-[#060913] text-slate-100 overflow-hidden font-sans select-none selection:bg-sky-500/30 selection:text-sky-200">
       {/* Ambient Background Glows for authentic Glassmorphic Refraction */}
       <div className="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] rounded-full bg-sky-600/10 blur-[130px] pointer-events-none z-0" />
       <div className="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] rounded-full bg-blue-700/10 blur-[150px] pointer-events-none z-0" />
