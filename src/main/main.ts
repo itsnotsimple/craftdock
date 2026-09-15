@@ -59,12 +59,12 @@ let mainWindow: BrowserWindow | null = null;
 function createWindow() {
   const iconPath = path.join(__dirname, '../resources/icon.png');
   mainWindow = new BrowserWindow({
-    width: 1240,
-    height: 820,
-    minWidth: 980,
-    minHeight: 680,
+    width: 1380,
+    height: 880,
+    minWidth: 1080,
+    minHeight: 700,
     icon: fs.existsSync(iconPath) ? iconPath : undefined,
-    backgroundColor: '#090d16',
+    backgroundColor: '#060913',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -72,9 +72,9 @@ function createWindow() {
     },
     titleBarStyle: 'hidden',
     titleBarOverlay: {
-      color: '#090d16',
-      symbolColor: '#ffffff',
-      height: 36,
+      color: '#070a14',
+      symbolColor: '#cbd5e1',
+      height: 38,
     },
     show: false,
   });

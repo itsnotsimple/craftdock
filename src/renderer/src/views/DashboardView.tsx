@@ -135,8 +135,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-transparent relative z-1">
       {/* Top Bar Header */}
       <header
-        className="px-6 py-4 bg-slate-950/40 backdrop-blur-2xl border-b border-white/[0.08] flex items-center justify-between shrink-0 relative z-10"
-        style={{ paddingRight: '145px' }}
+        className="h-16 px-6 border-b border-white/[0.08] flex items-center justify-between bg-slate-950/40 backdrop-blur-2xl shrink-0"
       >
         <div className="flex items-center gap-4">
           <button
@@ -153,8 +152,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="flex items-center justify-center">
                 {isRunning ? (
                   <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-sky-500 border border-sky-300"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border border-emerald-300"></span>
                   </span>
                 ) : isStarting ? (
                   <span className="w-3 h-3 rounded-full bg-amber-400 animate-ping" />
@@ -184,18 +183,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="flex items-center gap-2.5">
           <button
             onClick={onOpenNetworkModal}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-semibold transition-all border border-white/[0.1] hover:border-sky-400/40 shadow-sm cursor-pointer group"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-semibold transition-all border border-white/[0.1] hover:border-cyan-400/40 shadow-sm cursor-pointer group"
           >
-            <Globe className="w-4 h-4 text-sky-400 transition-transform group-hover:rotate-12" />
+            <Globe className="w-4 h-4 text-cyan-400 transition-transform group-hover:rotate-12" />
             <span>IP за Приятели</span>
           </button>
 
           <button
             onClick={() => onOpenFolder(server.id)}
-            className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-slate-100 transition-all border border-white/[0.1] hover:border-white/[0.2] cursor-pointer"
+            className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-slate-100 transition-all border border-white/[0.1] hover:border-amber-400/40 cursor-pointer"
             title="Отвори папката на сървъра"
           >
-            <FolderOpen className="w-4 h-4" />
+            <FolderOpen className="w-4 h-4 text-amber-400" />
           </button>
 
           {isRunning ? (
@@ -204,16 +203,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               disabled={isStopping}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-bold text-xs transition-all shadow-lg shadow-rose-950/50 glow-crimson cursor-pointer disabled:opacity-50"
             >
-              <Square className="w-3.5 h-3.5 fill-current" />
+              <Square className="w-3.5 h-3.5 fill-current text-rose-200" />
               <span>{isStopping ? 'Спира...' : 'Спри Сървъра'}</span>
             </button>
           ) : (
             <button
               onClick={() => onStartServer(server.id)}
               disabled={isStarting}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-xs transition-all shadow-lg shadow-sky-950/50 glow-ice cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs transition-all shadow-lg shadow-emerald-950/50 glow-green cursor-pointer disabled:opacity-50"
             >
-              <Play className="w-3.5 h-3.5 fill-current" />
+              <Play className="w-3.5 h-3.5 fill-current text-emerald-200" />
               <span>{isStarting ? 'Стартира...' : 'Стартирай (1 Клик)'}</span>
             </button>
           )}
@@ -227,11 +226,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => setActiveTab('console')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'console'
-                ? 'bg-sky-500/15 text-sky-200 border border-sky-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
             }`}
           >
-            <TerminalIcon className={`w-3.5 h-3.5 ${activeTab === 'console' ? 'text-sky-400' : 'text-slate-400'}`} />
+            <TerminalIcon className={`w-3.5 h-3.5 ${activeTab === 'console' ? 'text-emerald-400' : 'text-emerald-400/70'}`} />
             <span>Конзола</span>
           </button>
 
@@ -239,11 +238,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => setActiveTab('plugins')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'plugins'
-                ? 'bg-sky-500/15 text-sky-200 border border-sky-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                ? 'bg-purple-500/15 text-purple-200 border border-purple-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
             }`}
           >
-            <Package className={`w-3.5 h-3.5 ${activeTab === 'plugins' ? 'text-sky-400' : 'text-slate-400'}`} />
+            <Package className={`w-3.5 h-3.5 ${activeTab === 'plugins' ? 'text-purple-400' : 'text-purple-400/70'}`} />
             <span>Плъгини & Ресурс Пакети</span>
           </button>
 
@@ -251,11 +250,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => setActiveTab('settings')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'settings'
-                ? 'bg-sky-500/15 text-sky-200 border border-sky-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                ? 'bg-amber-500/15 text-amber-200 border border-amber-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
             }`}
           >
-            <Settings className={`w-3.5 h-3.5 ${activeTab === 'settings' ? 'text-sky-400' : 'text-slate-400'}`} />
+            <Settings className={`w-3.5 h-3.5 ${activeTab === 'settings' ? 'text-amber-400' : 'text-amber-400/70'}`} />
             <span>Настройки на Света</span>
           </button>
 
@@ -263,11 +262,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => setActiveTab('players')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'players'
-                ? 'bg-sky-500/15 text-sky-200 border border-sky-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                ? 'bg-cyan-500/15 text-cyan-200 border border-cyan-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
             }`}
           >
-            <Users className={`w-3.5 h-3.5 ${activeTab === 'players' ? 'text-sky-400' : 'text-slate-400'}`} />
+            <Users className={`w-3.5 h-3.5 ${activeTab === 'players' ? 'text-cyan-400' : 'text-cyan-400/70'}`} />
             <span>Играчи & Whitelist ({players.length})</span>
           </button>
 
@@ -275,11 +274,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => setActiveTab('resources')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'resources'
-                ? 'bg-sky-500/15 text-sky-200 border border-sky-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                ? 'bg-pink-500/15 text-pink-200 border border-pink-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
             }`}
           >
-            <Activity className={`w-3.5 h-3.5 ${activeTab === 'resources' ? 'text-sky-400' : 'text-slate-400'}`} />
+            <Activity className={`w-3.5 h-3.5 ${activeTab === 'resources' ? 'text-pink-400' : 'text-pink-400/70'}`} />
             <span>Ресурси & Хардуер</span>
           </button>
 
@@ -287,11 +286,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => setActiveTab('backups')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'backups'
-                ? 'bg-sky-500/15 text-sky-200 border border-sky-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                ? 'bg-orange-500/15 text-orange-200 border border-orange-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
             }`}
           >
-            <Archive className={`w-3.5 h-3.5 ${activeTab === 'backups' ? 'text-sky-400' : 'text-slate-400'}`} />
+            <Archive className={`w-3.5 h-3.5 ${activeTab === 'backups' ? 'text-orange-400' : 'text-orange-400/70'}`} />
             <span>Архиви (Backups)</span>
           </button>
         </div>
@@ -301,7 +300,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <span
             className={`w-2.5 h-2.5 rounded-full ${
               isRunning
-                ? 'bg-sky-400 animate-pulse'
+                ? 'bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]'
                 : isStarting
                 ? 'bg-amber-400 animate-ping'
                 : 'bg-slate-600'

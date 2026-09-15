@@ -62,10 +62,10 @@ export const ServerCard: React.FC<ServerCardProps> = ({
           {/* Status Badge */}
           <div>
             {isRunning && (
-              <span className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-sky-500/15 text-sky-300 border border-sky-400/30 shadow-sm shadow-sky-950/50">
+              <span className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-400/30 shadow-sm shadow-emerald-950/50">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
                 Онлайн
               </span>
@@ -91,11 +91,11 @@ export const ServerCard: React.FC<ServerCardProps> = ({
         {/* Server specs row */}
         <div className="grid grid-cols-2 gap-2 my-3.5 p-3 rounded-xl bg-slate-950/40 border border-white/[0.06] text-xs font-mono">
           <div className="flex items-center gap-2 text-slate-300">
-            <Cpu className="w-3.5 h-3.5 text-sky-400" />
+            <Cpu className="w-3.5 h-3.5 text-purple-400" />
             <span>RAM: <strong className="text-slate-100">{server.allocatedRamGb} GB</strong></span>
           </div>
           <div className="flex items-center gap-2 text-slate-300">
-            <Users className="w-3.5 h-3.5 text-sky-400" />
+            <Users className="w-3.5 h-3.5 text-cyan-400" />
             <span>Играчи: <strong className="text-slate-100">{isRunning ? (server.playerCount || 0) : 0}/{server.maxPlayers || 20}</strong></span>
           </div>
         </div>
@@ -125,7 +125,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
                 onStart(server.id);
               }}
               disabled={isStarting}
-              className="flex-1 py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-sky-950/50 glow-ice cursor-pointer disabled:opacity-50"
+              className="flex-1 py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-950/50 glow-green cursor-pointer disabled:opacity-50"
             >
               <Play className="w-3.5 h-3.5 fill-current" /> Стартирай (1 Клик)
             </button>
@@ -137,9 +137,9 @@ export const ServerCard: React.FC<ServerCardProps> = ({
               onOpenDashboard(server.id);
             }}
             title="Конзола и управление"
-            className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 hover:text-white transition-all border border-white/[0.08] hover:border-sky-400/40 cursor-pointer"
+            className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 hover:text-white transition-all border border-white/[0.08] hover:border-emerald-400/40 cursor-pointer"
           >
-            <Terminal className="w-4 h-4 text-sky-400" />
+            <Terminal className="w-4 h-4 text-emerald-400" />
           </button>
 
           <button
@@ -148,9 +148,9 @@ export const ServerCard: React.FC<ServerCardProps> = ({
               onOpenNetwork(server);
             }}
             title="Връзка и IP за играчите"
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all"
+            className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 hover:text-white transition-all border border-white/[0.08] hover:border-cyan-400/40 cursor-pointer"
           >
-            <Globe className="w-4 h-4 text-emerald-400" />
+            <Globe className="w-4 h-4 text-cyan-400" />
           </button>
         </div>
 
@@ -161,9 +161,9 @@ export const ServerCard: React.FC<ServerCardProps> = ({
               e.stopPropagation();
               onOpenFolder(server.id);
             }}
-            className="flex items-center gap-1 hover:text-slate-200 transition-colors"
+            className="flex items-center gap-1.5 text-slate-400 hover:text-amber-300 transition-colors cursor-pointer"
           >
-            <FolderOpen className="w-3.5 h-3.5" /> Отвори папка
+            <FolderOpen className="w-3.5 h-3.5 text-amber-400" /> Отвори папка
           </button>
           <button
             onClick={(e) => {
@@ -171,7 +171,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
               onDelete(server.id);
             }}
             disabled={isRunning}
-            className="flex items-center gap-1 text-slate-500 hover:text-rose-400 transition-colors disabled:opacity-30"
+            className="flex items-center gap-1 text-slate-500 hover:text-rose-400 transition-colors disabled:opacity-30 cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" /> Изтрий
           </button>

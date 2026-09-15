@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { TitleBar } from './components/TitleBar';
 import { Sidebar } from './components/Sidebar';
 import { LibraryView } from './views/LibraryView';
 import { WizardView } from './views/WizardView';
@@ -255,75 +256,81 @@ export const App: React.FC = () => {
   const activeServer = servers.find((s) => s.id === activeServerId) || servers[0];
 
   return (
-    <div className="flex h-screen bg-[#070C16] text-slate-100 overflow-hidden font-sans relative selection:bg-sky-500/30 selection:text-sky-200">
+    <div className="flex flex-col h-screen w-screen bg-[#060913] text-slate-100 overflow-hidden font-sans relative selection:bg-sky-500/30 selection:text-sky-200">
       {/* Ambient Background Glows for authentic Glassmorphic Refraction */}
       <div className="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] rounded-full bg-sky-600/10 blur-[130px] pointer-events-none z-0" />
       <div className="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] rounded-full bg-blue-700/10 blur-[150px] pointer-events-none z-0" />
       <div className="absolute top-[35%] right-[25%] w-[400px] h-[400px] rounded-full bg-cyan-500/5 blur-[120px] pointer-events-none z-0" />
 
-      {/* Sidebar Navigation */}
-      <Sidebar
-        currentTab={currentTab}
-        onTabChange={setCurrentTab}
-        servers={servers}
-        activeServerId={activeServerId}
-        systemInfo={systemInfo}
-      />
+      {/* Full-width Draggable TitleBar Strip */}
+      <TitleBar activeServer={activeServer} />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {currentTab === 'library' && (
-          <LibraryView
-            servers={servers}
-            onStartServer={handleStartServer}
-            onStopServer={handleStopServer}
-            onOpenDashboard={handleOpenDashboard}
-            onOpenNetwork={(srv) => setNetworkModalServer(srv)}
-            onOpenFolder={handleOpenFolder}
-            onDeleteServer={handleDeleteServer}
-            onNavigateToWizard={() => setCurrentTab('wizard')}
-          />
-        )}
+      {/* App Workspace: Sidebar + Content */}
+      <div className="flex flex-1 overflow-hidden relative z-10">
+        {/* Sidebar Navigation */}
+        <Sidebar
+          currentTab={currentTab}
+          onTabChange={setCurrentTab}
+          servers={servers}
+          activeServerId={activeServerId}
+          systemInfo={systemInfo}
+        />
 
-        {currentTab === 'wizard' && (
-          <WizardView
-            systemInfo={systemInfo}
-            onCancel={() => setCurrentTab('library')}
-            onCreateServer={handleCreateServer}
-            downloadProgress={downloadProgress}
-            isCreating={isCreating}
-          />
-        )}
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {currentTab === 'library' && (
+            <LibraryView
+              servers={servers}
+              onStartServer={handleStartServer}
+              onStopServer={handleStopServer}
+              onOpenDashboard={handleOpenDashboard}
+              onOpenNetwork={(srv) => setNetworkModalServer(srv)}
+              onOpenFolder={handleOpenFolder}
+              onDeleteServer={handleDeleteServer}
+              onNavigateToWizard={() => setCurrentTab('wizard')}
+            />
+          )}
 
-        {currentTab === 'dashboard' && activeServer && (
-          <DashboardView
-            server={activeServer}
-            logs={serverLogs[activeServer.id] || []}
-            players={serverPlayers[activeServer.id] || []}
-            serverStats={serverStats[activeServer.id] || null}
-            systemInfo={systemInfo}
-            onUpdateServer={(updated) => {
-              if (!updated) return;
-              const targetId = updated.id || activeServerId || activeServer.id;
-              setServers((prev) =>
-                prev.map((s) => (s.id === targetId ? { ...s, ...updated, id: targetId } : s))
-              );
-              refreshServers();
-            }}
-            onStartServer={handleStartServer}
-            onStopServer={handleStopServer}
-            onSendCommand={handleSendCommand}
-            onClearLogs={() => {
-              setServerLogs((prev) => ({
-                ...prev,
-                [activeServer.id]: [],
-              }));
-            }}
-            onOpenNetworkModal={() => setNetworkModalServer(activeServer)}
-            onOpenFolder={handleOpenFolder}
-            onBackToLibrary={() => setCurrentTab('library')}
-          />
-        )}
+          {currentTab === 'wizard' && (
+            <WizardView
+              systemInfo={systemInfo}
+              onCancel={() => setCurrentTab('library')}
+              onCreateServer={handleCreateServer}
+              downloadProgress={downloadProgress}
+              isCreating={isCreating}
+            />
+          )}
+
+          {currentTab === 'dashboard' && activeServer && (
+            <DashboardView
+              server={activeServer}
+              logs={serverLogs[activeServer.id] || []}
+              players={serverPlayers[activeServer.id] || []}
+              serverStats={serverStats[activeServer.id] || null}
+              systemInfo={systemInfo}
+              onUpdateServer={(updated) => {
+                if (!updated) return;
+                const targetId = updated.id || activeServerId || activeServer.id;
+                setServers((prev) =>
+                  prev.map((s) => (s.id === targetId ? { ...s, ...updated, id: targetId } : s))
+                );
+                refreshServers();
+              }}
+              onStartServer={handleStartServer}
+              onStopServer={handleStopServer}
+              onSendCommand={handleSendCommand}
+              onClearLogs={() => {
+                setServerLogs((prev) => ({
+                  ...prev,
+                  [activeServer.id]: [],
+                }));
+              }}
+              onOpenNetworkModal={() => setNetworkModalServer(activeServer)}
+              onOpenFolder={handleOpenFolder}
+              onBackToLibrary={() => setCurrentTab('library')}
+            />
+          )}
+        </div>
       </div>
 
       {/* IP / Connection Modal */}

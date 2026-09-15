@@ -171,7 +171,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/[0.08]" style={{ paddingRight: '145px' }}>
+      <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/[0.08]">
         <div className="flex items-center gap-3">
           <button
             onClick={onCancel}
@@ -193,7 +193,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Step 1: Server Name & Software */}
         <section className="space-y-4">
-          <div className="flex items-center gap-2 text-sm font-extrabold text-sky-400 uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-sm font-extrabold text-indigo-400 uppercase tracking-wider">
             <span>Стъпка 1</span> • Име и Тип Сървър
           </div>
 
@@ -205,7 +205,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="напр. Survival с Аверите"
-              className="w-full px-4 py-2.5 rounded-xl glass-input text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-400 transition-colors"
+              className="w-full px-4 py-2.5 rounded-xl glass-input text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-400 transition-colors"
             />
           </div>
 
@@ -217,7 +217,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
                 onClick={() => setSoftware(opt.id)}
                 className={`p-4 rounded-2xl text-left border transition-all duration-200 relative cursor-pointer ${
                   software === opt.id
-                    ? 'bg-sky-500/15 border-sky-400/60 shadow-lg shadow-sky-950/40 glow-ice'
+                    ? 'bg-indigo-500/15 border-indigo-400/60 shadow-lg shadow-indigo-950/40 glow-ice'
                     : 'glass-card hover:border-white/[0.15]'
                 }`}
               >
@@ -226,7 +226,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
                   <span
                     className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       software === opt.id
-                        ? 'bg-sky-500/20 text-sky-200 border border-sky-400/40'
+                        ? 'bg-indigo-500/20 text-indigo-200 border border-indigo-400/40'
                         : 'bg-white/[0.04] text-slate-400 border border-white/[0.08]'
                     }`}
                   >
@@ -242,12 +242,12 @@ export const WizardView: React.FC<WizardViewProps> = ({
         {/* Step 2: Minecraft Version (Loaded live via API) */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-extrabold text-sky-400 uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-sm font-extrabold text-cyan-400 uppercase tracking-wider">
               <span>Стъпка 2</span> • Версия на Minecraft (Онлайн API)
             </div>
             {loadingVersions && (
               <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-400" /> Зареждане на версии на живо...
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" /> Зареждане на версии на живо...
               </span>
             )}
           </div>
@@ -255,7 +255,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
           <div className="p-4 rounded-2xl glass-card space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-slate-300">
-                Избери версия за <strong className="text-sky-400">{software.toUpperCase()}</strong>:
+                Избери версия за <strong className="text-cyan-400">{software.toUpperCase()}</strong>:
               </label>
               <span className="text-[11px] text-slate-500">Дърпа се директно от официалното API</span>
             </div>
@@ -264,7 +264,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
               value={version}
               onChange={(e) => setVersion(e.target.value)}
               disabled={loadingVersions}
-              className="w-full px-4 py-2.5 rounded-xl glass-input text-sm text-slate-100 focus:outline-none focus:border-sky-400 font-mono transition-colors cursor-pointer"
+              className="w-full px-4 py-2.5 rounded-xl glass-input text-sm text-slate-100 focus:outline-none focus:border-cyan-400 font-mono transition-colors cursor-pointer"
             >
               {versionsList.map((v) => (
                 <option key={v.version} value={v.version}>
@@ -277,7 +277,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
 
         {/* Step 3: RAM Slider & Intelligent Capacity Advisor */}
         <section className="space-y-4">
-          <div className="flex items-center gap-2 text-sm font-extrabold text-sky-400 uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-sm font-extrabold text-purple-400 uppercase tracking-wider">
             <span>Стъпка 3</span> • RAM Памет & Капацитет за Играчи
           </div>
 
@@ -349,8 +349,8 @@ export const WizardView: React.FC<WizardViewProps> = ({
 
           {/* Optional Settings (Port, MOTD) */}
           <div className="p-5 rounded-2xl glass-card space-y-4">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
-              <Settings className="w-4 h-4 text-sky-400" /> Допълнителни мрежови настройки
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-400">
+              <Settings className="w-4 h-4 text-amber-400" /> Допълнителни мрежови настройки
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -360,7 +360,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
                   type="number"
                   value={port}
                   onChange={(e) => setPort(parseInt(e.target.value, 10) || 25565)}
-                  className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 font-mono focus:outline-none focus:border-sky-400"
+                  className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 font-mono focus:outline-none focus:border-amber-400"
                 />
               </div>
               <div className="space-y-1">
@@ -369,7 +369,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
                   type="text"
                   value={motd}
                   onChange={(e) => setMotd(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 focus:outline-none focus:border-sky-400"
+                  className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 focus:outline-none focus:border-amber-400"
                 />
               </div>
             </div>
@@ -389,7 +389,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
           <button
             type="submit"
             disabled={isCreating || loadingVersions}
-            className="flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-sm transition-all shadow-xl shadow-sky-950/60 glow-ice cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-sm transition-all shadow-xl shadow-emerald-950/60 glow-green cursor-pointer disabled:opacity-50"
           >
             <Sparkles className="w-4 h-4" />
             Създай и Изтегли Сървъра (1 Клик)

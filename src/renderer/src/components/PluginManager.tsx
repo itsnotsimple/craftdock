@@ -322,7 +322,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-white/[0.08] gap-3">
         <div>
           <h3 className="text-lg font-black text-slate-100 flex items-center gap-2">
-            <Package className="w-5 h-5 text-sky-400" />
+            <Package className="w-5 h-5 text-purple-400" />
             Плъгини & Ресурс Пакети
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -337,7 +337,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-card hover:bg-white/[0.08] text-slate-200 text-xs font-semibold transition-all border border-white/[0.08] shadow-sm cursor-pointer"
             title="Отвори папка за .jar плъгини"
           >
-            <FolderOpen className="w-4 h-4 text-sky-400" />
+            <FolderOpen className="w-4 h-4 text-purple-400" />
             <span>Папка plugins</span>
           </button>
 
@@ -347,7 +347,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-card hover:bg-white/[0.08] text-slate-200 text-xs font-semibold transition-all border border-white/[0.08] shadow-sm cursor-pointer"
             title="Отвори папка за локални ресурс пакети"
           >
-            <FolderOpen className="w-4 h-4 text-sky-400" />
+            <FolderOpen className="w-4 h-4 text-pink-400" />
             <span>Папка resourcepacks</span>
           </button>
         </div>
@@ -360,11 +360,11 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           onClick={() => setSubTab('plugins')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             subTab === 'plugins'
-              ? 'bg-sky-500/20 text-sky-200 border border-sky-400/40 shadow-sm'
+              ? 'bg-purple-500/20 text-purple-200 border border-purple-400/40 shadow-sm shadow-purple-950/40'
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Box className="w-3.5 h-3.5" />
+          <Box className={`w-3.5 h-3.5 ${subTab === 'plugins' ? 'text-purple-400' : 'text-slate-400'}`} />
           <span>Сървърни Плъгини ({installed.length})</span>
         </button>
 
@@ -373,16 +373,16 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           onClick={() => setSubTab('resourcepacks')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             subTab === 'resourcepacks'
-              ? 'bg-sky-500/20 text-sky-200 border border-sky-400/40 shadow-sm'
+              ? 'bg-pink-500/20 text-pink-200 border border-pink-400/40 shadow-sm shadow-pink-950/40'
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Palette className="w-3.5 h-3.5" />
+          <Palette className={`w-3.5 h-3.5 ${subTab === 'resourcepacks' ? 'text-pink-400' : 'text-slate-400'}`} />
           <span>Сървърни Ресурс Пакети ({savedPacks.length})</span>
           {activePackUrl && (
             <span className="flex h-2 w-2 relative ml-1">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-pink-500"></span>
             </span>
           )}
         </button>
@@ -390,8 +390,8 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
 
       {/* Feedback Banner */}
       {saveFeedback && (
-        <div className="p-3 rounded-xl bg-sky-950/40 border border-sky-400/30 text-sky-200 text-xs font-bold flex items-center gap-2 backdrop-blur-xl animate-in fade-in">
-          <Check className="w-4 h-4 text-sky-400 shrink-0" />
+        <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-400/30 text-purple-200 text-xs font-bold flex items-center gap-2 backdrop-blur-xl animate-in fade-in">
+          <Check className="w-4 h-4 text-purple-400 shrink-0" />
           <span>{saveFeedback}</span>
         </div>
       )}
@@ -459,14 +459,14 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                         <span className="text-[11px] text-slate-500 font-mono">{plugin.fileName}</span>
 
                         {installedState ? (
-                          <span className="flex items-center gap-1.5 text-xs font-bold text-sky-400">
-                            <CheckCircle2 className="w-4 h-4" /> Инсталиран
+                          <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Инсталиран
                           </span>
                         ) : (
                           <button
                             onClick={() => handleInstall(plugin)}
                             disabled={isProcessing}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-xs transition-all shadow-md shadow-sky-950/40 glow-ice disabled:opacity-50 cursor-pointer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs transition-all shadow-md shadow-purple-950/40 glow-ice disabled:opacity-50 cursor-pointer"
                           >
                             <Download className="w-3.5 h-3.5" />
                             {isProcessing ? 'Сваляне...' : 'Инсталирай (1 Клик)'}
@@ -639,7 +639,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           <div
             className={`p-5 rounded-2xl border transition-all ${
               activePackUrl
-                ? 'bg-gradient-to-r from-sky-950/40 via-slate-950/70 to-slate-950/70 border-sky-400/40 shadow-lg shadow-sky-950/30 backdrop-blur-xl'
+                ? 'bg-gradient-to-r from-pink-950/40 via-slate-950/70 to-slate-950/70 border-pink-400/40 shadow-lg shadow-pink-950/30 backdrop-blur-xl'
                 : 'glass-card'
             }`}
           >
@@ -647,10 +647,10 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
               <div className="flex items-center gap-3">
                 <div
                   className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    activePackUrl ? 'bg-sky-500/20 text-sky-300' : 'bg-white/[0.04] text-slate-400'
+                    activePackUrl ? 'bg-pink-500/20 text-pink-300' : 'bg-white/[0.04] text-slate-400'
                   }`}
                 >
-                  <Palette className="w-5 h-5" />
+                  <Palette className="w-5 h-5 text-pink-400" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -658,7 +658,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                       {activePackUrl ? '🟢 Активен Сървърен Ресурс Пакет' : '⚪ Няма активен ресурс пакет'}
                     </h4>
                     {activePackUrl && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-bold border border-sky-400/30 font-mono">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 font-bold border border-pink-400/30 font-mono">
                         Записан в server.properties
                       </span>
                     )}
@@ -679,7 +679,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-card hover:bg-white/[0.08] text-slate-200 text-xs font-semibold border border-white/[0.08] transition-all cursor-pointer"
                     title="Свали и провери файла"
                   >
-                    <Download className="w-3.5 h-3.5 text-sky-400" />
+                    <Download className="w-3.5 h-3.5 text-pink-400" />
                     <span>Тествай линка</span>
                   </button>
 
@@ -708,7 +708,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
 
                 <div className="p-3 rounded-xl glass-card">
                   <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Задължителен за играчите:</span>
-                  <span className={`font-bold text-[11px] ${activePackRequired ? 'text-amber-400' : 'text-sky-400'}`}>
+                  <span className={`font-bold text-[11px] ${activePackRequired ? 'text-amber-400' : 'text-pink-300'}`}>
                     {activePackRequired ? '🔒 ДА (Задължителен)' : '🟢 НЕ (По избор на играча)'}
                   </span>
                 </div>
@@ -735,7 +735,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <FileArchive className="w-3.5 h-3.5 text-sky-400" />
+                  <FileArchive className="w-3.5 h-3.5 text-pink-400" />
                   Запазени Ресурс Пакети в Библиотеката ({savedPacks.length})
                 </span>
                 <p className="text-[11px] text-slate-400 mt-0.5">
@@ -762,19 +762,19 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                       key={pack.id}
                       className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
                         isActive
-                          ? 'glass-card border-sky-400/60 shadow-md shadow-sky-950/40 ring-1 ring-sky-400/30'
+                          ? 'glass-card border-pink-400/60 shadow-md shadow-pink-950/40 ring-1 ring-pink-400/30'
                           : 'glass-card hover:border-white/[0.15]'
                       }`}
                     >
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <Palette className={`w-4 h-4 ${isActive ? 'text-sky-400' : 'text-slate-400'}`} />
+                            <Palette className={`w-4 h-4 ${isActive ? 'text-pink-400' : 'text-slate-400'}`} />
                             <span className="font-extrabold text-sm text-slate-100">{pack.name}</span>
                           </div>
 
                           {isActive ? (
-                            <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/40 font-bold flex items-center gap-1">
+                            <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-400/40 font-bold flex items-center gap-1">
                               <CheckCircle2 className="w-3 h-3" /> Активен в момента
                             </span>
                           ) : (
@@ -822,7 +822,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                         </div>
 
                         {isActive ? (
-                          <span className="text-xs font-bold text-sky-400 flex items-center gap-1">
+                          <span className="text-xs font-bold text-pink-400 flex items-center gap-1">
                             <Check className="w-3.5 h-3.5" /> Зареден на сървъра
                           </span>
                         ) : (
@@ -830,7 +830,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                             type="button"
                             onClick={() => handleActivatePack(pack)}
                             disabled={savingAction}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold text-xs transition-all shadow-md shadow-sky-950/40 cursor-pointer disabled:opacity-50 glow-ice"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-extrabold text-xs transition-all shadow-md shadow-pink-950/40 cursor-pointer disabled:opacity-50"
                           >
                             <Radio className="w-3 h-3" />
                             <span>Активирай на този сървър</span>
@@ -851,7 +851,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           >
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
               <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Plus className="w-4 h-4 text-sky-400" />
+                <Plus className="w-4 h-4 text-pink-400" />
                 Добави нов ресурс пакет чрез линк
               </span>
               <span className="text-[11px] text-slate-500">
@@ -870,7 +870,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                   value={newPack.name}
                   onChange={(e) => setNewPack({ ...newPack, name: e.target.value })}
                   placeholder="напр. Faithful 32x, Bare Bones или PvP Pack"
-                  className="w-full px-3.5 py-2 rounded-xl glass-input text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-sky-400"
+                  className="w-full px-3.5 py-2 rounded-xl glass-input text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-pink-400"
                 />
               </div>
 
@@ -878,7 +878,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
                   <span>Директен линк за сваляне на .zip файла *</span>
-                  <span className="text-[10px] text-sky-400 font-mono">.zip URL</span>
+                  <span className="text-[10px] text-pink-400 font-mono">.zip URL</span>
                 </label>
                 <input
                   type="url"
@@ -886,7 +886,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                   value={newPack.url}
                   onChange={(e) => setNewPack({ ...newPack, url: e.target.value })}
                   placeholder="https://download.mc-packs.net/pack/...zip"
-                  className="w-full px-3.5 py-2 rounded-xl glass-input text-xs text-slate-200 font-mono placeholder:text-slate-600 focus:outline-none focus:border-sky-400"
+                  className="w-full px-3.5 py-2 rounded-xl glass-input text-xs text-slate-200 font-mono placeholder:text-slate-600 focus:outline-none focus:border-pink-400"
                 />
               </div>
             </div>
@@ -900,7 +900,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                   onClick={() => setNewPack({ ...newPack, required: !newPack.required })}
                   className={`w-full py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer text-center ${
                     newPack.required
-                      ? 'bg-sky-500/20 border-sky-400/50 text-sky-200'
+                      ? 'bg-pink-500/20 border-pink-400/50 text-pink-200'
                       : 'bg-white/[0.03] border-white/[0.08] text-slate-400 hover:text-slate-200'
                   }`}
                 >
@@ -916,7 +916,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                   value={newPack.prompt}
                   onChange={(e) => setNewPack({ ...newPack, prompt: e.target.value })}
                   placeholder="Официален текстурен пакет за сървъра"
-                  className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 focus:outline-none focus:border-sky-400"
+                  className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 focus:outline-none focus:border-pink-400"
                 />
               </div>
 
@@ -928,7 +928,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                   value={newPack.sha1}
                   onChange={(e) => setNewPack({ ...newPack, sha1: e.target.value })}
                   placeholder="40-знаков sha1 код"
-                  className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 font-mono focus:outline-none focus:border-sky-400"
+                  className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 font-mono focus:outline-none focus:border-pink-400"
                 />
               </div>
             </div>
@@ -941,7 +941,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
               <button
                 type="submit"
                 disabled={savingAction}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-xs transition-all shadow-lg shadow-sky-950/50 glow-ice cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-black text-xs transition-all shadow-lg shadow-pink-950/50 cursor-pointer disabled:opacity-50"
               >
                 <Save className="w-4 h-4" />
                 <span>Запази и Активирай в Сървъра</span>

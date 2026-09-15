@@ -275,8 +275,8 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
           {/* Method 2: Public Internet IP */}
           <div className="p-4 rounded-xl glass-card space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Globe className="w-3.5 h-3.5" /> Директен публичен IP
+              <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-cyan-400" /> Директен публичен IP
               </span>
               <span className="text-[11px] text-slate-400">Изисква Port Forward</span>
             </div>
@@ -292,7 +292,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
               >
                 {copiedType === 'public' ? (
                   <>
-                    <Check className="w-3.5 h-3.5 text-sky-400" /> Копирано!
+                    <Check className="w-3.5 h-3.5 text-cyan-400" /> Копирано!
                   </>
                 ) : (
                   <>
@@ -309,8 +309,8 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
           {/* Method 3: Local LAN */}
           <div className="p-4 rounded-xl glass-card space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Wifi className="w-3.5 h-3.5" /> За игра в една стая (LAN / Wi-Fi)
+              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Wifi className="w-3.5 h-3.5 text-emerald-400" /> За игра в една стая (LAN / Wi-Fi)
               </span>
               <span className="text-[11px] text-slate-400">Еднаква мрежа</span>
             </div>
@@ -325,7 +325,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
               >
                 {copiedType === 'local' ? (
                   <>
-                    <Check className="w-3.5 h-3.5 text-sky-400" /> Копирано!
+                    <Check className="w-3.5 h-3.5 text-emerald-400" /> Копирано!
                   </>
                 ) : (
                   <>

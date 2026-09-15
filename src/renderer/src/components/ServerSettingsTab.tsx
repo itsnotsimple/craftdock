@@ -163,7 +163,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
       <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
         <div>
           <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-            <Settings className="w-5 h-5 text-sky-400" />
+            <Settings className="w-5 h-5 text-amber-400" />
             Настройки на Света (server.properties)
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -173,11 +173,11 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
 
         <button
           type="submit"
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-xs transition-all shadow-lg shadow-sky-950/50 glow-ice cursor-pointer"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs transition-all shadow-lg shadow-indigo-950/50 glow-ice cursor-pointer"
         >
           {saved ? (
             <>
-              <Check className="w-4 h-4" /> Запазено успешно!
+              <Check className="w-4 h-4 text-emerald-300" /> Запазено успешно!
             </>
           ) : (
             <>
@@ -191,7 +191,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
       <div className="p-5 rounded-2xl bg-slate-900/40 border border-white/[0.08] backdrop-blur-xl space-y-4 shadow-lg">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-            <ImageIcon className="w-4 h-4 text-sky-400" />
+            <ImageIcon className="w-4 h-4 text-cyan-400" />
             Снимка на Сървъра (Server Icon & Меню Изглед)
           </span>
           <span className="text-[11px] text-slate-400">
@@ -205,7 +205,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
             {/* 64x64 Icon Box */}
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="w-16 h-16 rounded-xl bg-slate-950 border border-white/[0.15] hover:border-sky-400 flex items-center justify-center overflow-hidden shrink-0 shadow-inner group cursor-pointer relative transition-all"
+              className="w-16 h-16 rounded-xl bg-slate-950 border border-white/[0.15] hover:border-cyan-400 flex items-center justify-center overflow-hidden shrink-0 shadow-inner group cursor-pointer relative transition-all"
               title="Кликни, за да качиш снимка"
             >
               {serverIcon ? (
@@ -215,14 +215,14 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
                   className="w-full h-full object-cover [image-rendering:pixelated]"
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center text-slate-500 group-hover:text-sky-400 transition-colors">
+                <div className="flex flex-col items-center justify-center text-slate-500 group-hover:text-cyan-400 transition-colors">
                   <ImageIcon className="w-6 h-6" />
                   <span className="text-[9px] font-mono mt-0.5">64x64</span>
                 </div>
               )}
 
               {/* Hover overlay */}
-              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-sky-300 text-[10px] font-bold transition-opacity">
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-cyan-300 text-[10px] font-bold transition-opacity">
                 Качи
               </div>
             </div>
@@ -233,7 +233,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
                 <span className="font-bold text-sm text-slate-100 font-sans tracking-wide">
                   {server.name}
                 </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white/[0.04] text-sky-300 border border-white/[0.08]">
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white/[0.04] text-cyan-300 border border-white/[0.08]">
                   {server.version}
                 </span>
               </div>
@@ -253,11 +253,11 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
             </div>
 
             {/* 5-bar Minecraft signal icon */}
-            <div className="flex items-end gap-0.5 h-4 text-sky-400" title="Пинг: Отличен">
-              <span className="w-1 h-1.5 bg-sky-400 rounded-xs"></span>
-              <span className="w-1 h-2.5 bg-sky-400 rounded-xs"></span>
-              <span className="w-1 h-3.5 bg-sky-400 rounded-xs"></span>
-              <span className="w-1 h-4 bg-sky-400 rounded-xs"></span>
+            <div className="flex items-end gap-0.5 h-4 text-emerald-400" title="Пинг: Отличен">
+              <span className="w-1 h-1.5 bg-emerald-400 rounded-xs"></span>
+              <span className="w-1 h-2.5 bg-emerald-400 rounded-xs"></span>
+              <span className="w-1 h-3.5 bg-emerald-400 rounded-xs"></span>
+              <span className="w-1 h-4 bg-emerald-400 rounded-xs"></span>
             </div>
 
             {/* Action Buttons */}
@@ -265,7 +265,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 text-xs font-semibold border border-sky-400/30 transition-all cursor-pointer shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 text-xs font-semibold border border-cyan-400/30 transition-all cursor-pointer shadow-sm"
               >
                 <Upload className="w-3.5 h-3.5" />
                 <span>Качи Снимка</span>
@@ -294,7 +294,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
       <div className="p-4 rounded-2xl glass-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="w-4 h-4 text-sky-400" />
+            <Sparkles className="w-4 h-4 text-emerald-400" />
             <span className="text-sm font-bold text-slate-100">Пиратски акаунти (TLauncher / Неофициален Minecraft)</span>
           </div>
           <p className="text-xs text-slate-400 leading-relaxed">
@@ -309,7 +309,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
           onClick={() => setSettings({ ...settings, onlineMode: !settings.onlineMode })}
           className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all border shrink-0 cursor-pointer ${
             !settings.onlineMode
-              ? 'bg-sky-500/20 border-sky-400/50 text-sky-200 glow-ice'
+              ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-200 glow-green'
               : 'bg-white/[0.03] border-white/[0.08] text-slate-400 hover:text-slate-200 hover:border-white/[0.15]'
           }`}
         >
@@ -367,7 +367,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <span className="text-sm font-bold text-slate-200 flex items-center gap-2">
-              <Shield className="w-4 h-4 text-sky-400" />
+              <Shield className="w-4 h-4 text-amber-400" />
               Защита на Спауна (Spawn Protection)
             </span>
             <p className="text-xs text-slate-400">
@@ -387,7 +387,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
                   spawnProtection: Math.max(0, parseInt(e.target.value, 10) || 0),
                 })
               }
-              className="w-20 px-3 py-1.5 rounded-xl glass-input text-sm font-black text-sky-400 text-center font-mono focus:outline-none focus:border-sky-400"
+              className="w-20 px-3 py-1.5 rounded-xl glass-input text-sm font-black text-amber-400 text-center font-mono focus:outline-none focus:border-amber-400"
             />
             <span className="text-xs text-slate-400 font-bold">блока</span>
           </div>
@@ -407,7 +407,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
               onClick={() => setSettings({ ...settings, spawnProtection: preset.value })}
               className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all border cursor-pointer ${
                 settings.spawnProtection === preset.value
-                  ? 'bg-sky-500/20 border-sky-400/50 text-sky-200'
+                  ? 'bg-amber-500/20 border-amber-400/50 text-amber-200'
                   : 'bg-white/[0.03] border-white/[0.08] text-slate-400 hover:text-slate-200 hover:border-white/[0.15]'
               }`}
             >
@@ -517,7 +517,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
             className={`w-full px-3 py-2 rounded-lg glass-input text-xs text-slate-200 focus:outline-none cursor-pointer ${
               settings.hardcore
                 ? 'border-rose-500/40 text-rose-300 cursor-not-allowed opacity-80'
-                : 'focus:border-sky-400'
+                : 'focus:border-amber-400'
             }`}
           >
             <option value="peaceful">Мирна (Peaceful - без мобове)</option>
@@ -533,7 +533,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
           <select
             value={settings.gamemode}
             onChange={(e) => setSettings({ ...settings, gamemode: e.target.value as any })}
-            className="w-full px-3 py-2 rounded-lg glass-input text-xs text-slate-200 focus:outline-none focus:border-sky-400 cursor-pointer"
+            className="w-full px-3 py-2 rounded-lg glass-input text-xs text-slate-200 focus:outline-none focus:border-purple-400 cursor-pointer"
           >
             <option value="survival">Оцеляване (Survival)</option>
             <option value="creative">Творчески (Creative)</option>
@@ -567,9 +567,9 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
         <div className="p-4 rounded-xl glass-card space-y-2.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-              <Eye className="w-4 h-4 text-sky-400" /> Видимост (View Distance)
+              <Eye className="w-4 h-4 text-teal-400" /> Видимост (View Distance)
             </span>
-            <span className="text-xs font-bold text-sky-400 font-mono">{settings.viewDistance} чанка</span>
+            <span className="text-xs font-bold text-teal-400 font-mono">{settings.viewDistance} чанка</span>
           </div>
           <input
             type="range"
@@ -578,7 +578,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
             step="1"
             value={settings.viewDistance}
             onChange={(e) => setSettings({ ...settings, viewDistance: parseInt(e.target.value, 10) })}
-            className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-400"
+            className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-teal-400"
           />
           <div className="flex justify-between text-[10px] text-slate-500 font-mono">
             <span>4 (Минимум)</span>
@@ -592,13 +592,13 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
       {/* MOTD */}
       <div className="space-y-1.5">
         <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-          <FileText className="w-4 h-4 text-slate-400" /> MOTD Описание (Текстът под сървъра в Minecraft менюто)
+          <FileText className="w-4 h-4 text-indigo-400" /> MOTD Описание (Текстът под сървъра в Minecraft менюто)
         </label>
         <input
           type="text"
           value={settings.motd}
           onChange={(e) => setSettings({ ...settings, motd: e.target.value })}
-          className="w-full px-4 py-2 rounded-xl glass-input text-xs text-slate-200 focus:outline-none focus:border-sky-400"
+          className="w-full px-4 py-2 rounded-xl glass-input text-xs text-slate-200 focus:outline-none focus:border-indigo-400"
         />
       </div>
 
