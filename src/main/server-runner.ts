@@ -155,7 +155,7 @@ export function autoAcceptEula(serverDir: string) {
   fs.writeFileSync(eulaPath, content, 'utf-8');
 }
 
-export function updateServerProperties(serverDir: string, port: number, motd?: string) {
+export function updateServerProperties(serverDir: string, port: number, motd?: string, hardcore?: boolean) {
   const propPath = path.join(serverDir, 'server.properties');
   let content = '';
   if (fs.existsSync(propPath)) {
@@ -164,9 +164,23 @@ export function updateServerProperties(serverDir: string, port: number, motd?: s
     if (motd) {
       content = content.replace(/^motd=.*$/m, `motd=${motd}`);
     }
+    if (hardcore !== undefined) {
+      if (content.match(/^hardcore=.*$/m)) {
+        content = content.replace(/^hardcore=.*$/m, `hardcore=${hardcore}`);
+      } else {
+        content += `\nhardcore=${hardcore}`;
+      }
+      if (hardcore) {
+        if (content.match(/^difficulty=.*$/m)) {
+          content = content.replace(/^difficulty=.*$/m, `difficulty=hard`);
+        } else {
+          content += `\ndifficulty=hard`;
+        }
+      }
+    }
   } else {
-    // Default to online-mode=false (Cracked friendly) or true, let's keep false as an option or true with easy toggle
-    content = `server-port=${port}\nmotd=${motd || 'CraftDock Minecraft Server'}\nquery.port=${port}\nonline-mode=false\nmax-players=20\n`;
+    // Default to online-mode=false (Cracked friendly) or true
+    content = `server-port=${port}\nmotd=${motd || 'CraftDock Minecraft Server'}\nquery.port=${port}\nonline-mode=false\nmax-players=20\nhardcore=${hardcore ?? false}\ndifficulty=${hardcore ? 'hard' : 'normal'}\n`;
   }
   fs.writeFileSync(propPath, content, 'utf-8');
 }

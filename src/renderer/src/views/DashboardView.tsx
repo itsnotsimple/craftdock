@@ -135,29 +135,47 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-950">
       {/* Top Bar Header */}
       <header
-        className="px-6 py-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between shrink-0"
+        className="px-6 py-4 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 flex items-center justify-between shrink-0 relative z-10"
         style={{ paddingRight: '145px' }}
       >
         <div className="flex items-center gap-4">
           <button
             onClick={onBackToLibrary}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-all"
+            className="p-2.5 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-900 border border-slate-800/80 hover:border-slate-700 transition-all cursor-pointer group"
             title="Назад към списъка със сървъри"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
           </button>
 
           <div>
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-3">
+              {/* Pulsing Status Beacon */}
+              <div className="flex items-center justify-center">
+                {isRunning ? (
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border border-emerald-300"></span>
+                  </span>
+                ) : isStarting ? (
+                  <span className="w-3 h-3 rounded-full bg-amber-400 animate-ping" />
+                ) : (
+                  <span className="w-3 h-3 rounded-full bg-slate-700" />
+                )}
+              </div>
+
               <h2 className="text-xl font-black text-slate-100 tracking-tight">{server.name}</h2>
-              <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-slate-800 text-slate-300 border border-slate-700 uppercase">
-                v{server.version} ({server.software})
+              <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-slate-900 text-emerald-400 border border-emerald-500/30 uppercase font-mono tracking-wider shadow-xs">
+                v{server.version} • {server.software}
               </span>
             </div>
-            <div className="flex items-center gap-3 text-xs text-slate-400 font-mono mt-0.5">
-              <span>Порт: :{server.port}</span>
-              <span>•</span>
-              <span>Заделен RAM: {server.allocatedRamGb} GB</span>
+            <div className="flex items-center gap-3 text-xs text-slate-400 font-mono mt-1">
+              <span className="flex items-center gap-1 text-slate-300">
+                <span className="text-slate-500">Порт:</span> :{server.port}
+              </span>
+              <span className="text-slate-600">•</span>
+              <span className="flex items-center gap-1 text-slate-300">
+                <span className="text-slate-500">Заделен RAM:</span> {server.allocatedRamGb} GB
+              </span>
             </div>
           </div>
         </div>
@@ -166,15 +184,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="flex items-center gap-2.5">
           <button
             onClick={onOpenNetworkModal}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all border border-slate-700"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 text-xs font-bold transition-all border border-slate-700/80 hover:border-cyan-500/50 shadow-sm cursor-pointer group"
           >
-            <Globe className="w-4 h-4 text-emerald-400" />
+            <Globe className="w-4 h-4 text-cyan-400 transition-transform group-hover:rotate-12" />
             <span>IP за Приятели</span>
           </button>
 
           <button
             onClick={() => onOpenFolder(server.id)}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700"
+            className="p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-slate-100 transition-all border border-slate-700/80 hover:border-slate-600 cursor-pointer"
             title="Отвори папката на сървъра"
           >
             <FolderOpen className="w-4 h-4" />
@@ -184,16 +202,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <button
               onClick={() => onStopServer(server.id)}
               disabled={isStopping}
-              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-all shadow-md shadow-rose-950/50"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-black text-xs transition-all shadow-lg shadow-rose-950/60 glow-red cursor-pointer disabled:opacity-50"
             >
               <Square className="w-3.5 h-3.5 fill-current" />
-              <span>{isStopping ? 'Спира...' : 'Спри'}</span>
+              <span>{isStopping ? 'Спира...' : 'Спри Сървъра'}</span>
             </button>
           ) : (
             <button
               onClick={() => onStartServer(server.id)}
               disabled={isStarting}
-              className="flex items-center gap-2 px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs transition-all shadow-lg shadow-emerald-950/60 glow-green"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs transition-all shadow-lg shadow-emerald-950/60 glow-emerald cursor-pointer disabled:opacity-50"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               <span>{isStarting ? 'Стартира...' : 'Стартирай (1 Клик)'}</span>
@@ -203,72 +221,78 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </header>
 
       {/* Navigation Tabs */}
-      <div className="px-6 py-2 bg-slate-900/60 border-b border-slate-800 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-1.5">
+      <div className="px-6 py-2 bg-slate-950/60 border-b border-slate-800/80 flex items-center justify-between shrink-0 backdrop-blur-md">
+        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
           <button
             onClick={() => setActiveTab('console')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'console'
-                ? 'bg-slate-800 text-emerald-400 border border-slate-700 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-slate-900 text-cyan-300 border border-cyan-500/40 shadow-sm shadow-cyan-950/50'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
             }`}
           >
-            <TerminalIcon className="w-3.5 h-3.5" /> Конзола
+            <TerminalIcon className={`w-3.5 h-3.5 ${activeTab === 'console' ? 'text-cyan-400' : 'text-slate-400'}`} />
+            <span>Конзола</span>
           </button>
 
           <button
             onClick={() => setActiveTab('plugins')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'plugins'
-                ? 'bg-slate-800 text-emerald-400 border border-slate-700 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-slate-900 text-pink-300 border border-pink-500/40 shadow-sm shadow-pink-950/50'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
             }`}
           >
-            <Package className="w-3.5 h-3.5 text-pink-400" /> Плъгини & Ресурс Пакети
+            <Package className={`w-3.5 h-3.5 ${activeTab === 'plugins' ? 'text-pink-400' : 'text-slate-400'}`} />
+            <span>Плъгини & Ресурс Пакети</span>
           </button>
 
           <button
             onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'settings'
-                ? 'bg-slate-800 text-emerald-400 border border-slate-700 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-slate-900 text-emerald-300 border border-emerald-500/40 shadow-sm shadow-emerald-950/50'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
             }`}
           >
-            <Settings className="w-3.5 h-3.5" /> Настройки на Света
+            <Settings className={`w-3.5 h-3.5 ${activeTab === 'settings' ? 'text-emerald-400' : 'text-slate-400'}`} />
+            <span>Настройки на Света</span>
           </button>
 
           <button
             onClick={() => setActiveTab('players')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'players'
-                ? 'bg-slate-800 text-emerald-400 border border-slate-700 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-slate-900 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-950/50'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
             }`}
           >
-            <Users className="w-3.5 h-3.5" /> Играчи & Whitelist ({players.length})
+            <Users className={`w-3.5 h-3.5 ${activeTab === 'players' ? 'text-amber-400' : 'text-slate-400'}`} />
+            <span>Играчи & Whitelist ({players.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('resources')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'resources'
-                ? 'bg-slate-800 text-emerald-400 border border-slate-700 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-slate-900 text-indigo-300 border border-indigo-500/40 shadow-sm shadow-indigo-950/50'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
             }`}
           >
-            <Activity className="w-3.5 h-3.5" /> Ресурси & Хардуер
+            <Activity className={`w-3.5 h-3.5 ${activeTab === 'resources' ? 'text-indigo-400' : 'text-slate-400'}`} />
+            <span>Ресурси & Хардуер</span>
           </button>
 
           <button
             onClick={() => setActiveTab('backups')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'backups'
-                ? 'bg-slate-800 text-emerald-400 border border-slate-700 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-slate-900 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-950/50'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
             }`}
           >
-            <Archive className="w-3.5 h-3.5" /> Резервни копия
+            <Archive className={`w-3.5 h-3.5 ${activeTab === 'backups' ? 'text-purple-400' : 'text-slate-400'}`} />
+            <span>Архиви (Backups)</span>
           </button>
         </div>
 

@@ -31,20 +31,31 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
       {/* Top Banner / Header */}
       <div className="flex items-center justify-between mb-8" style={{ paddingRight: '145px' }}>
         <div>
-          <h2 className="text-2xl font-black text-slate-100 tracking-tight flex items-center gap-2.5">
-            Запазени Сървъри
-            <span className="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 font-bold">
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-black text-slate-100 tracking-tight flex items-center gap-2.5">
+              Моите Сървъри
+            </h2>
+            <span className="text-xs px-3 py-1 rounded-full bg-slate-900 text-slate-300 font-bold border border-slate-800 font-mono">
               {servers.length} общо
             </span>
-          </h2>
-          <p className="text-sm text-slate-400 mt-1">
+            {runningCount > 0 && (
+              <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                {runningCount} активен
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-slate-400 mt-1.5">
             Управлявай твоите лични домашни Minecraft светове без месечни такси и без лаг
           </p>
         </div>
 
         <button
           onClick={onNavigateToWizard}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-sm transition-all shadow-lg shadow-emerald-950/50 glow-green"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-sm transition-all shadow-xl shadow-emerald-950/60 glow-emerald cursor-pointer"
         >
           <PlusCircle className="w-4 h-4" /> Създай Нов Сървър
         </button>

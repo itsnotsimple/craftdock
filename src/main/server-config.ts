@@ -15,6 +15,7 @@ export interface ServerProperties {
   maxPlayers: number;
   motd: string;
   spawnProtection: number;
+  hardcore?: boolean;
   resourcePack?: string;
   resourcePackSha1?: string;
   requireResourcePack?: boolean;
@@ -137,6 +138,7 @@ export function readServerProperties(serverDir: string): ServerProperties {
     maxPlayers: parseInt(map['max-players'] || '20', 10),
     motd: map['motd'] || defaults.motd,
     spawnProtection: parseInt(map['spawn-protection'] || '16', 10),
+    hardcore: map['hardcore'] === 'true',
     resourcePack: map['resource-pack'] || '',
     resourcePackSha1: map['resource-pack-sha1'] || '',
     requireResourcePack: map['require-resource-pack'] === 'true',
@@ -163,7 +165,13 @@ export function writeServerProperties(serverDir: string, props: Partial<ServerPr
     map['white-list'] = String(props.whiteList);
     map['enforce-whitelist'] = String(props.whiteList);
   }
-  if (props.difficulty !== undefined) map['difficulty'] = String(props.difficulty);
+  if (props.hardcore !== undefined) {
+    map['hardcore'] = String(props.hardcore);
+    if (props.hardcore) {
+      map['difficulty'] = 'hard';
+    }
+  }
+  if (props.difficulty !== undefined && !props.hardcore) map['difficulty'] = String(props.difficulty);
   if (props.gamemode !== undefined) map['gamemode'] = String(props.gamemode);
   if (props.pvp !== undefined) map['pvp'] = String(props.pvp);
   if (props.viewDistance !== undefined) {

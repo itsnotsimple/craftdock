@@ -157,6 +157,7 @@ ipcMain.handle(
       allocatedRamGb: number;
       port: number;
       motd: string;
+      hardcore?: boolean;
     }
   ) => {
     const folder = getDefaultServerFolder(options.name);
@@ -200,7 +201,7 @@ ipcMain.handle(
     });
 
     autoAcceptEula(folder);
-    updateServerProperties(folder, options.port, options.motd);
+    updateServerProperties(folder, options.port, options.motd, options.hardcore);
 
     const profile: ServerProfile = {
       id: `srv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,

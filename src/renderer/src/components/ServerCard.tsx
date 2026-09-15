@@ -42,14 +42,14 @@ export const ServerCard: React.FC<ServerCardProps> = ({
   return (
     <div
       onClick={() => onOpenDashboard(server.id)}
-      className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800/80 hover:border-emerald-500/50 hover:bg-slate-900/95 transition-all duration-200 flex flex-col justify-between shadow-lg relative group cursor-pointer"
+      className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800/80 hover:border-emerald-500/40 hover:bg-slate-900/90 transition-all duration-300 flex flex-col justify-between shadow-xl relative group cursor-pointer backdrop-blur-md"
     >
       {/* Top row */}
       <div>
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-base font-extrabold text-slate-100 group-hover:text-emerald-300 transition-colors">
+              <h3 className="text-base font-black text-slate-100 group-hover:text-emerald-300 transition-colors tracking-tight">
                 {server.name}
               </h3>
               {getSoftwareBadge()}
@@ -62,44 +62,48 @@ export const ServerCard: React.FC<ServerCardProps> = ({
           {/* Status Badge */}
           <div>
             {isRunning && (
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm shadow-emerald-500/20">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Онлайн
+              <span className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm shadow-emerald-950/50">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                Онлайн
               </span>
             )}
             {isStarting && (
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse">
+              <span className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-950/50">
                 <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" /> Стартира...
               </span>
             )}
             {isStopping && (
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30">
+              <span className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
                 Спира се...
               </span>
             )}
             {!isRunning && !isStarting && !isStopping && (
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">
-                <span className="w-2 h-2 rounded-full bg-slate-500" /> Офлайн
+              <span className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-slate-950 text-slate-400 border border-slate-800">
+                <span className="w-2 h-2 rounded-full bg-slate-600" /> Офлайн
               </span>
             )}
           </div>
         </div>
 
         {/* Server specs row */}
-        <div className="grid grid-cols-2 gap-2 my-3 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs">
+        <div className="grid grid-cols-2 gap-2 my-3.5 p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 text-xs font-mono">
           <div className="flex items-center gap-2 text-slate-300">
-            <Cpu className="w-4 h-4 text-cyan-400" />
-            <span>RAM: <strong className="text-slate-100 font-mono">{server.allocatedRamGb} GB</strong></span>
+            <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+            <span>RAM: <strong className="text-slate-100">{server.allocatedRamGb} GB</strong></span>
           </div>
           <div className="flex items-center gap-2 text-slate-300">
-            <Users className="w-4 h-4 text-emerald-400" />
-            <span>Играчи: <strong className="text-slate-100 font-mono">{isRunning ? (server.playerCount || 0) : 0}/{server.maxPlayers || 20}</strong></span>
+            <Users className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Играчи: <strong className="text-slate-100">{isRunning ? (server.playerCount || 0) : 0}/{server.maxPlayers || 20}</strong></span>
           </div>
         </div>
       </div>
 
       {/* Action Buttons */}
       <div
-        className="space-y-2 pt-2 border-t border-slate-800/80"
+        className="space-y-2 pt-2.5 border-t border-slate-800/80"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2">
@@ -110,7 +114,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
                 onStop(server.id);
               }}
               disabled={isStopping}
-              className="flex-1 py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-rose-900/30"
+              className="flex-1 py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-rose-950/50 cursor-pointer disabled:opacity-50"
             >
               <Square className="w-3.5 h-3.5 fill-current" /> Спри Сървъра
             </button>
@@ -121,7 +125,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
                 onStart(server.id);
               }}
               disabled={isStarting}
-              className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/40 glow-green"
+              className="flex-1 py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-950/60 glow-emerald cursor-pointer disabled:opacity-50"
             >
               <Play className="w-3.5 h-3.5 fill-current" /> Стартирай (1 Клик)
             </button>
@@ -133,7 +137,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
               onOpenDashboard(server.id);
             }}
             title="Конзола и управление"
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all"
+            className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white transition-all border border-slate-700/60 hover:border-cyan-500/40 cursor-pointer"
           >
             <Terminal className="w-4 h-4 text-cyan-400" />
           </button>

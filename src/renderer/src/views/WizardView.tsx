@@ -9,6 +9,8 @@ import {
   HelpCircle,
   Cpu,
   Loader2,
+  Skull,
+  Flame,
 } from 'lucide-react';
 import { ServerSoftware, SystemInfo, VersionInfo } from '../types';
 import { RamSlider } from '../components/RamSlider';
@@ -23,6 +25,7 @@ interface WizardViewProps {
     allocatedRamGb: number;
     port: number;
     motd: string;
+    hardcore?: boolean;
   }) => Promise<void>;
   downloadProgress: { percent: number; downloadedMb: number; totalMb: number; message: string } | null;
   isCreating: boolean;
@@ -38,6 +41,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
   const [name, setName] = useState('Survival с Аверите');
   const [software, setSoftware] = useState<ServerSoftware>('paper');
   const [version, setVersion] = useState<string>('1.21.4');
+  const [hardcore, setHardcore] = useState<boolean>(false);
   const [versionsList, setVersionsList] = useState<VersionInfo[]>([]);
   const [loadingVersions, setLoadingVersions] = useState<boolean>(true);
 
@@ -88,6 +92,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
       allocatedRamGb: ramGb,
       port,
       motd,
+      hardcore,
     });
   };
 
@@ -289,30 +294,84 @@ export const WizardView: React.FC<WizardViewProps> = ({
           </div>
         </section>
 
-        {/* Optional Settings (Port, MOTD) */}
-        <section className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80 space-y-4">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
-            <Settings className="w-4 h-4 text-slate-400" /> Допълнителни мрежови настройки
-          </div>
+        {/* Hardcore & Optional Settings */}
+        <section className="space-y-4">
+          {/* Hardcore Toggle Card */}
+          <div
+            onClick={() => setHardcore(!hardcore)}
+            className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 select-none ${
+              hardcore
+                ? 'bg-gradient-to-r from-rose-950/60 via-slate-950 to-slate-950 border-rose-500/50 glow-crimson'
+                : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`p-2.5 rounded-xl border ${
+                  hardcore
+                    ? 'bg-rose-500/20 border-rose-500/40 text-rose-400'
+                    : 'bg-slate-950 border-slate-800 text-slate-400'
+                }`}
+              >
+                <Skull className={`w-5 h-5 ${hardcore ? 'animate-pulse text-rose-400' : ''}`} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-black text-slate-100">
+                    Hardcore Режим (1 Живот & Permadeath)
+                  </span>
+                  {hardcore && (
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 uppercase font-mono animate-pulse">
+                      ВКЛЮЧЕН
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+                  {hardcore
+                    ? '💀 ВНИМАНИЕ: Всеки играч има точно 1 живот! При смърт – крайно отпадане (Spectator) и заключена трудност Hard.'
+                    : 'Стандартно оцеляване с възможност за нормално прераждане на спаун или легло.'}
+                </p>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs text-slate-400 font-medium">Мрежов Порт (По подразбиране: 25565)</label>
-              <input
-                type="number"
-                value={port}
-                onChange={(e) => setPort(parseInt(e.target.value, 10) || 25565)}
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 font-mono focus:outline-none focus:border-emerald-500"
+            <div
+              className={`w-12 h-6 rounded-full transition-colors relative flex items-center p-0.5 shrink-0 ${
+                hardcore ? 'bg-rose-600' : 'bg-slate-800 border border-slate-700'
+              }`}
+            >
+              <div
+                className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                  hardcore ? 'translate-x-6' : 'translate-x-0'
+                }`}
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-xs text-slate-400 font-medium">MOTD (Описание в сървър листа)</label>
-              <input
-                type="text"
-                value={motd}
-                onChange={(e) => setMotd(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
-              />
+          </div>
+
+          {/* Optional Settings (Port, MOTD) */}
+          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80 space-y-4">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
+              <Settings className="w-4 h-4 text-slate-400" /> Допълнителни мрежови настройки
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-400 font-medium">Мрежов Порт (По подразбиране: 25565)</label>
+                <input
+                  type="number"
+                  value={port}
+                  onChange={(e) => setPort(parseInt(e.target.value, 10) || 25565)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 font-mono focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-slate-400 font-medium">MOTD (Описание в сървър листа)</label>
+                <input
+                  type="text"
+                  value={motd}
+                  onChange={(e) => setMotd(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
             </div>
           </div>
         </section>

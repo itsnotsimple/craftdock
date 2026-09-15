@@ -66,5 +66,6 @@ export interface CreateServerOptions {
   allocatedRamGb: number;
   port: number;
   motd: string;
+  hardcore?: boolean;
   acceptEula: boolean;
 }

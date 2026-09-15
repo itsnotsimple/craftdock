@@ -222,6 +222,7 @@ export const App: React.FC = () => {
     allocatedRamGb: number;
     port: number;
     motd: string;
+    hardcore?: boolean;
   }) => {
     const api = (window as any).api;
     if (!api) return;
