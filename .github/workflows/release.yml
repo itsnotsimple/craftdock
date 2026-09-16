@@ -1,4 +1,4 @@
-﻿name: Build & Release CraftDock
+name: Build & Release CraftDock
 
 on:
   push:
@@ -28,7 +28,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Build and Package CraftDock
         run: npm run dist
