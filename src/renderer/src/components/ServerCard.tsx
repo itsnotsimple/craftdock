@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Square, Terminal, FolderOpen, Trash2, Globe, Users, Cpu, ShieldCheck } from 'lucide-react';
+import { Play, Square, Terminal, FolderOpen, Trash2, Globe, Users, Cpu, ShieldCheck, Loader2 } from 'lucide-react';
 import { ServerProfile } from '../types';
 
 interface ServerCardProps {
@@ -74,7 +74,11 @@ export const ServerCard: React.FC<ServerCardProps> = ({
             )}
             {isStarting && (
               <span className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-400/30 shadow-sm shadow-amber-950/50">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" /> Стартира...
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                </span>
+                Стартира се...
               </span>
             )}
             {isStopping && (
@@ -118,7 +122,23 @@ export const ServerCard: React.FC<ServerCardProps> = ({
               disabled={isStopping}
               className="flex-1 py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-rose-950/50 cursor-pointer disabled:opacity-50"
             >
-              <Square className="w-3.5 h-3.5 fill-current" /> Спри Сървъра
+              <Square className="w-3.5 h-3.5 fill-current" /> {isStopping ? 'Спира се...' : 'Спри Сървъра'}
+            </button>
+          ) : isStarting ? (
+            <button
+              disabled={true}
+              className="flex-1 py-2.5 px-3.5 rounded-xl bg-amber-500/20 text-amber-200 border border-amber-400/30 font-bold text-xs flex items-center justify-center gap-2 shadow-sm cursor-not-allowed opacity-90"
+            >
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+              <span>Стартира се...</span>
+            </button>
+          ) : isStopping ? (
+            <button
+              disabled={true}
+              className="flex-1 py-2.5 px-3.5 rounded-xl bg-rose-500/20 text-rose-200 border border-rose-400/30 font-bold text-xs flex items-center justify-center gap-2 shadow-sm cursor-not-allowed opacity-90"
+            >
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
+              <span>Спира се...</span>
             </button>
           ) : activeRunningServer && activeRunningServer.id !== server.id ? (
             <button
@@ -138,8 +158,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
                 e.stopPropagation();
                 onStart(server.id);
               }}
-              disabled={isStarting}
-              className="flex-1 py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-950/50 glow-green cursor-pointer disabled:opacity-50"
+              className="flex-1 py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-950/50 glow-green cursor-pointer"
             >
               <Play className="w-3.5 h-3.5 fill-current" /> Стартирай (1 Клик)
             </button>

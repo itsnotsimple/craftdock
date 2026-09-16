@@ -30,6 +30,7 @@ interface RunningInstance {
   lastCpuSec?: number;
   lastSampleTime?: number;
   currentStats: ServerStats;
+  status: 'starting' | 'running' | 'stopping';
 }
 
 const activeServers = new Map<string, RunningInstance>();
@@ -267,6 +268,7 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
       server,
       players: new Set<string>(),
       startTime: Date.now(),
+      status: 'starting',
       currentStats: {
         serverId: server.id,
         cpuPercent: 0,
@@ -284,8 +286,16 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
       for (const line of lines) {
         appendServerLog(server.id, line);
 
-        // Detect server ready
-        if (line.includes('Done (') || (line.includes('Done') && line.includes('help'))) {
+        // Detect server ready - only transition when Minecraft is 100% finished booting
+        const isReadyLine =
+          line.includes('Done (') ||
+          (line.includes('Done') && line.toLowerCase().includes('help')) ||
+          /Done \([0-9.]+s\)/i.test(line) ||
+          /Done in [0-9.]+/i.test(line) ||
+          /For help, type ["']?help["']?/i.test(line);
+
+        if (instance.status === 'starting' && isReadyLine) {
+          instance.status = 'running';
           updateServer(server.id, { status: 'running', lastPlayedAt: new Date().toISOString() });
           sendToWindow('server-status-changed', { serverId: server.id, status: 'running' });
           sendToWindow('server-profile-updated', { id: server.id, status: 'running' });
@@ -377,8 +387,10 @@ export function stopServer(serverId: string): boolean {
   const instance = activeServers.get(serverId);
   if (!instance) return false;
 
+  instance.status = 'stopping';
   updateServer(serverId, { status: 'stopping' });
   sendToWindow('server-status-changed', { serverId, status: 'stopping' });
+  sendToWindow('server-profile-updated', { id: serverId, status: 'stopping' });
 
   try {
     instance.process.stdin.write('stop\n');
@@ -423,6 +435,18 @@ export function getServerPlayers(serverId: string): string[] {
   return instance ? Array.from(instance.players) : [];
 }
 
+export function getServerActiveStatus(serverId: string): 'starting' | 'running' | 'stopping' | 'stopped' {
+  const instance = activeServers.get(serverId);
+  if (!instance) return 'stopped';
+  return instance.status;
+}
+
 export function isServerRunning(serverId: string): boolean {
+  const instance = activeServers.get(serverId);
+  return instance?.status === 'running';
+}
+
+export function isServerProcessActive(serverId: string): boolean {
   return activeServers.has(serverId);
 }
+

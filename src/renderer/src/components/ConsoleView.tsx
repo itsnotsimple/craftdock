@@ -146,6 +146,10 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
           placeholder={
             isRunning
               ? 'Въведи команда (напр. op krist, gamemode survival @a, say Здравейте!)...'
+              : serverStatus === 'starting'
+              ? 'Сървърът се зарежда и стартира, изчакайте да стане Онлайн...'
+              : serverStatus === 'stopping'
+              ? 'Сървърът се спира...'
               : 'Сървърът трябва да е пуснат, за да приема команди'
           }
           disabled={!isRunning}

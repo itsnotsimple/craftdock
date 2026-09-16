@@ -28,6 +28,7 @@ import {
   autoAcceptEula,
   updateServerProperties,
   isServerRunning,
+  getServerActiveStatus,
   getServerPlayers,
   getServerLogs,
   getServerStats,
@@ -136,11 +137,18 @@ ipcMain.handle('get-servers', async () => {
   const servers = loadServers();
   return servers.map((s) => {
     const props = fs.existsSync(s.path) ? readServerProperties(s.path) : null;
+    const activeStatus = getServerActiveStatus(s.id);
+    const resolvedStatus =
+      activeStatus !== 'stopped'
+        ? activeStatus
+        : s.status === 'starting' || s.status === 'stopping'
+        ? s.status
+        : 'stopped';
     return {
       ...s,
       maxPlayers: props?.maxPlayers ?? s.maxPlayers ?? 20,
       motd: props?.motd ?? s.motd ?? s.name,
-      status: isServerRunning(s.id) ? 'running' : s.status === 'starting' ? 'starting' : 'stopped',
+      status: resolvedStatus,
       playerCount: getServerPlayers(s.id).length,
     };
   });
