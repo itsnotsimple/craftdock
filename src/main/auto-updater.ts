@@ -291,25 +291,30 @@ open -n "$TARGET_APP"
 
       app.exit(0);
     } else if (process.platform === 'win32') {
-      const batPath = path.join(tempDir, 'install-win.bat');
-      const batContent = `@echo off
-:wait
-timeout /t 1 /nobreak >NUL
-tasklist /FI "PID eq %~1" 2>NUL | find "%~1" >NUL
-if not errorlevel 1 goto wait
-
-start /wait "" "%~2" /S
-start "" "%~3"
-del "%~2" 2>NUL
-del "%~f0" 2>NUL
+      const psPath = path.join(tempDir, 'install-win.ps1');
+      const safeDest = destFile.replace(/\\/g, '\\\\');
+      const safeExec = process.execPath.replace(/\\/g, '\\\\');
+      const psContent = `
+Start-Sleep -Seconds 2
+try {
+  $proc = Start-Process -FilePath "${safeDest}" -ArgumentList "/S" -PassThru -Wait
+  Start-Process -FilePath "${safeExec}"
+  Remove-Item -Path "${safeDest}" -Force -ErrorAction SilentlyContinue
+} catch {}
+Remove-Item -Path $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue
 `;
 
-      await fs.promises.writeFile(batPath, batContent);
+      await fs.promises.writeFile(psPath, psContent, 'utf8');
 
-      const child = spawn('cmd.exe', ['/c', batPath, String(process.pid), destFile, process.execPath], {
-        detached: true,
-        stdio: 'ignore',
-      });
+      const child = spawn(
+        'powershell.exe',
+        ['-NoProfile', '-WindowStyle', 'Hidden', '-ExecutionPolicy', 'Bypass', '-File', psPath],
+        {
+          detached: true,
+          stdio: 'ignore',
+          windowsHide: true,
+        }
+      );
       child.unref();
 
       app.exit(0);

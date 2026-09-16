@@ -1,6 +1,6 @@
 {
   "name": "minecraft-server-manager",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "description": "Personal Minecraft Server Host & Manager for Windows and Mac",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -43,10 +43,31 @@
         }
       ],
       "category": "public.app-category.games",
-      "icon": "resources/icon.png",
+      "icon": "resources/icon.icns",
       "artifactName": "CraftDock-${version}-macOS-${arch}.${ext}"
     },
     "dmg": {
+      "title": "Install CraftDock",
+      "icon": "resources/icon.icns",
+      "iconSize": 128,
+      "background": "resources/dmg-background.png",
+      "contents": [
+        {
+          "x": 140,
+          "y": 180,
+          "type": "file"
+        },
+        {
+          "x": 400,
+          "y": 180,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "window": {
+        "width": 540,
+        "height": 380
+      },
       "artifactName": "CraftDock-${version}-macOS-${arch}.${ext}"
     },
     "nsis": {

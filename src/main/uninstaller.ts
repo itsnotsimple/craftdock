@@ -42,41 +42,31 @@ export async function performUninstallAndErase(): Promise<boolean> {
     const uninstallerExe = path.join(appDir, 'Uninstall CraftDock.exe');
     const hasUninstaller = fs.existsSync(uninstallerExe);
 
-    const batPath = path.join(tempDir, 'craftdock-uninstall.bat');
-    const batContent = `@echo off
-:wait
-timeout /t 1 /nobreak >NUL
-tasklist /FI "PID eq %~1" 2>NUL | find "%~1" >NUL
-if not errorlevel 1 goto wait
+    const psPath = path.join(tempDir, 'craftdock-uninstall.ps1');
+    const safeData = dataDir.replace(/\\/g, '\\\\');
+    const safeUserData = userDataDir.replace(/\\/g, '\\\\');
+    const safeHome = homeFallback.replace(/\\/g, '\\\\');
+    const safeTemp = tempUpdateDir.replace(/\\/g, '\\\\');
+    const safeUninstaller = uninstallerExe.replace(/\\/g, '\\\\');
 
-REM Kill any lingering server processes
-taskkill /F /IM java.exe 2>NUL
-taskkill /F /IM javaw.exe 2>NUL
-
-REM Force remove all server and app data directories
-rmdir /s /q "%~2" 2>NUL
-rmdir /s /q "%~3" 2>NUL
-rmdir /s /q "%~4" 2>NUL
-rmdir /s /q "%~5" 2>NUL
-
-REM If NSIS uninstaller exists, trigger it silently
-if exist "%~6" (
-  start "" "%~6" /S
-)
-
-del "%~f0" 2>NUL
+    const psContent = `
+Start-Sleep -Seconds 2
+Stop-Process -Name "java", "javaw" -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "${safeData}", "${safeUserData}", "${safeHome}", "${safeTemp}" -Recurse -Force -ErrorAction SilentlyContinue
+${hasUninstaller ? `Start-Process -FilePath "${safeUninstaller}" -ArgumentList "/S"` : ''}
+Remove-Item -Path $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue
 `;
 
     try {
-      fs.writeFileSync(batPath, batContent);
+      fs.writeFileSync(psPath, psContent, 'utf8');
       const child = spawn(
-        'cmd.exe',
-        ['/c', batPath, String(process.pid), dataDir, userDataDir, homeFallback, tempUpdateDir, hasUninstaller ? uninstallerExe : ''],
-        { detached: true, stdio: 'ignore' }
+        'powershell.exe',
+        ['-NoProfile', '-WindowStyle', 'Hidden', '-ExecutionPolicy', 'Bypass', '-File', psPath],
+        { detached: true, stdio: 'ignore', windowsHide: true }
       );
       child.unref();
     } catch (e) {
-      console.error('[Uninstall] Failed to spawn cleaner bat:', e);
+      console.error('[Uninstall] Failed to spawn cleaner ps1:', e);
     }
   } else if (process.platform === 'darwin') {
     let appBundle = process.execPath.replace(/\/Contents\/MacOS\/.*$/, '');
