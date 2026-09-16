@@ -1,6 +1,6 @@
 {
   "name": "minecraft-server-manager",
-  "version": "2.2.8",
+  "version": "2.2.9",
   "description": "Personal Minecraft Server Host & Manager for Windows and Mac",
   "main": "dist-electron/main.js",
   "scripts": {

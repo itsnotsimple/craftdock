@@ -2,12 +2,12 @@
 
 <div align="center">
   <img src="resources/icon.png" width="130" height="130" alt="CraftDock Logo" style="border-radius: 28px; box-shadow: 0 10px 30px rgba(14, 165, 233, 0.3);" />
-  <h1 style="margin-top: 12px; margin-bottom: 4px;">CraftDock v2.2.8</h1>
+  <h1 style="margin-top: 12px; margin-bottom: 4px;">CraftDock v2.2.9</h1>
   <p><b>The ultimate, ultra-fast, and beautiful desktop Minecraft Server Manager for Windows & macOS.</b></p>
   <p><i>Host, optimize, customize, and play with friends in under 60 seconds — 100% on your own hardware, zero subscription fees.</i></p>
 
   <p>
-    <a href="https://github.com/itsnotsimple/craftdock/releases/latest"><img src="https://img.shields.io/badge/version-2.2.8-sky.svg?style=for-the-badge&logo=electron" alt="Version 2.2.8" /></a>
+    <a href="https://github.com/itsnotsimple/craftdock/releases/latest"><img src="https://img.shields.io/badge/version-2.2.9-sky.svg?style=for-the-badge&logo=electron" alt="Version 2.2.9" /></a>
     <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-blue.svg?style=for-the-badge&logo=apple" alt="Platform" />
     <img src="https://img.shields.io/badge/react-18.3.1-61dafb.svg?style=for-the-badge&logo=react" alt="React" />
     <img src="https://img.shields.io/badge/typescript-5.5-3178c6.svg?style=for-the-badge&logo=typescript" alt="TypeScript" />
@@ -32,9 +32,9 @@ Download the official compiled release for your operating system:
 
 | Platform | Processor Architecture | Download Link |
 |:---|:---|:---|
-| 🪟 **Windows** | 64-bit (x64) | [**`CraftDock-2.2.8-Windows-Setup.exe`**](https://github.com/itsnotsimple/craftdock/releases/latest) |
-| 🍏 **macOS** | Apple Silicon (**M1 / M2 / M3 / M4**) | [**`CraftDock-2.2.8-macOS-AppleSilicon-M-Chips.dmg`**](https://github.com/itsnotsimple/craftdock/releases/latest) |
-| 🍏 **macOS** | Intel Processor (x64) | [**`CraftDock-2.2.8-macOS-Intel.dmg`**](https://github.com/itsnotsimple/craftdock/releases/latest) |
+| 🪟 **Windows** | 64-bit (x64) | [**`CraftDock-2.2.9-Windows-Setup.exe`**](https://github.com/itsnotsimple/craftdock/releases/latest) |
+| 🍏 **macOS** | Apple Silicon (**M1 / M2 / M3 / M4**) | [**`CraftDock-2.2.9-macOS-AppleSilicon-M-Chips.dmg`**](https://github.com/itsnotsimple/craftdock/releases/latest) |
+| 🍏 **macOS** | Intel Processor (x64) | [**`CraftDock-2.2.9-macOS-Intel.dmg`**](https://github.com/itsnotsimple/craftdock/releases/latest) |
 
 > [!TIP]
 > **🍏 First-Time Launch on macOS (Apple Gatekeeper):**  

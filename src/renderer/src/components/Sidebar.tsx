@@ -217,7 +217,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span className={`flex items-center gap-1 ${theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>
             <Sparkles className="w-3 h-3 text-sky-500" /> {language === 'en' ? 'Local Hardware' : '100% Твой Хардуер'}
           </span>
-          <span className={`font-medium ${theme === 'light' ? 'text-sky-700' : 'text-sky-400'}`}>v2.2.8</span>
+          <span className={`font-medium ${theme === 'light' ? 'text-sky-700' : 'text-sky-400'}`}>v2.2.9</span>
         </div>
       </div>
     </aside>

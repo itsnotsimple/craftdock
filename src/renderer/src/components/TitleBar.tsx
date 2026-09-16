@@ -39,7 +39,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ activeServer }) => {
           CraftDock
         </span>
         <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-500 dark:text-sky-300 border border-sky-400/20 font-bold">
-          v2.2.8
+          v2.2.9
         </span>
         <span className="text-slate-400 dark:text-slate-600 text-xs hidden sm:inline">•</span>
         <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden sm:inline">

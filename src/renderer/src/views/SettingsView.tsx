@@ -743,7 +743,7 @@ export const SettingsView: React.FC = () => {
               </div>
 
               <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-lg bg-sky-500/15 text-sky-300 border border-sky-500/30">
-                v2.2.8 Release
+                v2.2.9 Release
               </span>
             </div>
 
