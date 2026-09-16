@@ -13,7 +13,7 @@ import { useLanguage } from './context/LanguageContext';
 import { useTheme } from './context/ThemeContext';
 
 export const App: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { theme } = useTheme();
   const { showConfirm, showAlert } = useDialog();
   const [currentTab, setCurrentTab] = useState<'library' | 'wizard' | 'dashboard' | 'settings'>('library');
@@ -214,6 +214,19 @@ export const App: React.FC = () => {
     const targetServer = servers.find((s) => s.id === id);
     if (!targetServer) return;
 
+    // RAM Safety Guard: prevent starting if server requires more RAM than system currently has free
+    if (systemInfo && systemInfo.freeRamGb > 0 && targetServer.allocatedRamGb > systemInfo.freeRamGb) {
+      await showAlert({
+        type: 'error',
+        title: language === 'bg' ? 'Недостатъчно свободна RAM памет' : 'Insufficient Free RAM',
+        message: language === 'bg'
+          ? `Сървърът "${targetServer.name}" изисква ${targetServer.allocatedRamGb} GB RAM, но на компютъра ти в момента има само ${systemInfo.freeRamGb} GB свободни. Освободи памет или намали заделената RAM от настройките на света.`
+          : `Server "${targetServer.name}" requires ${targetServer.allocatedRamGb} GB RAM, but your system currently only has ${systemInfo.freeRamGb} GB free. Close heavy applications or reduce allocated RAM in server settings.`,
+        buttonText: language === 'bg' ? 'Разбрах' : 'Understood',
+      });
+      return;
+    }
+
     // Check if another server is already running or starting
     const alreadyActive = servers.find(
       (s) => s.id !== id && (s.status === 'running' || s.status === 'starting')
@@ -242,6 +255,20 @@ export const App: React.FC = () => {
 
     const api = (window as any).api;
     if (!api) return;
+
+    // RAM Safety Guard for switch: check if target server fits in available RAM + released RAM from running server
+    const effectiveFreeRam = (systemInfo?.freeRamGb || 0) + (runningServer.allocatedRamGb || 0);
+    if (effectiveFreeRam > 0 && targetServer.allocatedRamGb > effectiveFreeRam) {
+      await showAlert({
+        type: 'error',
+        title: language === 'bg' ? 'Недостатъчно свободна RAM памет' : 'Insufficient Free RAM',
+        message: language === 'bg'
+          ? `Сървърът "${targetServer.name}" изисква ${targetServer.allocatedRamGb} GB RAM, но дори след спиране на текущия сървър ще имаш само ${effectiveFreeRam.toFixed(1)} GB свободни. Намали заделената RAM от настройките.`
+          : `Server "${targetServer.name}" requires ${targetServer.allocatedRamGb} GB RAM, but even after stopping the running server you will only have ${effectiveFreeRam.toFixed(1)} GB free. Please reduce allocated RAM.`,
+        buttonText: language === 'bg' ? 'Разбрах' : 'Understood',
+      });
+      return;
+    }
 
     // Stop currently running server
     setServers((prev) =>

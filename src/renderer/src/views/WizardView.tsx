@@ -16,12 +16,14 @@ import {
   Database,
   Check,
   ExternalLink,
+  AlertTriangle,
 } from 'lucide-react';
 import { ServerSoftware, SystemInfo, VersionInfo } from '../types';
 import { RamSlider } from '../components/RamSlider';
 import { StorageSlider } from '../components/StorageSlider';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
+import { useDialog } from '../context/DialogContext';
 
 interface WizardViewProps {
   systemInfo: SystemInfo | null;
@@ -52,6 +54,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
 }) => {
   const { t, language } = useLanguage();
   const { theme } = useTheme();
+  const { showAlert } = useDialog();
   const [name, setName] = useState(language === 'bg' ? 'Survival с Аверите' : 'Survival SMP');
   const [software, setSoftware] = useState<ServerSoftware>('paper');
   const [version, setVersion] = useState<string>('1.21.4');
@@ -140,9 +143,23 @@ export const WizardView: React.FC<WizardViewProps> = ({
     };
   }, [software]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const isOverRamLimit = Boolean(systemInfo && systemInfo.freeRamGb > 0 && ramGb > systemInfo.freeRamGb);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !version || isCreating) return;
+
+    if (isOverRamLimit) {
+      await showAlert({
+        type: 'error',
+        title: language === 'bg' ? 'Недостатъчно свободна RAM памет' : 'Insufficient Free RAM',
+        message: language === 'bg'
+          ? `Не можеш да създадеш сървър с ${ramGb} GB RAM, защото на компютъра ти в момента има само ${systemInfo?.freeRamGb} GB свободни. Намали заделената памет от плъзгача.`
+          : `Cannot create server with ${ramGb} GB RAM because your system only has ${systemInfo?.freeRamGb} GB free right now. Please lower the allocated RAM.`,
+        buttonText: language === 'bg' ? 'Разбрах' : 'Understood',
+      });
+      return;
+    }
 
     onCreateServer({
       name,
@@ -761,14 +778,24 @@ export const WizardView: React.FC<WizardViewProps> = ({
             {t('common.cancel')}
           </button>
 
-          <button
-            type="submit"
-            disabled={isCreating || loadingVersions}
-            className="flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-sm transition-all shadow-xl shadow-emerald-950/60 glow-green cursor-pointer disabled:opacity-50"
-          >
-            <Sparkles className="w-4 h-4" />
-            {t('wizard.createBtn')}
-          </button>
+          <div className="flex items-center gap-3">
+            {isOverRamLimit && (
+              <span className="text-xs font-bold text-rose-500 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                {language === 'bg'
+                  ? `Недостатъчно RAM (${ramGb}G избрани / ${systemInfo?.freeRamGb}G свободни)`
+                  : `Insufficient RAM (${ramGb}G selected / ${systemInfo?.freeRamGb}G free)`}
+              </span>
+            )}
+            <button
+              type="submit"
+              disabled={isCreating || loadingVersions || isOverRamLimit}
+              className="flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-sm transition-all shadow-xl shadow-emerald-950/60 glow-green cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Sparkles className="w-4 h-4" />
+              {t('wizard.createBtn')}
+            </button>
+          </div>
         </div>
       </form>
     </div>

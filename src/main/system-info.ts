@@ -1,4 +1,5 @@
 import os from 'os';
+import child_process from 'child_process';
 
 export interface SystemInfoData {
   totalRamGb: number;
@@ -12,6 +13,47 @@ export interface SystemInfoData {
 }
 
 let prevCpuTimes = getCpuTimes();
+let cachedMacFreeRamBytes = 0;
+
+function parseVmStatOutput(stdout: string): number {
+  const pageSizeMatch = stdout.match(/page size of (\d+) bytes/);
+  const pageSize = pageSizeMatch ? parseInt(pageSizeMatch[1], 10) : 4096;
+
+  const getPages = (key: string): number => {
+    const match = stdout.match(new RegExp(`${key}:\\s+(\\d+)`));
+    return match ? parseInt(match[1], 10) : 0;
+  };
+
+  const free = getPages('Pages free');
+  const inactive = getPages('Pages inactive');
+  const speculative = getPages('Pages speculative');
+  const purgeable = getPages('Pages purgeable');
+
+  // Available memory on macOS consists of free, inactive, speculative, and purgeable pages
+  return (free + inactive + speculative + purgeable) * pageSize;
+}
+
+function updateMacFreeRam() {
+  if (os.platform() === 'darwin') {
+    child_process.exec('vm_stat', (err, stdout) => {
+      if (!err && stdout) {
+        try {
+          const bytes = parseVmStatOutput(stdout);
+          if (bytes > 0) cachedMacFreeRamBytes = bytes;
+        } catch (e) {}
+      }
+    });
+  }
+}
+
+if (os.platform() === 'darwin') {
+  try {
+    const out = child_process.execSync('vm_stat', { encoding: 'utf-8', timeout: 800 });
+    const bytes = parseVmStatOutput(out);
+    if (bytes > 0) cachedMacFreeRamBytes = bytes;
+  } catch (e) {}
+  setInterval(updateMacFreeRam, 2500);
+}
 
 function getCpuTimes(): { idle: number; total: number } {
   const cpus = os.cpus();
@@ -37,7 +79,11 @@ function calculateCpuPercent(): number {
 
 export function getSystemInfo(): SystemInfoData {
   const totalRamGb = Math.round((os.totalmem() / (1024 * 1024 * 1024)) * 10) / 10;
-  const freeRamGb = Math.round((os.freemem() / (1024 * 1024 * 1024)) * 10) / 10;
+  let freeBytes = os.freemem();
+  if (os.platform() === 'darwin' && cachedMacFreeRamBytes > 0) {
+    freeBytes = cachedMacFreeRamBytes;
+  }
+  const freeRamGb = Math.round((freeBytes / (1024 * 1024 * 1024)) * 10) / 10;
   const cpuPercent = calculateCpuPercent();
   
   const cpus = os.cpus();
