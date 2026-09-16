@@ -106,9 +106,15 @@ export const translations = {
 
     // Update Banner
     'updateBanner.title': 'CraftDock {version} is Available!',
-    'updateBanner.desc': 'You are running v{current}. Download the latest release from GitHub.',
+    'updateBanner.desc': 'You are running v{current}.',
+    'updateBanner.updateNow': 'Update Now',
     'updateBanner.download': 'Download Update',
-    'updateBanner.dismiss': 'Dismiss',
+    'updateBanner.downloading': 'Downloading update... {percent}% ({transferred} / {total} MB)',
+    'updateBanner.installing': 'Installing update & restarting...',
+    'updateBanner.error': 'Update failed: {error}',
+    'updateBanner.retry': 'Retry',
+    'updateBanner.releaseNotes': 'Release Notes',
+    'updateBanner.dismiss': 'Later',
 
     // Wizard View
     'wizard.title': 'Server Wizard (Create Server)',
@@ -594,9 +600,15 @@ export const translations = {
 
     // Update Banner
     'updateBanner.title': 'CraftDock {version} е наличен!',
-    'updateBanner.desc': 'Използваш v{current}. Изтегли последния release от GitHub.',
+    'updateBanner.desc': 'Използваш v{current}.',
+    'updateBanner.updateNow': 'Обнови сега',
     'updateBanner.download': 'Изтегли обновлението',
-    'updateBanner.dismiss': 'Затвори',
+    'updateBanner.downloading': 'Сваляне на обновлението... {percent}% ({transferred} / {total} MB)',
+    'updateBanner.installing': 'Инсталиране и рестартиране...',
+    'updateBanner.error': 'Грешка при обновяване: {error}',
+    'updateBanner.retry': 'Опитай отново',
+    'updateBanner.releaseNotes': 'Бележки',
+    'updateBanner.dismiss': 'По-късно',
 
     // Wizard View
     'wizard.title': 'Server Wizard (Създаване на Сървър)',

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Download, RotateCcw, AlertTriangle, Sparkles, ExternalLink } from 'lucide-react';
 import { TitleBar } from './components/TitleBar';
 import { Sidebar } from './components/Sidebar';
 import { LibraryView } from './views/LibraryView';
@@ -51,6 +52,14 @@ export const App: React.FC = () => {
     releaseName: string;
     releaseUrl: string;
   } | null>(null);
+
+  const [updateProgress, setUpdateProgress] = useState<{
+    status: 'idle' | 'downloading' | 'installing' | 'error';
+    percent: number;
+    transferred: number;
+    total: number;
+    error?: string;
+  }>({ status: 'idle', percent: 0, transferred: 0, total: 0 });
 
   // Helper to re-fetch servers and sync slots/status/players in real time
   const refreshServers = React.useCallback(async () => {
@@ -182,6 +191,10 @@ export const App: React.FC = () => {
       setUpdateInfo(data);
     });
 
+    const unsubUpdateProgress = api.onAppUpdateProgress?.((data: any) => {
+      setUpdateProgress(data);
+    });
+
     return () => {
       if (unsubLog) unsubLog();
       if (unsubStats) unsubStats();
@@ -191,6 +204,7 @@ export const App: React.FC = () => {
       if (unsubSystemInfo) unsubSystemInfo();
       if (unsubServerProfile) unsubServerProfile();
       if (unsubUpdateAvailable) unsubUpdateAvailable();
+      if (unsubUpdateProgress) unsubUpdateProgress();
     };
   }, [refreshServers]);
 
@@ -386,6 +400,32 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleStartUpdate = async () => {
+    const api = (window as any).api;
+    if (!api) return;
+    setUpdateProgress({ status: 'downloading', percent: 0, transferred: 0, total: 0 });
+    try {
+      const res = await api.startAppUpdate();
+      if (res && !res.success && res.error) {
+        setUpdateProgress({
+          status: 'error',
+          percent: 0,
+          transferred: 0,
+          total: 0,
+          error: res.error,
+        });
+      }
+    } catch (e: any) {
+      setUpdateProgress({
+        status: 'error',
+        percent: 0,
+        transferred: 0,
+        total: 0,
+        error: e?.message || 'Update failed',
+      });
+    }
+  };
+
   const activeServer = servers.find((s) => s.id === activeServerId) || servers[0];
 
   return (
@@ -416,30 +456,131 @@ export const App: React.FC = () => {
 
       {/* Update Available Banner */}
       {updateInfo && (
-        <div className="relative z-20 shrink-0 bg-emerald-600/90 backdrop-blur-sm text-white px-4 py-2 flex items-center justify-between gap-3 text-xs font-semibold border-b border-emerald-500/50">
-          <div className="flex items-center gap-2">
-            <span className="text-emerald-100 font-bold">
-              🎉 {t('updateBanner.title', { version: updateInfo.latestVersion })}
-            </span>
-            <span className="text-emerald-100/80 font-normal hidden sm:inline">
-              {t('updateBanner.desc', { current: updateInfo.currentVersion })}
-            </span>
+        <div className="relative z-20 shrink-0 bg-emerald-600/95 backdrop-blur-sm text-white px-4 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs font-semibold border-b border-emerald-500/50 shadow-md">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {updateProgress.status === 'downloading' ? (
+              <Download className="w-4 h-4 text-emerald-200 animate-bounce shrink-0" />
+            ) : updateProgress.status === 'installing' ? (
+              <RotateCcw className="w-4 h-4 text-emerald-200 animate-spin shrink-0" />
+            ) : updateProgress.status === 'error' ? (
+              <AlertTriangle className="w-4 h-4 text-amber-300 shrink-0" />
+            ) : (
+              <Sparkles className="w-4 h-4 text-emerald-200 shrink-0" />
+            )}
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+              <span className="text-white font-bold whitespace-nowrap">
+                {t('updateBanner.title', { version: updateInfo.latestVersion })}
+              </span>
+
+              {updateProgress.status === 'downloading' ? (
+                <span className="text-emerald-100/90 font-normal">
+                  {t('updateBanner.downloading', {
+                    percent: updateProgress.percent,
+                    transferred: (updateProgress.transferred / (1024 * 1024)).toFixed(1),
+                    total: (updateProgress.total / (1024 * 1024)).toFixed(1),
+                  })}
+                </span>
+              ) : updateProgress.status === 'installing' ? (
+                <span className="text-emerald-100 font-semibold animate-pulse">
+                  {t('updateBanner.installing')}
+                </span>
+              ) : updateProgress.status === 'error' ? (
+                <span className="text-amber-200 font-medium">
+                  {t('updateBanner.error', { error: updateProgress.error || 'Failed' })}
+                </span>
+              ) : (
+                <span className="text-emerald-100/80 font-normal hidden md:inline">
+                  {t('updateBanner.desc', { current: updateInfo.currentVersion })}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => (window as any).api?.openExternal?.(updateInfo.releaseUrl)}
-              className="px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white font-bold transition-all cursor-pointer border border-white/30 btn-bounce text-xs"
-            >
-              {t('updateBanner.download')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setUpdateInfo(null)}
-              className="px-2 py-1 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all cursor-pointer text-xs"
-            >
-              {t('updateBanner.dismiss')}
-            </button>
+
+          {/* Progress Bar (when downloading) */}
+          {updateProgress.status === 'downloading' && (
+            <div className="w-full sm:w-48 bg-black/25 h-2 rounded-full overflow-hidden border border-white/20">
+              <div
+                className="bg-white h-full transition-all duration-150 ease-out"
+                style={{ width: `${updateProgress.percent}%` }}
+              />
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            {updateProgress.status === 'idle' && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleStartUpdate}
+                  className="px-3.5 py-1.5 rounded-lg bg-white text-emerald-900 hover:bg-emerald-50 font-bold transition-all cursor-pointer shadow-xs btn-bounce text-xs flex items-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>{t('updateBanner.updateNow')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => (window as any).api?.openExternal?.(updateInfo.releaseUrl)}
+                  className="px-2.5 py-1.5 rounded-lg bg-emerald-700/60 hover:bg-emerald-700 text-emerald-100 hover:text-white transition-all cursor-pointer border border-emerald-500/50 text-xs flex items-center gap-1"
+                  title="View GitHub Release"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  <span className="hidden sm:inline">{t('updateBanner.releaseNotes')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUpdateInfo(null)}
+                  className="px-2 py-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all cursor-pointer text-xs"
+                >
+                  {t('updateBanner.dismiss')}
+                </button>
+              </>
+            )}
+
+            {updateProgress.status === 'error' && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleStartUpdate}
+                  className="px-3 py-1.5 rounded-lg bg-white text-emerald-900 hover:bg-emerald-50 font-bold transition-all cursor-pointer text-xs flex items-center gap-1 btn-bounce"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>{t('updateBanner.retry')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => (window as any).api?.openExternal?.(updateInfo.releaseUrl)}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-700/80 hover:bg-emerald-700 text-white transition-all cursor-pointer text-xs flex items-center gap-1"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>GitHub</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUpdateInfo(null);
+                    setUpdateProgress({ status: 'idle', percent: 0, transferred: 0, total: 0 });
+                  }}
+                  className="px-2 py-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all cursor-pointer text-xs"
+                >
+                  {t('updateBanner.dismiss')}
+                </button>
+              </>
+            )}
+
+            {updateProgress.status === 'downloading' && (
+              <button
+                type="button"
+                onClick={() => {
+                  (window as any).api?.cancelAppUpdate?.();
+                  setUpdateProgress({ status: 'idle', percent: 0, transferred: 0, total: 0 });
+                }}
+                className="px-2 py-1 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all cursor-pointer text-xs"
+              >
+                Cancel
+              </button>
+            )}
           </div>
         </div>
       )}

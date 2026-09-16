@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage } from 'ele
 import path from 'path';
 import fs from 'fs';
 import { getSystemInfo } from './system-info';
+import { checkForUpdates, startAppUpdate, cancelAppUpdate } from './auto-updater';
 import {
   fetchPaperVersions,
   fetchPurpurVersions,
@@ -200,7 +201,7 @@ function createWindow() {
 
     // Auto-update check
     if (appSettings.autoUpdate) {
-      checkForUpdatesAndNotify();
+      checkForUpdates(mainWindow || undefined);
     }
   });
 
@@ -229,51 +230,6 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
-}
-
-// ── GitHub release update checker ─────────────────────────────────────────────
-const GITHUB_RELEASES_URL = 'https://api.github.com/repos/itsnotsimple/craftdock/releases/latest';
-
-function semverGt(a: string, b: string): boolean {
-  const pa = a.replace(/^v/, '').split('.').map(Number);
-  const pb = b.replace(/^v/, '').split('.').map(Number);
-  for (let i = 0; i < 3; i++) {
-    const diff = (pa[i] || 0) - (pb[i] || 0);
-    if (diff > 0) return true;
-    if (diff < 0) return false;
-  }
-  return false;
-}
-
-async function checkForUpdatesAndNotify(): Promise<void> {
-  try {
-    const currentVersion = app.getVersion();
-    const res = await fetch(GITHUB_RELEASES_URL, {
-      headers: {
-        'User-Agent': `CraftDock/${currentVersion}`,
-        Accept: 'application/vnd.github+json',
-      },
-    });
-    if (!res.ok) return;
-    const release = (await res.json()) as { tag_name: string; html_url: string; name: string };
-    const latestTag = release.tag_name || '';
-    if (semverGt(latestTag, currentVersion)) {
-      const wins = BrowserWindow.getAllWindows();
-      for (const win of wins) {
-        if (!win.isDestroyed()) {
-          win.webContents.send('update-available', {
-            currentVersion,
-            latestVersion: latestTag,
-            releaseName: release.name,
-            releaseUrl: release.html_url,
-          });
-        }
-      }
-    }
-  } catch (e) {
-    // silently ignore — network may be offline
-    console.warn('[CraftDock] Update check failed:', e);
-  }
 }
 
 app.whenReady().then(() => {
@@ -849,8 +805,16 @@ ipcMain.handle('uninstall-app', async () => {
 });
 
 ipcMain.handle('check-for-updates', async () => {
-  await checkForUpdatesAndNotify();
-  return true;
+  const info = await checkForUpdates(mainWindow || undefined);
+  return !!info;
+});
+
+ipcMain.handle('start-app-update', async () => {
+  return startAppUpdate();
+});
+
+ipcMain.handle('cancel-app-update', async () => {
+  return cancelAppUpdate();
 });
 
 // Periodic live RAM & System Info update (every 2.5s)

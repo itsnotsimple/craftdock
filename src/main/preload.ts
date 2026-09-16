@@ -64,6 +64,8 @@ export interface IElectronApi {
   clearAppCache: () => Promise<any>;
   uninstallApp: () => Promise<boolean>;
   checkForUpdates: () => Promise<boolean>;
+  startAppUpdate: () => Promise<any>;
+  cancelAppUpdate: () => Promise<boolean>;
 
   // Subscriptions
   onServerLog: (callback: (data: any) => void) => () => void;
@@ -75,6 +77,7 @@ export interface IElectronApi {
   onTunnelStatusChanged: (callback: (data: any) => void) => () => void;
   onServerProfileUpdated: (callback: (data: any) => void) => () => void;
   onUpdateAvailable: (callback: (data: any) => void) => () => void;
+  onAppUpdateProgress: (callback: (data: any) => void) => () => void;
 }
 
 const api: IElectronApi = {
@@ -138,6 +141,8 @@ const api: IElectronApi = {
   clearAppCache: () => ipcRenderer.invoke('clear-app-cache'),
   uninstallApp: () => ipcRenderer.invoke('uninstall-app'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  startAppUpdate: () => ipcRenderer.invoke('start-app-update'),
+  cancelAppUpdate: () => ipcRenderer.invoke('cancel-app-update'),
 
   onServerLog: (callback) => {
     const handler = (_event: any, data: any) => callback(data);
@@ -183,6 +188,11 @@ const api: IElectronApi = {
     const handler = (_event: any, data: any) => callback(data);
     ipcRenderer.on('update-available', handler);
     return () => ipcRenderer.removeListener('update-available', handler);
+  },
+  onAppUpdateProgress: (callback) => {
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('app-update-progress', handler);
+    return () => ipcRenderer.removeListener('app-update-progress', handler);
   },
 };
 
