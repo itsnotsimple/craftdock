@@ -1,6 +1,6 @@
 {
   "name": "minecraft-server-manager",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "Personal Minecraft Server Host & Manager for Windows and Mac",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -43,7 +43,7 @@
         }
       ],
       "category": "public.app-category.games",
-      "icon": "resources/icon-mac.png",
+      "icon": "resources/icon.png",
       "artifactName": "CraftDock-${version}-macOS-${arch}.${ext}"
     },
     "dmg": {

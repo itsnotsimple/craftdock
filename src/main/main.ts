@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { getSystemInfo } from './system-info';
 import { checkForUpdates, startAppUpdate, cancelAppUpdate } from './auto-updater';
+import { performUninstallAndErase } from './uninstaller';
 import {
   fetchPaperVersions,
   fetchPurpurVersions,
@@ -144,6 +145,7 @@ function createWindow() {
     height: 880,
     minWidth: 1080,
     minHeight: 700,
+    title: 'CraftDock',
     icon: fs.existsSync(iconPath) ? iconPath : undefined,
     backgroundColor: '#060913',
     webPreferences: {
@@ -791,17 +793,7 @@ ipcMain.handle('clear-app-cache', async () => {
 });
 
 ipcMain.handle('uninstall-app', async () => {
-  try {
-    const dataDir = getDataDirectory();
-    if (fs.existsSync(dataDir)) {
-      fs.rmSync(dataDir, { recursive: true, force: true });
-    }
-  } catch (err) {
-    console.error('[uninstall-app] Error deleting data dir:', err);
-  }
-  isQuitting = true;
-  app.quit();
-  return true;
+  return performUninstallAndErase();
 });
 
 ipcMain.handle('check-for-updates', async () => {

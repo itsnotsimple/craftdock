@@ -73,5 +73,13 @@ jobs:
             3. Now double-click CraftDock — it will open immediately!
 
             *(Alternatively, go to **System Settings ➔ Privacy & Security ➔ Security** and click **Open Anyway**).*
+
+            ---
+
+            ### ✨ What's New in ${{ github.ref_name }}
+            * 🚀 **1-Click In-App Auto-Updater**: Directly updates CraftDock with live progress bar and automatic restart.
+            * 🍏 **Native macOS Experience**: High-resolution crisp icon and automated Gatekeeper bypass.
+            * 🧹 **Complete App & Data Eraser**: Clean uninstallation and total removal of server files, worlds, and runtimes.
+            * 🪟 **Clean Window Title**: Alt-Tab and title bar display pure "CraftDock".
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
