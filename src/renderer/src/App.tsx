@@ -7,8 +7,10 @@ import { DashboardView } from './views/DashboardView';
 import { NetworkModal } from './components/NetworkModal';
 import { ServerConflictModal } from './components/ServerConflictModal';
 import { ServerProfile, SystemInfo, LogEntry, ServerSoftware, ServerStats } from './types';
+import { useDialog } from './context/DialogContext';
 
 export const App: React.FC = () => {
+  const { showConfirm, showAlert } = useDialog();
   const [currentTab, setCurrentTab] = useState<'library' | 'wizard' | 'dashboard'>('library');
   const [servers, setServers] = useState<ServerProfile[]>([]);
   const [activeServerId, setActiveServerId] = useState<string | null>(null);
@@ -272,7 +274,26 @@ export const App: React.FC = () => {
   };
 
   const handleDeleteServer = async (id: string) => {
-    if (confirm('Сигурен ли си, че искаш да изтриеш този сървър?')) {
+    const target = servers.find((s) => s.id === id);
+    const serverName = target ? target.name : 'този сървър';
+    const confirmed = await showConfirm({
+      title: 'Изтриване на сървър',
+      message: (
+        <span>
+          Сигурен ли си, че искаш напълно да изтриеш <strong className="text-white font-semibold">"{serverName}"</strong>?
+          <br />
+          <span className="text-xs text-rose-400/80 mt-1.5 block">
+            Всички светове, плъгини и файлове ще бъдат премахнати безвъзвратно!
+          </span>
+        </span>
+      ),
+      confirmText: 'Изтрий сървъра',
+      cancelText: 'Отказ',
+      danger: true,
+      icon: 'trash',
+    });
+
+    if (confirmed) {
       await (window as any).api?.deleteServer(id, true);
       setServers((prev) => prev.filter((s) => s.id !== id));
       if (activeServerId === id) {
@@ -312,7 +333,12 @@ export const App: React.FC = () => {
       setActiveServerId(newServer.id);
       setCurrentTab('dashboard');
     } catch (err: any) {
-      alert(`Грешка при създаване на сървъра: ${err.message}`);
+      await showAlert({
+        type: 'error',
+        title: 'Грешка при създаване',
+        message: err.message || 'Възникна грешка при създаването на сървъра.',
+        buttonText: 'Разбрах',
+      });
     } finally {
       setIsCreating(false);
       setDownloadProgress(null);

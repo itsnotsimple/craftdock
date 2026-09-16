@@ -24,6 +24,7 @@ import {
   FileArchive,
 } from 'lucide-react';
 import { ServerProfile } from '../types';
+import { useDialog } from '../context/DialogContext';
 
 interface InstalledPlugin {
   name: string;
@@ -56,6 +57,7 @@ interface PluginManagerProps {
 }
 
 export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
+  const { showConfirm, showAlert } = useDialog();
   const [subTab, setSubTab] = useState<'plugins' | 'resourcepacks'>('plugins');
   const [installed, setInstalled] = useState<InstalledPlugin[]>([]);
   const [curated, setCurated] = useState<CuratedPlugin[]>([]);
@@ -144,14 +146,32 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
       await api.installCuratedPlugin(server.id, plugin.id);
       await loadData();
     } catch (e: any) {
-      alert(`Грешка при инсталиране: ${e.message}`);
+      await showAlert({
+        type: 'error',
+        title: 'Грешка при инсталиране',
+        message: e.message || 'Неуспешно инсталиране на плъгина.',
+        buttonText: 'Разбрах',
+      });
     } finally {
       setInstallingId(null);
     }
   };
 
   const handleDeletePlugin = async (fileName: string) => {
-    if (confirm(`Сигурен ли си, че искаш да изтриеш ${fileName}?`)) {
+    const confirmed = await showConfirm({
+      title: 'Изтриване на плъгин',
+      message: (
+        <span>
+          Сигурен ли си, че искаш да изтриеш <strong className="text-white font-semibold">"{fileName}"</strong> от сървъра?
+        </span>
+      ),
+      confirmText: 'Изтрий файла',
+      cancelText: 'Отказ',
+      danger: true,
+      icon: 'trash',
+    });
+
+    if (confirmed) {
       await (window as any).api?.deletePlugin(server.id, fileName);
       await loadData();
     }
@@ -179,7 +199,12 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
       setSaveFeedback(`Активиран: ${pack.name}`);
       setTimeout(() => setSaveFeedback(null), 3000);
     } catch (e: any) {
-      alert(`Грешка: ${e.message}`);
+      await showAlert({
+        type: 'error',
+        title: 'Грешка при активиране',
+        message: e.message || 'Възникна грешка при активиране на ресурс пакета.',
+        buttonText: 'Разбрах',
+      });
     } finally {
       setSavingAction(false);
     }
@@ -190,7 +215,16 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
     const api = (window as any).api;
     if (!api) return;
 
-    if (!confirm('Сигурен ли си, че искаш да изключиш ресурс пакета от сървъра? Играчите ще влизат със стандартните текстури.')) {
+    const confirmed = await showConfirm({
+      title: 'Изключване на ресурс пакет',
+      message: 'Сигурен ли си, че искаш да изключиш активния ресурс пакет от сървъра? Играчите ще влизат със стандартните текстури.',
+      confirmText: 'Изключи пакета',
+      cancelText: 'Отказ',
+      danger: true,
+      icon: 'warning',
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -211,7 +245,12 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
       setSaveFeedback('Ресурс пакетът е деактивиран от сървъра.');
       setTimeout(() => setSaveFeedback(null), 3000);
     } catch (e: any) {
-      alert(`Грешка: ${e.message}`);
+      await showAlert({
+        type: 'error',
+        title: 'Грешка при деактивиране',
+        message: e.message || 'Възникна грешка при деактивиране на пакета.',
+        buttonText: 'Разбрах',
+      });
     } finally {
       setSavingAction(false);
     }
@@ -224,7 +263,12 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
     if (!api) return;
 
     if (!newPack.url.trim()) {
-      alert('Моля въведи директен линк за сваляне на .zip файла!');
+      await showAlert({
+        type: 'warning',
+        title: 'Липсващ линк',
+        message: 'Моля, въведи директен линк за сваляне на .zip файла на ресурс пакета!',
+        buttonText: 'Разбрах',
+      });
       return;
     }
 
@@ -269,7 +313,12 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
       setSaveFeedback(`Успешно запазен и активиран: ${packName}!`);
       setTimeout(() => setSaveFeedback(null), 3500);
     } catch (e: any) {
-      alert(`Грешка: ${e.message}`);
+      await showAlert({
+        type: 'error',
+        title: 'Грешка при запазване',
+        message: e.message || 'Възникна грешка при запазване на ресурс пакета.',
+        buttonText: 'Разбрах',
+      });
     } finally {
       setSavingAction(false);
     }
@@ -283,14 +332,36 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
     const target = savedPacks.find((p) => p.id === packId);
     if (!target) return;
 
-    if (confirm(`Премахване на "${target.name}" от списъка със запазени пакети?`)) {
+    const confirmed = await showConfirm({
+      title: 'Премахване на пакет',
+      message: (
+        <span>
+          Сигурен ли си, че искаш да премахнеш <strong className="text-white font-semibold">"{target.name}"</strong> от списъка със запазени ресурс пакети?
+        </span>
+      ),
+      confirmText: 'Премахни пакета',
+      cancelText: 'Отказ',
+      danger: true,
+      icon: 'trash',
+    });
+
+    if (confirmed) {
       const updated = savedPacks.filter((p) => p.id !== packId);
       await api.saveResourcePacksList(server.id, updated);
       setSavedPacks(updated);
 
       // If the deleted one was currently active, prompt or keep
       if (activePackUrl === target.url) {
-        if (confirm('Този пакет е текущо активен на сървъра. Искаш ли да го деактивираш и от server.properties?')) {
+        const deactivateConfirmed = await showConfirm({
+          title: 'Деактивиране на пакета',
+          message: 'Този пакет в момента е активен на сървъра. Искаш ли да го изключиш и от настройките (server.properties)?',
+          confirmText: 'Изключи го',
+          cancelText: 'Остави го включен',
+          danger: false,
+          icon: 'warning',
+        });
+
+        if (deactivateConfirmed) {
           handleDeactivatePack();
         }
       }

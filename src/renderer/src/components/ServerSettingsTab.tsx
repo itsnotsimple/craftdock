@@ -18,6 +18,7 @@ import {
   Flame,
 } from 'lucide-react';
 import { ServerProfile } from '../types';
+import { useDialog } from '../context/DialogContext';
 
 interface ServerSettingsProps {
   server: ServerProfile;
@@ -25,6 +26,7 @@ interface ServerSettingsProps {
 }
 
 export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpdateServer }) => {
+  const { showConfirm } = useDialog();
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
   const [serverIcon, setServerIcon] = useState<string | null>(null);
@@ -105,7 +107,16 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
   };
 
   const handleRemoveIcon = async () => {
-    if (confirm('Сигурен ли си, че искаш да премахнеш снимката на сървъра?')) {
+    const confirmed = await showConfirm({
+      title: 'Премахване на снимка',
+      message: 'Сигурен ли си, че искаш да премахнеш текущата икона на сървъра? Сървърът ще се показва със стандартната икона.',
+      confirmText: 'Премахни снимката',
+      cancelText: 'Отказ',
+      danger: true,
+      icon: 'trash',
+    });
+
+    if (confirmed) {
       const api = (window as any).api;
       if (api) {
         await api.removeServerIcon(server.id);

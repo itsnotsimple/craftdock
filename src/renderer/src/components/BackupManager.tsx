@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Archive, Save, CheckCircle2, ShieldCheck, Clock, FolderOpen } from 'lucide-react';
 import { ServerProfile } from '../types';
+import { useDialog } from '../context/DialogContext';
 
 interface BackupManagerProps {
   server: ServerProfile;
 }
 
 export const BackupManager: React.FC<BackupManagerProps> = ({ server }) => {
+  const { showAlert } = useDialog();
   const [creating, setCreating] = useState(false);
   const [lastBackup, setLastBackup] = useState<string | null>(null);
 
@@ -20,10 +22,20 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ server }) => {
       if (fileName) {
         setLastBackup(fileName);
       } else {
-        alert('Няма открит свят за архив (пуснете сървъра поне веднъж, за да генерира свят).');
+        await showAlert({
+          type: 'warning',
+          title: 'Липсва генериран свят',
+          message: 'Няма открит свят за архив. Моля, стартирайте сървъра поне веднъж, за да генерира своята карта.',
+          buttonText: 'Разбрах',
+        });
       }
     } catch (e: any) {
-      alert(`Грешка при създаване на архив: ${e.message}`);
+      await showAlert({
+        type: 'error',
+        title: 'Грешка при архивиране',
+        message: e.message || 'Възникна грешка при създаването на бекъп.',
+        buttonText: 'Разбрах',
+      });
     } finally {
       setCreating(false);
     }
