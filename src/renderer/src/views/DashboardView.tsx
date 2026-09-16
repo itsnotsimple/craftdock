@@ -22,6 +22,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { ServerProfile, LogEntry, SystemInfo, ServerStats } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 import { ConsoleView } from '../components/ConsoleView';
 import { PluginManager } from '../components/PluginManager';
 import { ServerSettingsTab } from '../components/ServerSettingsTab';
@@ -61,6 +62,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenFolder,
   onBackToLibrary,
 }) => {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'console' | 'plugins' | 'settings' | 'resources' | 'players' | 'backups'>('console');
   const [whitelist, setWhitelist] = useState<Array<{ name: string; uuid?: string }>>([]);
   const [isWhitelistEnabled, setIsWhitelistEnabled] = useState<boolean>(false);
@@ -97,56 +99,68 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setWhitelistLoading(true);
     const api = (window as any).api;
     if (api) {
-      await api.addToWhitelist(server.id, name);
-      setNewPlayerName('');
-      await loadWhitelistData();
+      try {
+        await api.addToWhitelist(server.id, name);
+        setNewPlayerName('');
+        await loadWhitelistData();
+      } catch (err) {
+        console.error('Failed to add to whitelist:', err);
+      } finally {
+        setWhitelistLoading(false);
+      }
     }
-    setWhitelistLoading(false);
   };
 
   const handleRemoveWhitelist = async (name: string) => {
     setWhitelistLoading(true);
     const api = (window as any).api;
     if (api) {
-      await api.removeFromWhitelist(server.id, name);
-      await loadWhitelistData();
+      try {
+        await api.removeFromWhitelist(server.id, name);
+        await loadWhitelistData();
+      } catch (err) {
+        console.error('Failed to remove from whitelist:', err);
+      } finally {
+        setWhitelistLoading(false);
+      }
     }
-    setWhitelistLoading(false);
   };
 
   const handleToggleWhitelist = async () => {
     const api = (window as any).api;
     if (!api) return;
-    const nextState = !isWhitelistEnabled;
-    setIsWhitelistEnabled(nextState);
-    await api.saveServerProperties(server.id, { whiteList: nextState });
-    if (isRunning) {
-      onSendCommand(`whitelist ${nextState ? 'on' : 'off'}`);
-      onSendCommand('whitelist reload');
+    const newState = !isWhitelistEnabled;
+    try {
+      await api.saveServerProperties(server.id, { whiteList: newState });
+      setIsWhitelistEnabled(newState);
+      if (isRunning) {
+        onSendCommand(`whitelist ${newState ? 'on' : 'off'}`);
+        onSendCommand('whitelist reload');
+      }
+    } catch (e) {
+      console.error('Failed to toggle whitelist:', e);
     }
-  };
-
-  const handleKickPlayer = (playerName: string) => {
-    onSendCommand(`kick ${playerName} Изритан от администратор`);
   };
 
   const handleOpPlayer = (playerName: string) => {
     onSendCommand(`op ${playerName}`);
   };
 
+  const handleKickPlayer = (playerName: string) => {
+    onSendCommand(`kick ${playerName}`);
+  };
+
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-transparent relative z-1">
-      {/* Top Bar Header */}
-      <header
-        className="h-16 px-6 border-b border-white/[0.08] flex items-center justify-between bg-slate-950/40 backdrop-blur-2xl shrink-0"
-      >
+    <div className="flex-1 flex flex-col h-full bg-slate-950/20 overflow-hidden">
+      {/* Top Server Bar */}
+      <header className="px-6 py-4 border-b border-white/[0.08] flex items-center justify-between shrink-0 glass-panel">
         <div className="flex items-center gap-4">
           <button
             onClick={onBackToLibrary}
-            className="p-2.5 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-white/[0.06] border border-white/[0.08] hover:border-white/[0.15] transition-all cursor-pointer group"
-            title="Назад към списъка със сървъри"
+            className="p-2.5 rounded-xl glass-card hover:bg-white/[0.08] text-slate-300 hover:text-white transition-all cursor-pointer shadow-sm"
+            title={t('dashboard.backTooltip')}
           >
-            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+            <ArrowLeft className="w-4 h-4" />
           </button>
 
           <div>
@@ -181,29 +195,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {isStarting && (
                 <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-400/30 flex items-center gap-1.5 animate-pulse font-mono">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                  Стартира се...
+                  {t('common.starting')}
                 </span>
               )}
               {isRunning && (
                 <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-400/30 flex items-center gap-1.5 font-mono">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  Онлайн
+                  {t('common.online')}
                 </span>
               )}
               {isStopping && (
                 <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-400/30 flex items-center gap-1.5 font-mono">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                  Спира се...
+                  {t('common.stopping')}
                 </span>
               )}
             </div>
             <div className="flex items-center gap-3 text-xs text-slate-400 font-mono mt-1">
               <span className="flex items-center gap-1 text-slate-300">
-                <span className="text-slate-500">Порт:</span> :{server.port}
+                <span className="text-slate-500">{t('dashboard.port')}:</span> :{server.port}
               </span>
               <span className="text-slate-600">•</span>
               <span className="flex items-center gap-1 text-slate-300">
-                <span className="text-slate-500">Заделен RAM:</span> {server.allocatedRamGb} GB
+                <span className="text-slate-500">{t('dashboard.allocatedRam')}:</span> {server.allocatedRamGb} GB
               </span>
             </div>
           </div>
@@ -216,13 +230,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-semibold transition-all border border-white/[0.1] hover:border-cyan-400/40 shadow-sm cursor-pointer group"
           >
             <Globe className="w-4 h-4 text-cyan-400 transition-transform group-hover:rotate-12" />
-            <span>IP за Приятели</span>
+            <span>{t('dashboard.ipForFriends')}</span>
           </button>
 
           <button
             onClick={() => onOpenFolder(server.id)}
             className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-slate-100 transition-all border border-white/[0.1] hover:border-amber-400/40 cursor-pointer"
-            title="Отвори папката на сървъра"
+            title={t('dashboard.openFolderTooltip')}
           >
             <FolderOpen className="w-4 h-4 text-amber-400" />
           </button>
@@ -234,7 +248,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-bold text-xs transition-all shadow-lg shadow-rose-950/50 glow-crimson cursor-pointer disabled:opacity-50"
             >
               <Square className="w-3.5 h-3.5 fill-current text-rose-200" />
-              <span>{isStopping ? 'Спира се...' : 'Спри Сървъра'}</span>
+              <span>{isStopping ? t('common.stopping') : t('common.stop')}</span>
             </button>
           ) : isStarting ? (
             <button
@@ -242,7 +256,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-500/20 text-amber-200 border border-amber-400/30 font-bold text-xs shadow-lg shadow-amber-950/40 cursor-not-allowed opacity-90"
             >
               <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
-              <span>Стартира се...</span>
+              <span>{t('common.starting')}</span>
             </button>
           ) : isStopping ? (
             <button
@@ -250,16 +264,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-rose-500/20 text-rose-200 border border-rose-400/30 font-bold text-xs shadow-lg cursor-not-allowed opacity-90"
             >
               <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
-              <span>Спира се...</span>
+              <span>{t('common.stopping')}</span>
             </button>
           ) : activeRunningServer && activeRunningServer.id !== server.id ? (
             <button
               onClick={() => onStartServer(server.id)}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-bold text-xs transition-all border border-amber-400/30 cursor-pointer shadow-sm shadow-amber-950/40"
-              title={`В момента работи «${activeRunningServer.name}». Кликни за смяна.`}
+              title={t('serverCard.runningAnother', { name: activeRunningServer.name })}
             >
               <Play className="w-3.5 h-3.5 fill-current text-amber-400" />
-              <span>Смени на този сървър</span>
+              <span>{t('common.switchServer')}</span>
             </button>
           ) : (
             <button
@@ -267,7 +281,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs transition-all shadow-lg shadow-emerald-950/50 glow-green cursor-pointer"
             >
               <Play className="w-3.5 h-3.5 fill-current text-emerald-200" />
-              <span>Стартирай (1 Клик)</span>
+              <span>{t('common.startOneClick')}</span>
             </button>
           )}
         </div>
@@ -285,7 +299,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             }`}
           >
             <TerminalIcon className={`w-3.5 h-3.5 ${activeTab === 'console' ? 'text-emerald-400' : 'text-emerald-400/70'}`} />
-            <span>Конзола</span>
+            <span>{t('dashboard.tabConsole')}</span>
           </button>
 
           <button
@@ -297,7 +311,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             }`}
           >
             <Package className={`w-3.5 h-3.5 ${activeTab === 'plugins' ? 'text-purple-400' : 'text-purple-400/70'}`} />
-            <span>Плъгини & Ресурс Пакети</span>
+            <span>{t('dashboard.tabPlugins')}</span>
           </button>
 
           <button
@@ -309,7 +323,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             }`}
           >
             <Settings className={`w-3.5 h-3.5 ${activeTab === 'settings' ? 'text-amber-400' : 'text-amber-400/70'}`} />
-            <span>Настройки на Света</span>
+            <span>{t('dashboard.tabSettings')}</span>
           </button>
 
           <button
@@ -321,7 +335,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             }`}
           >
             <Users className={`w-3.5 h-3.5 ${activeTab === 'players' ? 'text-cyan-400' : 'text-cyan-400/70'}`} />
-            <span>Играчи & Whitelist ({players.length})</span>
+            <span>{t('dashboard.tabPlayers')} ({players.length})</span>
           </button>
 
           <button
@@ -333,7 +347,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             }`}
           >
             <Activity className={`w-3.5 h-3.5 ${activeTab === 'resources' ? 'text-pink-400' : 'text-pink-400/70'}`} />
-            <span>Ресурси & Хардуер</span>
+            <span>{t('dashboard.tabResources')}</span>
           </button>
 
           <button
@@ -345,7 +359,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             }`}
           >
             <Archive className={`w-3.5 h-3.5 ${activeTab === 'backups' ? 'text-orange-400' : 'text-orange-400/70'}`} />
-            <span>Архиви (Backups)</span>
+            <span>{t('dashboard.tabBackups')}</span>
           </button>
         </div>
 
@@ -361,7 +375,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             }`}
           />
           <span className="font-semibold text-slate-300 font-mono">
-            {isRunning ? 'Онлайн' : isStarting ? 'Стартира...' : 'Офлайн'}
+            {isRunning ? t('common.online') : isStarting ? t('common.starting') : t('common.offline')}
           </span>
         </div>
       </div>
@@ -402,17 +416,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div>
                   <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
                     <Users className="w-5 h-5 text-sky-400" />
-                    Онлайн играчи в момента ({players.length})
+                    {t('dashboard.onlinePlayersNow')} ({players.length})
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Играчи, които са свързани и играят в сървъра точно сега
+                    {t('dashboard.onlinePlayersSubtitle')}
                   </p>
                 </div>
               </div>
 
               {players.length === 0 ? (
                 <div className="py-8 text-center glass-card rounded-xl text-slate-400 text-xs">
-                  Няма свързани играчи в момента. Когато някой влезе в играта, ще се появи тук с опция за OP и Kick.
+                  {t('dashboard.noConnectedPlayers')}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -433,14 +447,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => handleOpPlayer(player)}
-                          title="Дай OP (Администраторски права)"
+                          title={t('dashboard.opTooltip')}
                           className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all text-xs flex items-center gap-1 font-semibold cursor-pointer"
                         >
                           <Crown className="w-3.5 h-3.5" /> OP
                         </button>
                         <button
                           onClick={() => handleKickPlayer(player)}
-                          title="Изритай играч (Kick)"
+                          title={t('dashboard.kickTooltip')}
                           className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all text-xs flex items-center gap-1 font-semibold cursor-pointer"
                         >
                           <UserX className="w-3.5 h-3.5" /> Kick
@@ -458,10 +472,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div>
                   <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
                     <Shield className="w-5 h-5 text-sky-400" />
-                    Whitelist (Списък с разрешени играчи)
+                    {t('dashboard.whitelistTitle')}
                   </h3>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Защити сървъра, така че само одобрени приятели да могат да влизат
+                    {t('dashboard.whitelistSubtitle')}
                   </p>
                 </div>
 
@@ -475,11 +489,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   >
                     {isWhitelistEnabled ? (
                       <>
-                        <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> Whitelist: Активен
+                        <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> {t('dashboard.whitelistActive')}
                       </>
                     ) : (
                       <>
-                        <ShieldAlert className="w-3.5 h-3.5 text-slate-400" /> Whitelist: Изключен
+                        <ShieldAlert className="w-3.5 h-3.5 text-slate-400" /> {t('dashboard.whitelistDisabled')}
                       </>
                     )}
                   </span>
@@ -492,7 +506,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         : 'bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white border-sky-400/40 glow-ice shadow-sm'
                     }`}
                   >
-                    {isWhitelistEnabled ? 'Изключи Whitelist' : 'Включи Whitelist'}
+                    {isWhitelistEnabled ? t('dashboard.disableWhitelist') : t('dashboard.enableWhitelist')}
                   </button>
                 </div>
               </div>
@@ -513,13 +527,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div>
                   <div className="font-bold">
                     {isWhitelistEnabled
-                      ? 'Сървърът е в защитен режим!'
-                      : 'Внимание: Всеки играч с твоя IP адрес може да влезе в момента.'}
+                      ? t('dashboard.serverSecured')
+                      : t('dashboard.serverUnsecured')}
                   </div>
                   <div className="text-[11px] opacity-90 mt-0.5">
                     {isWhitelistEnabled
-                      ? 'Само потребителите в списъка по-долу могат да се присъединят към играта.'
-                      : 'Натисни "Включи Whitelist", ако искаш да ограничиш достъпа само за хората, добавени в списъка по-долу.'}
+                      ? t('dashboard.serverSecuredDesc')
+                      : t('dashboard.serverUnsecuredDesc')}
                   </div>
                 </div>
               </div>
@@ -528,7 +542,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <form onSubmit={handleAddWhitelist} className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Въведи Minecraft потребителско име (напр. Ivan, Alex, Player123)..."
+                  placeholder={t('dashboard.addPlayerPlaceholder')}
                   value={newPlayerName}
                   onChange={(e) => setNewPlayerName(e.target.value)}
                   className="flex-1 px-4 py-2 rounded-xl glass-input text-slate-200 text-xs focus:outline-none focus:border-sky-400 font-mono"
@@ -539,14 +553,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 disabled:opacity-50 text-white font-bold text-xs transition-all shadow-sm shrink-0 glow-ice cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Добави в Whitelist</span>
+                  <span>{t('dashboard.addToWhitelist')}</span>
                 </button>
               </form>
 
               {/* Whitelisted Players List */}
               {whitelist.length === 0 ? (
                 <div className="py-8 text-center glass-card rounded-xl text-slate-400 text-xs">
-                  Няма добавени играчи в белия списък. Напиши името на приятел по-горе и натисни "Добави в Whitelist".
+                  {t('dashboard.noPlayers')}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -565,17 +579,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           <span className="font-mono text-xs font-bold text-slate-200 block">
                             {entry.name}
                           </span>
-                          <span className="text-[10px] text-sky-400 font-medium">Разрешен</span>
+                          <span className="text-[10px] text-sky-400 font-medium">{t('dashboard.allowedBadge')}</span>
                         </div>
                       </div>
 
                       <button
                         onClick={() => handleRemoveWhitelist(entry.name)}
                         disabled={whitelistLoading}
-                        title="Премахни от Whitelist"
+                        title={t('dashboard.removeWhitelistTooltip')}
                         className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all text-xs flex items-center gap-1 font-semibold cursor-pointer"
                       >
-                        <Trash2 className="w-3.5 h-3.5" /> Премахни
+                        <Trash2 className="w-3.5 h-3.5" /> {t('common.delete')}
                       </button>
                     </div>
                   ))}

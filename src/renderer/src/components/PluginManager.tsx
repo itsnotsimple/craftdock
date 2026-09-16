@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { ServerProfile } from '../types';
 import { useDialog } from '../context/DialogContext';
+import { useLanguage } from '../context/LanguageContext';
+import { translations, TranslationKey } from '../i18n/translations';
 
 interface InstalledPlugin {
   name: string;
@@ -57,6 +59,7 @@ interface PluginManagerProps {
 }
 
 export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
+  const { t, language } = useLanguage();
   const { showConfirm, showAlert } = useDialog();
   const [subTab, setSubTab] = useState<'plugins' | 'resourcepacks'>('plugins');
   const [installed, setInstalled] = useState<InstalledPlugin[]>([]);
@@ -83,6 +86,16 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
   });
   const [savingAction, setSavingAction] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
+
+  const getPluginName = (plugin: CuratedPlugin) => {
+    const key = `plugins.plugin.${plugin.id}.name` as TranslationKey;
+    return translations[language][key] || plugin.name;
+  };
+
+  const getPluginDesc = (plugin: CuratedPlugin) => {
+    const key = `plugins.plugin.${plugin.id}.desc` as TranslationKey;
+    return translations[language][key] || plugin.description;
+  };
 
   const loadData = async () => {
     const api = (window as any).api;
@@ -114,7 +127,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
       if (propUrl && !libList.some((p) => p.url === propUrl)) {
         const autoPack: SavedResourcePack = {
           id: 'pack_' + Date.now(),
-          name: 'Текущ Сървърен Пакет',
+          name: language === 'bg' ? 'Текущ Сървърен Пакет' : 'Current Server Pack',
           url: propUrl,
           sha1: propSha1,
           required: propReq,
@@ -148,9 +161,9 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
     } catch (e: any) {
       await showAlert({
         type: 'error',
-        title: 'Грешка при инсталиране',
-        message: e.message || 'Неуспешно инсталиране на плъгина.',
-        buttonText: 'Разбрах',
+        title: t('dialogs.errorTitle'),
+        message: e.message || 'Failed to install plugin.',
+        buttonText: t('common.understand'),
       });
     } finally {
       setInstallingId(null);
@@ -159,14 +172,14 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
 
   const handleDeletePlugin = async (fileName: string) => {
     const confirmed = await showConfirm({
-      title: 'Изтриване на плъгин',
+      title: t('dialogs.deletePluginTitle'),
       message: (
         <span>
-          Сигурен ли си, че искаш да изтриеш <strong className="text-white font-semibold">"{fileName}"</strong> от сървъра?
+          {t('dialogs.deletePluginMsg', { name: fileName })}
         </span>
       ),
-      confirmText: 'Изтрий файла',
-      cancelText: 'Отказ',
+      confirmText: t('dialogs.deletePluginBtn'),
+      cancelText: t('common.cancel'),
       danger: true,
       icon: 'trash',
     });
@@ -196,14 +209,14 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
       setActivePackRequired(pack.required);
       setActivePackPrompt(pack.prompt || '');
 
-      setSaveFeedback(`Активиран: ${pack.name}`);
+      setSaveFeedback(`${language === 'bg' ? 'Активиран' : 'Activated'}: ${pack.name}`);
       setTimeout(() => setSaveFeedback(null), 3000);
     } catch (e: any) {
       await showAlert({
         type: 'error',
-        title: 'Грешка при активиране',
-        message: e.message || 'Възникна грешка при активиране на ресурс пакета.',
-        buttonText: 'Разбрах',
+        title: t('dialogs.errorTitle'),
+        message: e.message || 'Error activating resource pack.',
+        buttonText: t('common.understand'),
       });
     } finally {
       setSavingAction(false);
@@ -216,10 +229,10 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
     if (!api) return;
 
     const confirmed = await showConfirm({
-      title: 'Изключване на ресурс пакет',
-      message: 'Сигурен ли си, че искаш да изключиш активния ресурс пакет от сървъра? Играчите ще влизат със стандартните текстури.',
-      confirmText: 'Изключи пакета',
-      cancelText: 'Отказ',
+      title: t('dialogs.deactivatePackTitle'),
+      message: t('dialogs.deactivatePackMsg'),
+      confirmText: t('plugins.deactivate'),
+      cancelText: t('common.cancel'),
       danger: true,
       icon: 'warning',
     });
@@ -242,14 +255,14 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
       setActivePackRequired(false);
       setActivePackPrompt('');
 
-      setSaveFeedback('Ресурс пакетът е деактивиран от сървъра.');
+      setSaveFeedback(language === 'bg' ? 'Ресурс пакетът е деактивиран от сървъра.' : 'Resource pack deactivated from server.');
       setTimeout(() => setSaveFeedback(null), 3000);
     } catch (e: any) {
       await showAlert({
         type: 'error',
-        title: 'Грешка при деактивиране',
-        message: e.message || 'Възникна грешка при деактивиране на пакета.',
-        buttonText: 'Разбрах',
+        title: t('dialogs.errorTitle'),
+        message: e.message || 'Error deactivating pack.',
+        buttonText: t('common.understand'),
       });
     } finally {
       setSavingAction(false);
@@ -265,16 +278,18 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
     if (!newPack.url.trim()) {
       await showAlert({
         type: 'warning',
-        title: 'Липсващ линк',
-        message: 'Моля, въведи директен линк за сваляне на .zip файла на ресурс пакета!',
-        buttonText: 'Разбрах',
+        title: t('dialogs.warningTitle'),
+        message: language === 'bg'
+          ? 'Моля, въведи директен линк за сваляне на .zip файла на ресурс пакета!'
+          : 'Please enter a direct download link for the .zip resource pack file!',
+        buttonText: t('common.understand'),
       });
       return;
     }
 
     setSavingAction(true);
     try {
-      const packName = newPack.name.trim() || `Ресурс Пакет #${savedPacks.length + 1}`;
+      const packName = newPack.name.trim() || `${language === 'bg' ? 'Ресурс Пакет' : 'Resource Pack'} #${savedPacks.length + 1}`;
       const packItem: SavedResourcePack = {
         id: 'pack_' + Date.now(),
         name: packName,
@@ -310,14 +325,14 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
         sha1: '',
       });
 
-      setSaveFeedback(`Успешно запазен и активиран: ${packName}!`);
+      setSaveFeedback(`${language === 'bg' ? 'Успешно запазен и активиран' : 'Successfully saved and activated'}: ${packName}!`);
       setTimeout(() => setSaveFeedback(null), 3500);
     } catch (e: any) {
       await showAlert({
         type: 'error',
-        title: 'Грешка при запазване',
-        message: e.message || 'Възникна грешка при запазване на ресурс пакета.',
-        buttonText: 'Разбрах',
+        title: t('dialogs.errorTitle'),
+        message: e.message || 'Error saving resource pack.',
+        buttonText: t('common.understand'),
       });
     } finally {
       setSavingAction(false);
@@ -333,14 +348,16 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
     if (!target) return;
 
     const confirmed = await showConfirm({
-      title: 'Премахване на пакет',
+      title: t('dialogs.confirmTitle'),
       message: (
         <span>
-          Сигурен ли си, че искаш да премахнеш <strong className="text-white font-semibold">"{target.name}"</strong> от списъка със запазени ресурс пакети?
+          {language === 'bg'
+            ? `Сигурен ли си, че искаш да премахнеш "${target.name}" от списъка със запазени ресурс пакети?`
+            : `Are you sure you want to remove "${target.name}" from your saved resource packs?`}
         </span>
       ),
-      confirmText: 'Премахни пакета',
-      cancelText: 'Отказ',
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
       danger: true,
       icon: 'trash',
     });
@@ -353,10 +370,12 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
       // If the deleted one was currently active, prompt or keep
       if (activePackUrl === target.url) {
         const deactivateConfirmed = await showConfirm({
-          title: 'Деактивиране на пакета',
-          message: 'Този пакет в момента е активен на сървъра. Искаш ли да го изключиш и от настройките (server.properties)?',
-          confirmText: 'Изключи го',
-          cancelText: 'Остави го включен',
+          title: t('dialogs.deactivatePackTitle'),
+          message: language === 'bg'
+            ? 'Този пакет в момента е активен на сървъра. Искаш ли да го изключиш и от настройките (server.properties)?'
+            : 'This pack is currently active on the server. Do you also want to remove it from server.properties?',
+          confirmText: t('plugins.deactivate'),
+          cancelText: language === 'bg' ? 'Остави го включен' : 'Keep it active',
           danger: false,
           icon: 'warning',
         });
@@ -394,10 +413,10 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
         <div>
           <h3 className="text-lg font-black text-slate-100 flex items-center gap-2">
             <Package className="w-5 h-5 text-purple-400" />
-            Плъгини & Ресурс Пакети
+            {t('plugins.title')}
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Управлявай добавките и автоматичните текстурни пакети за всички играчи
+            {t('plugins.subtitle')}
           </p>
         </div>
 
@@ -406,20 +425,20 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
             type="button"
             onClick={() => (window as any).api?.openPluginsFolder(server.id)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-card hover:bg-white/[0.08] text-slate-200 text-xs font-semibold transition-all border border-white/[0.08] shadow-sm cursor-pointer"
-            title="Отвори папка за .jar плъгини"
+            title={t('plugins.openPluginsFolder')}
           >
             <FolderOpen className="w-4 h-4 text-purple-400" />
-            <span>Папка plugins</span>
+            <span>plugins</span>
           </button>
 
           <button
             type="button"
             onClick={() => (window as any).api?.openResourcePacksFolder(server.id)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-card hover:bg-white/[0.08] text-slate-200 text-xs font-semibold transition-all border border-white/[0.08] shadow-sm cursor-pointer"
-            title="Отвори папка за локални ресурс пакети"
+            title={t('plugins.openPacksFolder')}
           >
             <FolderOpen className="w-4 h-4 text-pink-400" />
-            <span>Папка resourcepacks</span>
+            <span>resourcepacks</span>
           </button>
         </div>
       </div>
@@ -436,7 +455,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           }`}
         >
           <Box className={`w-3.5 h-3.5 ${subTab === 'plugins' ? 'text-purple-400' : 'text-slate-400'}`} />
-          <span>Сървърни Плъгини ({installed.length})</span>
+          <span>{t('plugins.tabPlugins')} ({installed.length})</span>
         </button>
 
         <button
@@ -449,7 +468,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           }`}
         >
           <Palette className={`w-3.5 h-3.5 ${subTab === 'resourcepacks' ? 'text-pink-400' : 'text-slate-400'}`} />
-          <span>Сървърни Ресурс Пакети ({savedPacks.length})</span>
+          <span>{t('plugins.tabPacks')} ({savedPacks.length})</span>
           {activePackUrl && (
             <span className="flex h-2 w-2 relative ml-1">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
@@ -470,35 +489,30 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
       {/* ===================== TAB 1: PLUGINS ===================== */}
       {subTab === 'plugins' && (
         <div className="space-y-6">
-          {/* Curated 1-Click Catalog - Only for non-Vanilla servers (Paper, Purpur, Spigot) */}
           {server.software === 'vanilla' ? (
             <div className="p-6 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-3">
               <div className="flex items-center gap-2.5 text-amber-300">
                 <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
                 <span className="text-sm font-bold text-amber-200">
-                  Препоръчаните плъгини са скрити, защото сървърът е на ядро Vanilla
+                  {language === 'bg'
+                    ? 'Препоръчаните плъгини са скрити, защото сървърът е на ядро Vanilla'
+                    : 'Recommended plugins are hidden because the server engine is Vanilla'}
                 </span>
               </div>
               <p className="text-xs text-amber-300/80 leading-relaxed">
-                Официалният чист <strong>Vanilla</strong> Minecraft не поддържа плъгини от папка <code>plugins/</code>. Затова бутоните за инсталиране на плъгини са деактивирани тук.
+                {language === 'bg'
+                  ? 'Официалният чист Vanilla Minecraft не поддържа плъгини от папка plugins/. Затова бутоните за инсталиране на плъгини са деактивирани тук.'
+                  : 'Official pure Vanilla Minecraft does not load plugins from plugins/. Therefore plugin installation is disabled here.'}
               </p>
-              <div className="p-3.5 rounded-xl glass-card text-xs text-slate-300 space-y-1.5">
-                <span className="font-bold text-slate-100 flex items-center gap-1.5">
-                  💡 Искаш да ползваш SkinsRestorer, Geyser (кросплей) и команди?
-                </span>
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Създай нов сървър от бутона <strong>+ Нов Сървър</strong> и избери софтуер <strong>Paper</strong> или <strong>Purpur</strong>. Те поддържат 100% от тези плъгини с 1 клик, съвместими са с всички обикновени Minecraft клиенти и имат много по-висока производителност!
-                </p>
-              </div>
             </div>
           ) : (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-                  Препоръчани плъгини за игра с приятели
+                  {t('plugins.curatedTitle')}
                 </span>
-                <span className="text-[11px] text-slate-500">100% съвместими и тествани</span>
+                <span className="text-[11px] text-slate-500">{t('plugins.curatedDesc')}</span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -515,15 +529,15 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center gap-2">
                             {getCategoryIcon(plugin.category)}
-                            <span className="font-extrabold text-sm text-slate-100">{plugin.name}</span>
+                            <span className="font-extrabold text-sm text-slate-100">{getPluginName(plugin)}</span>
                           </div>
                           {plugin.recommended && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-400/30 font-bold">
-                              Топ избор
+                              {language === 'bg' ? 'Топ избор' : 'Top Choice'}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-slate-400 leading-relaxed mb-4">{plugin.description}</p>
+                        <p className="text-xs text-slate-400 leading-relaxed mb-4">{getPluginDesc(plugin)}</p>
                       </div>
 
                       <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between">
@@ -531,7 +545,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
 
                         {installedState ? (
                           <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Инсталиран
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> {t('plugins.installed')}
                           </span>
                         ) : (
                           <button
@@ -540,7 +554,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs transition-all shadow-md shadow-purple-950/40 glow-ice disabled:opacity-50 cursor-pointer"
                           >
                             <Download className="w-3.5 h-3.5" />
-                            {isProcessing ? 'Сваляне...' : 'Инсталирай (1 Клик)'}
+                            {isProcessing ? t('plugins.installing') : t('plugins.install')}
                           </button>
                         )}
                       </div>
@@ -555,16 +569,18 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           <div className="space-y-3 pt-4 border-t border-slate-800">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                Инсталирани файлове в сървъра ({installed.length})
+                {t('plugins.installedTitle')} ({installed.length})
               </span>
               <span className="text-[11px] text-slate-500">
-                За да добавиш други плъгини, просто ги пусни в папка plugins
+                {language === 'bg'
+                  ? 'За да добавиш други плъгини, просто ги пусни в папка plugins'
+                  : 'To add other plugins, simply drop them into the plugins folder'}
               </span>
             </div>
 
             {installed.length === 0 ? (
               <div className="p-8 rounded-xl bg-slate-950/40 border border-dashed border-slate-800 text-center text-xs text-slate-500">
-                Все още няма инсталирани плъгини. Избери някой от горния списък или натисни "Папка plugins"!
+                {t('plugins.noInstalled')}
               </div>
             ) : (
               <div className="space-y-2">
@@ -586,7 +602,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                     <button
                       onClick={() => handleDeletePlugin(item.fileName)}
                       className="p-2 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 transition-all cursor-pointer"
-                      title="Изтрий плъгина"
+                      title={t('common.delete')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -601,9 +617,11 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                 <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                Търси още добавки и ресурси онлайн
+                {language === 'bg' ? 'Търси още добавки и ресурси онлайн' : 'Search more plugins and resources online'}
               </span>
-              <span className="text-[11px] text-slate-500">Свали .jar файл и го пусни в папката</span>
+              <span className="text-[11px] text-slate-500">
+                {language === 'bg' ? 'Свали .jar файл и го пусни в папката' : 'Download .jar file and drop it in plugins/'}
+              </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -622,11 +640,11 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                     <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-orange-400" />
                   </div>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
-                    Хиляди популярни плъгини, текстури и модификации.
+                    {language === 'bg' ? 'Хиляди популярни плъгини, текстури и модификации.' : 'Thousands of popular plugins, textures, and mods.'}
                   </p>
                 </div>
                 <span className="text-[10px] text-orange-400/80 font-mono mt-3 inline-flex items-center gap-1">
-                  Отвори curseforge.com &rarr;
+                  curseforge.com &rarr;
                 </span>
               </button>
 
@@ -645,11 +663,11 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                     <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-sky-400" />
                   </div>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
-                    Модерен, бърз каталог с отворен код за плъгини и оптимизации.
+                    {language === 'bg' ? 'Модерен, бърз каталог с отворен код за плъгини и оптимизации.' : 'Modern, fast open-source catalog for plugins and optimizations.'}
                   </p>
                 </div>
                 <span className="text-[10px] text-sky-400/80 font-mono mt-3 inline-flex items-center gap-1">
-                  Отвори modrinth.com &rarr;
+                  modrinth.com &rarr;
                 </span>
               </button>
 
@@ -668,11 +686,11 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                     <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400" />
                   </div>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
-                    Класически ресурси, мини-игри, икономика и сървърни инструменти.
+                    {language === 'bg' ? 'Класически ресурси, мини-игри, икономика и сървърни инструменти.' : 'Classic server resources, minigames, economy, and tools.'}
                   </p>
                 </div>
                 <span className="text-[10px] text-amber-400/80 font-mono mt-3 inline-flex items-center gap-1">
-                  Отвори spigotmc.org &rarr;
+                  spigotmc.org &rarr;
                 </span>
               </button>
 
@@ -691,11 +709,11 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                     <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-sky-400" />
                   </div>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
-                    Официален портал на PaperMC за проверени и безопасни добавки.
+                    {language === 'bg' ? 'Официален портал на PaperMC за проверени и безопасни добавки.' : 'Official PaperMC portal for verified and secure plugins.'}
                   </p>
                 </div>
                 <span className="text-[10px] text-sky-400/80 font-mono mt-3 inline-flex items-center gap-1">
-                  Отвори hangar.papermc.io &rarr;
+                  hangar.papermc.io &rarr;
                 </span>
               </button>
             </div>
@@ -706,7 +724,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
       {/* ===================== TAB 2: RESOURCE PACKS ===================== */}
       {subTab === 'resourcepacks' && (
         <div className="space-y-6">
-          {/* 1. CURRENT ACTIVE STATUS CARD (WHERE IT SHOWS IT IS SAVED) */}
+          {/* 1. CURRENT ACTIVE STATUS CARD */}
           <div
             className={`p-5 rounded-2xl border transition-all ${
               activePackUrl
@@ -726,18 +744,22 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                 <div>
                   <div className="flex items-center gap-2">
                     <h4 className="text-sm font-extrabold text-slate-100">
-                      {activePackUrl ? '🟢 Активен Сървърен Ресурс Пакет' : '⚪ Няма активен ресурс пакет'}
+                      {activePackUrl
+                        ? (language === 'bg' ? '🟢 Активен Сървърен Ресурс Пакет' : '🟢 Active Server Resource Pack')
+                        : (language === 'bg' ? '⚪ Няма активен ресурс пакет' : '⚪ No Active Resource Pack')}
                     </h4>
                     {activePackUrl && (
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 font-bold border border-pink-400/30 font-mono">
-                        Записан в server.properties
+                        {language === 'bg' ? 'Записан в server.properties' : 'Saved in server.properties'}
                       </span>
                     )}
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
                     {activePackUrl
-                      ? 'Всеки играч, който се свърже към сървъра, ще изтегли този пакет автоматично в играта.'
-                      : 'Сървърът в момента изпраща обикновените стандартни Minecraft текстури.'}
+                      ? t('plugins.activePackDesc')
+                      : (language === 'bg'
+                          ? 'Сървърът в момента изпраща обикновените стандартни Minecraft текстури.'
+                          : 'The server currently serves default standard Minecraft textures.')}
                   </p>
                 </div>
               </div>
@@ -748,10 +770,10 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                     type="button"
                     onClick={() => (window as any).api?.openExternal(activePackUrl)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-card hover:bg-white/[0.08] text-slate-200 text-xs font-semibold border border-white/[0.08] transition-all cursor-pointer"
-                    title="Свали и провери файла"
+                    title={language === 'bg' ? 'Свали и провери файла' : 'Download and verify link'}
                   >
                     <Download className="w-3.5 h-3.5 text-pink-400" />
-                    <span>Тествай линка</span>
+                    <span>{language === 'bg' ? 'Тествай линка' : 'Test URL'}</span>
                   </button>
 
                   <button
@@ -759,10 +781,10 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                     onClick={handleDeactivatePack}
                     disabled={savingAction}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold border border-rose-500/30 transition-all cursor-pointer"
-                    title="Премахни пакета от сървъра"
+                    title={t('plugins.deactivate')}
                   >
                     <PowerOff className="w-3.5 h-3.5" />
-                    <span>Деактивирай</span>
+                    <span>{t('plugins.deactivate')}</span>
                   </button>
                 </div>
               )}
@@ -771,57 +793,69 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
             {activePackUrl && (
               <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                 <div className="p-3 rounded-xl glass-card">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Директен линк:</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                    {language === 'bg' ? 'Директен линк:' : 'Direct URL:'}
+                  </span>
                   <p className="font-mono text-slate-200 text-[11px] truncate" title={activePackUrl}>
                     {activePackUrl}
                   </p>
                 </div>
 
                 <div className="p-3 rounded-xl glass-card">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Задължителен за играчите:</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                    {language === 'bg' ? 'Задължителен за играчите:' : 'Required for players:'}
+                  </span>
                   <span className={`font-bold text-[11px] ${activePackRequired ? 'text-amber-400' : 'text-pink-300'}`}>
-                    {activePackRequired ? '🔒 ДА (Задължителен)' : '🟢 НЕ (По избор на играча)'}
+                    {activePackRequired
+                      ? (language === 'bg' ? '🔒 ДА (Задължителен)' : '🔒 YES (Required)')
+                      : (language === 'bg' ? '🟢 НЕ (По избор на играча)' : '🟢 NO (Optional)')}
                   </span>
                 </div>
 
                 <div className="p-3 rounded-xl glass-card">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Съобщение при запитване:</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                    {language === 'bg' ? 'Съобщение при запитване:' : 'Join Prompt Message:'}
+                  </span>
                   <span className="text-slate-200 text-[11px] italic">
-                    {activePackPrompt || 'Стандартно питане от Minecraft'}
+                    {activePackPrompt || (language === 'bg' ? 'Стандартно питане от Minecraft' : 'Default Minecraft prompt')}
                   </span>
                 </div>
 
                 <div className="p-3 rounded-xl glass-card">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Кеш Хеш (SHA-1):</span>
-                  <span className="font-mono text-slate-400 text-[11px] truncate block" title={activePackSha1 || 'Не е зададен'}>
-                    {activePackSha1 ? `${activePackSha1.slice(0, 16)}...` : 'Автоматичен кеш'}
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                    {language === 'bg' ? 'Кеш Хеш (SHA-1):' : 'Cache Hash (SHA-1):'}
+                  </span>
+                  <span className="font-mono text-slate-400 text-[11px] truncate block" title={activePackSha1 || 'Automatic'}>
+                    {activePackSha1 ? `${activePackSha1.slice(0, 16)}...` : (language === 'bg' ? 'Автоматичен кеш' : 'Automatic cache')}
                   </span>
                 </div>
               </div>
             )}
           </div>
 
-          {/* 2. RESOURCE PACKS LIBRARY (SHOWS ALL ADDED PACKS) */}
+          {/* 2. RESOURCE PACKS LIBRARY */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                   <FileArchive className="w-3.5 h-3.5 text-pink-400" />
-                  Запазени Ресурс Пакети в Библиотеката ({savedPacks.length})
+                  {t('plugins.savedPacksLibrary')} ({savedPacks.length})
                 </span>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Можеш да запазваш множество пакети и да ги сменяш с 1 клик според това коя игра играете
+                  {language === 'bg'
+                    ? 'Можеш да запазваш множество пакети и да ги сменяш с 1 клик'
+                    : 'Save multiple resource packs and switch between them in 1-click'}
                 </p>
               </div>
 
               <span className="text-[11px] text-slate-500 font-mono">
-                {savedPacks.length} добавени
+                {savedPacks.length} {language === 'bg' ? 'добавени' : 'saved'}
               </span>
             </div>
 
             {savedPacks.length === 0 ? (
               <div className="p-6 rounded-2xl glass-card border border-dashed border-white/[0.1] text-center text-xs text-slate-400">
-                Все още нямаш запазени ресурс пакети в списъка. Добави първия чрез формата по-долу!
+                {t('plugins.noPacks')}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -846,11 +880,11 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
 
                           {isActive ? (
                             <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-400/40 font-bold flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3" /> Активен в момента
+                              <CheckCircle2 className="w-3 h-3" /> {t('plugins.activeBadge')}
                             </span>
                           ) : (
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] text-slate-400 border border-white/[0.08]">
-                              В наличност
+                              {language === 'bg' ? 'В наличност' : 'Saved'}
                             </span>
                           )}
                         </div>
@@ -861,7 +895,9 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
 
                         <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 mb-4">
                           <span className="px-2 py-0.5 rounded-md glass-card">
-                            {pack.required ? '🔒 Задължителен' : '🟢 По избор'}
+                            {pack.required
+                              ? (language === 'bg' ? '🔒 Задължителен' : '🔒 Required')
+                              : (language === 'bg' ? '🟢 По избор' : '🟢 Optional')}
                           </span>
                           {pack.prompt && (
                             <span className="px-2 py-0.5 rounded-md glass-card truncate max-w-[200px]" title={pack.prompt}>
@@ -877,7 +913,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                             type="button"
                             onClick={() => (window as any).api?.openExternal(pack.url)}
                             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] transition-all cursor-pointer"
-                            title="Свали пакета за тест"
+                            title={language === 'bg' ? 'Свали пакета за тест' : 'Download pack'}
                           >
                             <Download className="w-3.5 h-3.5" />
                           </button>
@@ -886,7 +922,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                             type="button"
                             onClick={() => handleDeleteFromLibrary(pack.id)}
                             className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 transition-all cursor-pointer"
-                            title="Изтрий от списъка"
+                            title={t('plugins.deletePack')}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -894,7 +930,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
 
                         {isActive ? (
                           <span className="text-xs font-bold text-pink-400 flex items-center gap-1">
-                            <Check className="w-3.5 h-3.5" /> Зареден на сървъра
+                            <Check className="w-3.5 h-3.5" /> {language === 'bg' ? 'Зареден на сървъра' : 'Loaded on Server'}
                           </span>
                         ) : (
                           <button
@@ -904,7 +940,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                             className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-extrabold text-xs transition-all shadow-md shadow-pink-950/40 cursor-pointer disabled:opacity-50"
                           >
                             <Radio className="w-3 h-3" />
-                            <span>Активирай на този сървър</span>
+                            <span>{t('plugins.activate')}</span>
                           </button>
                         )}
                       </div>
@@ -923,10 +959,10 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
               <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
                 <Plus className="w-4 h-4 text-pink-400" />
-                Добави нов ресурс пакет чрез линк
+                {t('plugins.addNewPack')}
               </span>
               <span className="text-[11px] text-slate-500">
-                Ще бъде добавен към списъка и активиран веднага
+                {language === 'bg' ? 'Ще бъде добавен към списъка и активиран веднага' : 'Will be saved and activated immediately'}
               </span>
             </div>
 
@@ -934,13 +970,13 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
               {/* Name */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-300">
-                  Име на пакета (за лесно разпознаване)
+                  {t('plugins.packNameLabel')}
                 </label>
                 <input
                   type="text"
                   value={newPack.name}
                   onChange={(e) => setNewPack({ ...newPack, name: e.target.value })}
-                  placeholder="напр. Faithful 32x, Bare Bones или PvP Pack"
+                  placeholder={t('plugins.packNamePlaceholder')}
                   className="w-full px-3.5 py-2 rounded-xl glass-input text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-pink-400"
                 />
               </div>
@@ -948,7 +984,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
               {/* Direct Download URL */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
-                  <span>Директен линк за сваляне на .zip файла *</span>
+                  <span>{t('plugins.packUrlLabel')} *</span>
                   <span className="text-[10px] text-pink-400 font-mono">.zip URL</span>
                 </label>
                 <input
@@ -965,7 +1001,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
               {/* Require Toggle */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300">Задължителен ли е?</label>
+                <label className="text-xs font-bold text-slate-300">{t('plugins.requirePack')}</label>
                 <button
                   type="button"
                   onClick={() => setNewPack({ ...newPack, required: !newPack.required })}
@@ -975,30 +1011,32 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                       : 'bg-white/[0.03] border-white/[0.08] text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  {newPack.required ? '🔒 Задължителен' : '🟢 По избор (Препоръчително)'}
+                  {newPack.required
+                    ? (language === 'bg' ? '🔒 Задължителен' : '🔒 Required')
+                    : (language === 'bg' ? '🟢 По избор' : '🟢 Optional')}
                 </button>
               </div>
 
               {/* Prompt */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300">Съобщение при запитване</label>
+                <label className="text-xs font-bold text-slate-300">{t('plugins.packPromptLabel')}</label>
                 <input
                   type="text"
                   value={newPack.prompt}
                   onChange={(e) => setNewPack({ ...newPack, prompt: e.target.value })}
-                  placeholder="Официален текстурен пакет за сървъра"
+                  placeholder={t('plugins.packPromptPlaceholder')}
                   className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 focus:outline-none focus:border-pink-400"
                 />
               </div>
 
               {/* SHA-1 */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300">SHA-1 Хеш (по избор)</label>
+                <label className="text-xs font-bold text-slate-300">SHA-1 Hash</label>
                 <input
                   type="text"
                   value={newPack.sha1}
                   onChange={(e) => setNewPack({ ...newPack, sha1: e.target.value })}
-                  placeholder="40-знаков sha1 код"
+                  placeholder="40-char sha1 code"
                   className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 font-mono focus:outline-none focus:border-pink-400"
                 />
               </div>
@@ -1006,7 +1044,9 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
 
             <div className="flex items-center justify-between pt-3 border-t border-white/[0.08]">
               <p className="text-[11px] text-slate-400">
-                * При Vanilla сървър направи рестарт (Спри 🛑 и Пусни ▶️), за да влезе новият пакет в сила.
+                {language === 'bg'
+                  ? '* При Vanilla сървър направи рестарт (Спри 🛑 и Пусни ▶️), за да влезе новият пакет в сила.'
+                  : '* For Vanilla servers, restart (Stop 🛑 and Start ▶️) to apply the resource pack in-game.'}
               </p>
 
               <button
@@ -1015,64 +1055,10 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-black text-xs transition-all shadow-lg shadow-pink-950/50 cursor-pointer disabled:opacity-50"
               >
                 <Save className="w-4 h-4" />
-                <span>Запази и Активирай в Сървъра</span>
+                <span>{t('plugins.saveAndActivate')}</span>
               </button>
             </div>
           </form>
-
-          {/* 4. MULTIPLE PACKS EXPLANATION & FREE HOSTING */}
-          <div className="p-4 rounded-2xl glass-card space-y-3">
-            <div className="flex items-center gap-2">
-              <Globe className="w-4 h-4 text-sky-400" />
-              <span className="text-xs font-bold text-slate-200">
-                Как да ползваш няколко ресурс пакета едновременно в Minecraft?
-              </span>
-            </div>
-
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              В Minecraft файлът <code>server.properties</code> технически приема <strong>1 активен линк</strong>. Ако искаш да комбинираш няколко пакета едновременно (например текстурен пакет + 3D предмети + персонализирани звуци), решението е те да се обединят в <strong>един общ .zip файл (Merge)</strong>:
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-              <div className="p-3 rounded-xl glass-card space-y-1.5">
-                <span className="text-xs font-bold text-sky-400">1. Обедини ги онлайн</span>
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Използвай безплатния инструмент за обединяване на пакети.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => (window as any).api?.openExternal('https://merge.elmakers.com/')}
-                  className="text-[11px] text-sky-300 hover:underline flex items-center gap-1 cursor-pointer font-bold"
-                >
-                  merge.elmakers.com <ExternalLink className="w-3 h-3" />
-                </button>
-              </div>
-
-              <div className="p-3 rounded-xl glass-card space-y-1.5">
-                <span className="text-xs font-bold text-cyan-400">2. Качи готовия .zip</span>
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Качи обединения пакет в безплатен хостинг, за да вземеш директен линк.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => (window as any).api?.openExternal('https://mc-packs.net/')}
-                  className="text-[11px] text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer font-bold"
-                >
-                  mc-packs.net <ExternalLink className="w-3 h-3" />
-                </button>
-              </div>
-
-              <div className="p-3 rounded-xl glass-card space-y-1.5">
-                <span className="text-xs font-bold text-amber-400">3. Добави го тук</span>
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Постави новия линк във формата горе и цъкни „Запази и Активирай“.
-                </p>
-                <span className="text-[11px] text-amber-300/80 font-mono block">
-                  100% готов за игра!
-                </span>
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>

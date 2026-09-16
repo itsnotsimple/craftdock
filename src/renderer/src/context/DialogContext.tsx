@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { Trash2, AlertTriangle, AlertCircle, Info, CheckCircle2, X } from 'lucide-react';
+import { useLanguage } from './LanguageContext';
 
 export interface ConfirmOptions {
   title?: string;
@@ -46,6 +47,7 @@ type ActiveDialog =
   | null;
 
 export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { t } = useLanguage();
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
 
   const showConfirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
@@ -114,8 +116,8 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             {/* Close X Button */}
             <button
               onClick={() => handleClose(false)}
-              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
-              title="Затвори (Esc)"
+              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+              title={`${t('common.close')} (Esc)`}
             >
               <X className="w-4 h-4" />
             </button>
@@ -151,7 +153,7 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
                 {/* Title */}
                 <h3 className="text-lg font-bold text-white tracking-tight mb-2">
-                  {activeDialog.options.title || 'Потвърждение'}
+                  {activeDialog.options.title || t('dialogs.confirmTitle')}
                 </h3>
 
                 {/* Message */}
@@ -164,22 +166,22 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                   <button
                     type="button"
                     onClick={() => handleClose(false)}
-                    className="flex-1 py-2.5 px-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-medium text-sm transition-all active:scale-95 focus:outline-none"
+                    className="flex-1 py-2.5 px-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-medium text-sm transition-all active:scale-95 focus:outline-none cursor-pointer"
                   >
-                    {activeDialog.options.cancelText || 'Отказ'}
+                    {activeDialog.options.cancelText || t('common.cancel')}
                   </button>
                   <button
                     type="button"
                     autoFocus
                     onClick={() => handleClose(true)}
-                    className={`flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 text-white focus:outline-none ${
+                    className={`flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 text-white focus:outline-none cursor-pointer ${
                       activeDialog.options.danger !== false
                         ? 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 shadow-rose-900/40 hover:shadow-rose-900/60'
                         : 'bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 shadow-sky-900/40 hover:shadow-sky-900/60'
                     }`}
                   >
                     {activeDialog.options.icon === 'trash' && <Trash2 className="w-4 h-4" />}
-                    {activeDialog.options.confirmText || 'Потвърди'}
+                    {activeDialog.options.confirmText || t('common.confirm')}
                   </button>
                 </div>
               </>
@@ -228,12 +230,12 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 <h3 className="text-lg font-bold text-white tracking-tight mb-2">
                   {activeDialog.options.title ||
                     (activeDialog.options.type === 'error'
-                      ? 'Грешка'
+                      ? t('dialogs.errorTitle')
                       : activeDialog.options.type === 'warning'
-                      ? 'Внимание'
+                      ? t('dialogs.warningTitle')
                       : activeDialog.options.type === 'success'
-                      ? 'Успех'
-                      : 'Информация')}
+                      ? t('dialogs.successTitle')
+                      : t('dialogs.infoTitle'))}
                 </h3>
 
                 {/* Message */}
@@ -247,7 +249,7 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     type="button"
                     autoFocus
                     onClick={() => handleClose(true)}
-                    className={`w-full py-2.5 px-4 rounded-xl font-semibold text-sm transition-all shadow-lg active:scale-95 text-white focus:outline-none ${
+                    className={`w-full py-2.5 px-4 rounded-xl font-semibold text-sm transition-all shadow-lg active:scale-95 text-white focus:outline-none cursor-pointer ${
                       activeDialog.options.type === 'error'
                         ? 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 shadow-rose-900/40 hover:shadow-rose-900/60'
                         : activeDialog.options.type === 'warning'
@@ -257,7 +259,7 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                         : 'bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 shadow-sky-900/40 hover:shadow-sky-900/60'
                     }`}
                   >
-                    {activeDialog.options.buttonText || 'Разбрах'}
+                    {activeDialog.options.buttonText || t('common.understand')}
                   </button>
                 </div>
               </>

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { ServerProfile } from '../types';
 import { useDialog } from '../context/DialogContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface ServerSettingsProps {
   server: ServerProfile;
@@ -26,6 +27,7 @@ interface ServerSettingsProps {
 }
 
 export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpdateServer }) => {
+  const { t, language } = useLanguage();
   const { showConfirm } = useDialog();
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
@@ -81,7 +83,6 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
     reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
-        // Render to exact 64x64 canvas for Minecraft
         const canvas = document.createElement('canvas');
         canvas.width = 64;
         canvas.height = 64;
@@ -102,16 +103,15 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
       img.src = event.target?.result as string;
     };
     reader.readAsDataURL(file);
-    // Reset file input so same file can be picked again if desired
     e.target.value = '';
   };
 
   const handleRemoveIcon = async () => {
     const confirmed = await showConfirm({
-      title: 'Премахване на снимка',
-      message: 'Сигурен ли си, че искаш да премахнеш текущата икона на сървъра? Сървърът ще се показва със стандартната икона.',
-      confirmText: 'Премахни снимката',
-      cancelText: 'Отказ',
+      title: t('dialogs.removeIconTitle'),
+      message: t('dialogs.removeIconMsg'),
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
       danger: true,
       icon: 'trash',
     });
@@ -151,7 +151,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center text-slate-500 text-xs">
-        Зареждане на настройките на сървъра...
+        {t('common.loading')}
       </div>
     );
   }
@@ -175,10 +175,10 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
         <div>
           <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
             <Settings className="w-5 h-5 text-amber-400" />
-            Настройки на Света (server.properties)
+            {t('settings.title')}
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Променяй правилата на играта, снимката на сървъра, слотовете и защитата с 1 клик
+            {t('settings.subtitle')}
           </p>
         </div>
 
@@ -188,11 +188,11 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
         >
           {saved ? (
             <>
-              <Check className="w-4 h-4 text-emerald-300" /> Запазено успешно!
+              <Check className="w-4 h-4 text-emerald-300" /> {t('settings.savedSuccess')}
             </>
           ) : (
             <>
-              <Save className="w-4 h-4" /> Запази Настройките
+              <Save className="w-4 h-4" /> {t('settings.saveChanges')}
             </>
           )}
         </button>
@@ -203,10 +203,10 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
             <ImageIcon className="w-4 h-4 text-cyan-400" />
-            Снимка на Сървъра (Server Icon & Меню Изглед)
+            {t('settings.iconSection')}
           </span>
           <span className="text-[11px] text-slate-400">
-            Автоматично се оразмерява в точен 64x64 PNG за Minecraft
+            {t('settings.iconHelp')}
           </span>
         </div>
 
@@ -217,7 +217,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
             <div
               onClick={() => fileInputRef.current?.click()}
               className="w-16 h-16 rounded-xl bg-slate-950 border border-white/[0.15] hover:border-cyan-400 flex items-center justify-center overflow-hidden shrink-0 shadow-inner group cursor-pointer relative transition-all"
-              title="Кликни, за да качиш снимка"
+              title={t('settings.changeIcon')}
             >
               {serverIcon ? (
                 <img
@@ -234,11 +234,11 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
 
               {/* Hover overlay */}
               <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-cyan-300 text-[10px] font-bold transition-opacity">
-                Качи
+                {t('settings.changeIcon')}
               </div>
             </div>
 
-            {/* Server Text Preview (Simulates Minecraft Multiplayer List) */}
+            {/* Server Text Preview */}
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm text-slate-100 font-sans tracking-wide">
@@ -260,11 +260,11 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
               <span className="text-xs font-mono font-bold text-slate-300">
                 0 / {settings.maxPlayers}
               </span>
-              <span className="text-[10px] text-slate-500 block">играчи</span>
+              <span className="text-[10px] text-slate-500 block">{t('common.players').toLowerCase()}</span>
             </div>
 
             {/* 5-bar Minecraft signal icon */}
-            <div className="flex items-end gap-0.5 h-4 text-emerald-400" title="Пинг: Отличен">
+            <div className="flex items-end gap-0.5 h-4 text-emerald-400" title={t('settings.pingExcellent')}>
               <span className="w-1 h-1.5 bg-emerald-400 rounded-xs"></span>
               <span className="w-1 h-2.5 bg-emerald-400 rounded-xs"></span>
               <span className="w-1 h-3.5 bg-emerald-400 rounded-xs"></span>
@@ -279,7 +279,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 text-xs font-semibold border border-cyan-400/30 transition-all cursor-pointer shadow-sm"
               >
                 <Upload className="w-3.5 h-3.5" />
-                <span>Качи Снимка</span>
+                <span>{t('settings.changeIcon')}</span>
               </button>
 
               {serverIcon && (
@@ -287,7 +287,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
                   type="button"
                   onClick={handleRemoveIcon}
                   className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
-                  title="Премахни снимката"
+                  title={t('settings.removeIcon')}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -297,21 +297,21 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
         </div>
 
         <p className="text-[11px] text-slate-400 leading-relaxed">
-          💡 Можеш да избереш <strong>всяко изображение</strong> (JPG, PNG, WEBP) от компютъра си. CraftDock автоматично го преобразува в перфектен <code>server-icon.png</code> с размер 64x64 пиксела.
+          {t('settings.iconTip')}
         </p>
       </div>
 
-      {/* Online Mode / Cracked Selector (Full width card) */}
+      {/* Online Mode / Cracked Selector */}
       <div className="p-4 rounded-2xl glass-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="w-4 h-4 text-emerald-400" />
-            <span className="text-sm font-bold text-slate-100">Пиратски акаунти (TLauncher / Неофициален Minecraft)</span>
+            <span className="text-sm font-bold text-slate-100">{t('settings.crackedTitle')}</span>
           </div>
           <p className="text-xs text-slate-400 leading-relaxed">
             {!settings.onlineMode
-              ? '🟢 Разрешени – приятели без платен Minecraft акаунт могат да играят с теб безпроблемно.'
-              : '🔒 Забранени – сървърът изисква официален платен Minecraft профил.'}
+              ? t('settings.crackedAllowedDesc')
+              : t('settings.crackedBlockedDesc')}
           </p>
         </div>
 
@@ -324,7 +324,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
               : 'bg-white/[0.03] border-white/[0.08] text-slate-400 hover:text-slate-200 hover:border-white/[0.15]'
           }`}
         >
-          {!settings.onlineMode ? '🟢 Разрешени (Всеки може да влезе)' : '🔒 Само Купен Minecraft'}
+          {!settings.onlineMode ? t('settings.crackedBtnAllowed') : t('settings.crackedBtnBlocked')}
         </button>
       </div>
 
@@ -334,10 +334,10 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
           <div>
             <span className="text-sm font-bold text-slate-200 flex items-center gap-2">
               <Users className="w-4 h-4 text-sky-400" />
-              Максимален брой слотове за сървъра (Max Players)
+              {t('settings.maxPlayersTitle')}
             </span>
             <p className="text-xs text-slate-400">
-              Колко играчи едновременно могат да бъдат в сървъра (показва се в Minecraft листа като 0/{settings.maxPlayers})
+              {t('settings.maxPlayersDesc', { max: settings.maxPlayers })}
             </p>
           </div>
 
@@ -350,7 +350,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
               onChange={(e) => setSettings({ ...settings, maxPlayers: Math.max(1, parseInt(e.target.value, 10) || 1) })}
               className="w-20 px-3 py-1.5 rounded-xl glass-input text-sm font-black text-sky-400 text-center font-mono focus:outline-none focus:border-sky-400"
             />
-            <span className="text-xs text-slate-400 font-bold">слота</span>
+            <span className="text-xs text-slate-400 font-bold">{language === 'bg' ? 'слота' : 'slots'}</span>
           </div>
         </div>
 
@@ -367,7 +367,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
                   : 'bg-white/[0.03] border-white/[0.08] text-slate-400 hover:text-slate-200 hover:border-white/[0.15]'
               }`}
             >
-              {slotCount} играчи
+              {slotCount} {t('common.players').toLowerCase()}
             </button>
           ))}
         </div>
@@ -379,10 +379,12 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
           <div>
             <span className="text-sm font-bold text-slate-200 flex items-center gap-2">
               <Shield className="w-4 h-4 text-amber-400" />
-              Защита на Спауна (Spawn Protection)
+              {t('settings.spawnProtection')}
             </span>
             <p className="text-xs text-slate-400">
-              Радиус в блокове около началната точка (Spawn), в който обикновените играчи без OP права не могат да чупят или строят
+              {language === 'bg'
+                ? 'Радиус в блокове около началната точка (Spawn), в който обикновените играчи без OP права не могат да чупят или строят'
+                : 'Radius in blocks around spawn where non-OP players cannot place or break blocks'}
             </p>
           </div>
 
@@ -400,17 +402,17 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
               }
               className="w-20 px-3 py-1.5 rounded-xl glass-input text-sm font-black text-amber-400 text-center font-mono focus:outline-none focus:border-amber-400"
             />
-            <span className="text-xs text-slate-400 font-bold">блока</span>
+            <span className="text-xs text-slate-400 font-bold">{language === 'bg' ? 'блока' : 'blocks'}</span>
           </div>
         </div>
 
         {/* Quick Spawn Protection Presets */}
         <div className="flex flex-wrap gap-2 pt-1">
           {[
-            { value: 0, label: '0 (Изключена - свободно строителство)' },
-            { value: 16, label: '16 (Minecraft Стандарт)' },
-            { value: 32, label: '32 (Средна зона)' },
-            { value: 64, label: '64 (Голяма зона)' },
+            { value: 0, label: language === 'bg' ? '0 (Изключена - свободно строителство)' : '0 (Disabled - free building)' },
+            { value: 16, label: language === 'bg' ? '16 (Minecraft Стандарт)' : '16 (Minecraft Standard)' },
+            { value: 32, label: language === 'bg' ? '32 (Средна зона)' : '32 (Medium Area)' },
+            { value: 64, label: language === 'bg' ? '64 (Голяма зона)' : '64 (Large Area)' },
           ].map((preset) => (
             <button
               key={preset.value}
@@ -451,22 +453,22 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-black text-slate-100 tracking-wide">
-                    Hardcore Режим (1 Живот & Permadeath)
+                    {t('settings.hardcoreTitle')}
                   </span>
                   {settings.hardcore ? (
                     <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 uppercase font-mono tracking-wider animate-pulse">
-                      АКТИВЕН
+                      {t('wizard.hardcoreActiveBadge')}
                     </span>
                   ) : (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/[0.04] text-slate-400 border border-white/[0.08] font-mono">
-                      Изключен
+                      {t('common.offline')}
                     </span>
                   )}
                 </div>
                 <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
                   {settings.hardcore
-                    ? '💀 ВНИМАНИЕ: При смърт играчите НЯМАТ право на прераждане и стават Наблюдатели (Spectator). Трудността се заключва на "Трудна" (Hard).'
-                    : 'Стандартен режим: При смърт играчите се прераждат нормално на своето легло или на спауна.'}
+                    ? t('settings.hardcoreActiveNotice')
+                    : t('settings.hardcoreDisabledNotice')}
                 </p>
               </div>
             </div>
@@ -491,12 +493,12 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
             {settings.hardcore ? (
               <>
                 <Flame className="w-4 h-4 text-amber-300 animate-bounce" />
-                <span>💀 Включен (Hardcore)</span>
+                <span>💀 {t('settings.hardcoreTitle')}</span>
               </>
             ) : (
               <>
                 <Skull className="w-4 h-4 text-slate-400" />
-                <span>Включи Hardcore</span>
+                <span>{language === 'bg' ? 'Включи Hardcore' : 'Enable Hardcore'}</span>
               </>
             )}
           </button>
@@ -514,10 +516,10 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
           }`}
         >
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-slate-300">Трудност (Difficulty)</label>
+            <label className="text-xs font-bold text-slate-300">{t('settings.difficulty')}</label>
             {settings.hardcore && (
               <span className="text-[10px] font-bold text-rose-400 flex items-center gap-1 font-mono">
-                🔒 Заключено на Hard (Hardcore)
+                🔒 {language === 'bg' ? 'Заключено на Hard (Hardcore)' : 'Locked to Hard (Hardcore)'}
               </span>
             )}
           </div>
@@ -531,25 +533,25 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
                 : 'focus:border-amber-400'
             }`}
           >
-            <option value="peaceful">Мирна (Peaceful - без мобове)</option>
-            <option value="easy">Лесна (Easy)</option>
-            <option value="normal">Нормална (Normal)</option>
-            <option value="hard">Трудна (Hard)</option>
+            <option value="peaceful">{t('settings.diffPeaceful')}</option>
+            <option value="easy">{t('settings.diffEasy')}</option>
+            <option value="normal">{t('settings.diffNormal')}</option>
+            <option value="hard">{t('settings.diffHard')}</option>
           </select>
         </div>
 
         {/* Gamemode */}
         <div className="p-4 rounded-xl glass-card space-y-2">
-          <label className="text-xs font-bold text-slate-300">Режим на игра по подразбиране</label>
+          <label className="text-xs font-bold text-slate-300">{t('settings.gamemode')}</label>
           <select
             value={settings.gamemode}
             onChange={(e) => setSettings({ ...settings, gamemode: e.target.value as any })}
             className="w-full px-3 py-2 rounded-lg glass-input text-xs text-slate-200 focus:outline-none focus:border-purple-400 cursor-pointer"
           >
-            <option value="survival">Оцеляване (Survival)</option>
-            <option value="creative">Творчески (Creative)</option>
-            <option value="adventure">Приключенски (Adventure)</option>
-            <option value="spectator">Наблюдател (Spectator)</option>
+            <option value="survival">{t('settings.gmSurvival')}</option>
+            <option value="creative">{t('settings.gmCreative')}</option>
+            <option value="adventure">{t('settings.gmAdventure')}</option>
+            <option value="spectator">{t('settings.gmSpectator')}</option>
           </select>
         </div>
 
@@ -557,9 +559,11 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
         <div className="p-4 rounded-xl glass-card flex items-center justify-between">
           <div>
             <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-              <Swords className="w-4 h-4 text-rose-400" /> PvP битки между играчите
+              <Swords className="w-4 h-4 text-rose-400" /> {t('settings.pvp')}
             </span>
-            <p className="text-[11px] text-slate-400">Могат ли приятелите да се удрят взаимно</p>
+            <p className="text-[11px] text-slate-400">
+              {settings.pvp ? t('settings.pvpEnabled') : t('settings.pvpDisabled')}
+            </p>
           </div>
           <button
             type="button"
@@ -570,7 +574,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
                 : 'bg-white/[0.04] border-white/[0.08] text-slate-400 hover:text-slate-200'
             }`}
           >
-            {settings.pvp ? 'Включено' : 'Изключено'}
+            {settings.pvp ? t('common.yes') : t('common.no')}
           </button>
         </div>
 
@@ -578,9 +582,11 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
         <div className="p-4 rounded-xl glass-card space-y-2.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-              <Eye className="w-4 h-4 text-teal-400" /> Видимост (View Distance)
+              <Eye className="w-4 h-4 text-teal-400" /> {t('settings.viewDistance')}
             </span>
-            <span className="text-xs font-bold text-teal-400 font-mono">{settings.viewDistance} чанка</span>
+            <span className="text-xs font-bold text-teal-400 font-mono">
+              {settings.viewDistance} {language === 'bg' ? 'чанка' : 'chunks'}
+            </span>
           </div>
           <input
             type="range"
@@ -592,10 +598,10 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
             className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-teal-400"
           />
           <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-            <span>4 (Минимум)</span>
-            <span>6 (Препоръчително)</span>
-            <span>10 (Стандартно)</span>
-            <span>16 (Макс)</span>
+            <span>4</span>
+            <span>6</span>
+            <span>10</span>
+            <span>16</span>
           </div>
         </div>
       </div>
@@ -603,7 +609,7 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
       {/* MOTD */}
       <div className="space-y-1.5">
         <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-          <FileText className="w-4 h-4 text-indigo-400" /> MOTD Описание (Текстът под сървъра в Minecraft менюто)
+          <FileText className="w-4 h-4 text-indigo-400" /> {t('settings.motd')}
         </label>
         <input
           type="text"
@@ -619,16 +625,22 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
           <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
           <div className="space-y-1">
             <p className="font-bold text-amber-300">
-              Важно за новите настройки и снимката на сървъра:
+              {language === 'bg'
+                ? 'Важно за новите настройки и снимката на сървъра:'
+                : 'Important for new settings and server icon:'}
             </p>
             <p className="text-[11px] text-amber-300/80 leading-relaxed">
-              Vanilla Minecraft чете лимита на чанковете (View Distance) и снимката на сървъра (<code>server-icon.png</code>) <strong>само при стартиране</strong>. Рестартирай сървъра (<strong>Спри</strong> 🛑 и след това <strong>Стартирай</strong> ▶️), за да се заредят в играта.
+              {language === 'bg'
+                ? 'Vanilla Minecraft чете лимита на чанковете (View Distance) и снимката на сървъра (server-icon.png) само при стартиране. Рестартирай сървъра (Спри 🛑 и след това Стартирай ▶️), за да се заредят в играта.'
+                : 'Minecraft loads view distance and server-icon.png only during server startup. Restart the server (Stop 🛑 and then Start ▶️) for changes to appear in-game.'}
             </p>
           </div>
         </div>
       ) : (
         <p className="text-[11px] text-slate-500 pt-1">
-          * Забележка: Новите настройки и снимката ще влязат в сила веднага при следващото стартиране на сървъра.
+          {language === 'bg'
+            ? '* Забележка: Новите настройки и снимката ще влязат в сила веднага при следващото стартиране на сървъра.'
+            : '* Note: New settings and server icon will take effect upon the next server start.'}
         </p>
       )}
     </form>

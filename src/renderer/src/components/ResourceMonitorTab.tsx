@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, Cpu, HardDrive, Clock, Gauge, Users, Network, Zap, Sparkles } from 'lucide-react';
 import { ServerProfile, SystemInfo, ServerStats } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 
 interface ResourceMonitorProps {
   server: ServerProfile;
@@ -15,6 +16,7 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
   systemInfo,
   onlinePlayerCount,
 }) => {
+  const { t, language } = useLanguage();
   const [stats, setStats] = useState<ServerStats | null>(propStats || null);
   const [uptimeSeconds, setUptimeSeconds] = useState<number>(0);
   const [liveMaxPlayers, setLiveMaxPlayers] = useState<number>(server.maxPlayers || 20);
@@ -103,29 +105,29 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
         <div>
           <h3 className="text-lg font-black text-slate-100 flex items-center gap-2">
             <Activity className="w-5 h-5 text-emerald-400" />
-            Мониторинг на Ресурси & Хардуер
+            {t('monitor.title')}
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Следи натоварването на процесора, RAM паметта и процентите на сървъра на живо
+            {t('monitor.subtitle')}
           </p>
         </div>
 
         <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
           <Clock className="w-4 h-4 text-cyan-400" />
-          <span className="text-slate-400 font-medium">Uptime:</span>
+          <span className="text-slate-400 font-medium">{t('monitor.uptime')}:</span>
           <span className="font-mono font-bold text-slate-100">
-            {isRunning ? formatUptime(stats?.uptimeSeconds || uptimeSeconds) : 'Офлайн'}
+            {isRunning ? formatUptime(stats?.uptimeSeconds || uptimeSeconds) : t('common.offline')}
           </span>
         </div>
       </div>
 
-      {/* Primary Server Metrics (Live Server Consumption) */}
+      {/* Primary Server Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Card 1: Server Real CPU % */}
         <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-              <Cpu className="w-4 h-4 text-emerald-400" /> Сървърно CPU Натоварване
+              <Cpu className="w-4 h-4 text-emerald-400" /> {t('monitor.serverCpu')}
             </span>
             <span
               className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
@@ -138,7 +140,13 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
                   : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
               }`}
             >
-              {isRunning ? (serverCpu > 75 ? 'Високо натоварване' : serverCpu > 40 ? 'Умерено' : 'Нормално') : 'Спрян'}
+              {isRunning
+                ? serverCpu > 75
+                  ? (language === 'bg' ? 'Високо натоварване' : 'High Load')
+                  : serverCpu > 40
+                  ? (language === 'bg' ? 'Умерено' : 'Moderate')
+                  : (language === 'bg' ? 'Нормално' : 'Normal')
+                : t('common.offline')}
             </span>
           </div>
 
@@ -147,7 +155,7 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
               {isRunning ? `${serverCpu}%` : '0%'}
             </div>
             <span className="text-xs text-slate-400 font-mono">
-              {isRunning ? `Процес Java (PID: ${server.name})` : 'Няма активен процес'}
+              {isRunning ? `Java Process (${server.name})` : (language === 'bg' ? 'Няма активен процес' : 'No active process')}
             </span>
           </div>
 
@@ -162,8 +170,10 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
           </div>
           <p className="text-[11px] text-slate-400">
             {isRunning
-              ? 'Процент от процесорната мощност на компютъра, изразходван от този сървър.'
-              : 'Стартирай сървъра, за да видиш потреблението на процесора.'}
+              ? (language === 'bg'
+                  ? 'Процент от процесорната мощност на компютъра, изразходван от този сървър.'
+                  : 'Percentage of host CPU power consumed by this Minecraft server process.')
+              : t('monitor.serverOfflineNotice')}
           </p>
         </div>
 
@@ -171,7 +181,7 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
         <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-              <HardDrive className="w-4 h-4 text-cyan-400" /> Реално използвана RAM от Сървъра
+              <HardDrive className="w-4 h-4 text-cyan-400" /> {t('monitor.serverRam')}
             </span>
             <span
               className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
@@ -184,7 +194,7 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
                   : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
               }`}
             >
-              {isRunning ? `${serverRamPercent}% от капацитета` : '0%'}
+              {isRunning ? `${serverRamPercent}% ${language === 'bg' ? 'от капацитета' : 'of capacity'}` : '0%'}
             </span>
           </div>
 
@@ -194,10 +204,11 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
             </div>
             <div className="text-right">
               <div className="text-xs text-slate-400 font-mono">
-                Heap Лимит: <strong className="text-slate-200">{server.allocatedRamGb} GB</strong>
+                {language === 'bg' ? 'Heap Лимит:' : 'Heap Limit:'}{' '}
+                <strong className="text-slate-200">{server.allocatedRamGb} GB</strong>
               </div>
               <div className="text-[10px] text-slate-500 font-sans">
-                + ~300 MB Java овърхед
+                + ~300 MB Java overhead
               </div>
             </div>
           </div>
@@ -220,7 +231,7 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
         <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
-              <Gauge className="w-4 h-4 text-emerald-400" /> Сървърен TPS
+              <Gauge className="w-4 h-4 text-emerald-400" /> {language === 'bg' ? 'Сървърен TPS' : 'Server TPS'}
             </span>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               {isRunning ? '20.0 TPS' : '0.0 TPS'}
@@ -230,7 +241,9 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
             {isRunning ? '20.0' : '0.0'} <span className="text-xs text-slate-500 font-sans">/ 20.0 Ticks</span>
           </div>
           <p className="text-[11px] text-slate-400">
-            {isRunning ? '🟢 Перфектно плавен – нулев сървърен лаг!' : 'Сървърът не работи в момента.'}
+            {isRunning
+              ? (language === 'bg' ? '🟢 Перфектно плавен – нулев сървърен лаг!' : '🟢 Perfectly smooth – zero tick lag!')
+              : (language === 'bg' ? 'Сървърът не работи в момента.' : 'Server is currently stopped.')}
           </p>
         </div>
 
@@ -238,17 +251,19 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
         <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-amber-400" /> Играчи / Слотове
+              <Users className="w-4 h-4 text-amber-400" /> {t('monitor.onlinePlayers')}
             </span>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              Капацитет
+              {language === 'bg' ? 'Капацитет' : 'Capacity'}
             </span>
           </div>
           <div className="text-2xl font-black text-slate-100 font-mono">
-            {onlinePlayerCount} <span className="text-xs text-slate-500 font-sans">/ {liveMaxPlayers} слота</span>
+            {onlinePlayerCount} <span className="text-xs text-slate-500 font-sans">/ {liveMaxPlayers} {language === 'bg' ? 'слота' : 'slots'}</span>
           </div>
           <p className="text-[11px] text-slate-400">
-            {onlinePlayerCount > 0 ? `${onlinePlayerCount} активни играчи в игра` : 'Няма свързани играчи в момента'}
+            {onlinePlayerCount > 0
+              ? `${onlinePlayerCount} ${language === 'bg' ? 'активни играчи в игра' : 'active players in game'}`
+              : (language === 'bg' ? 'Няма свързани играчи в момента' : 'No connected players right now')}
           </p>
         </div>
       </div>
@@ -261,8 +276,8 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
               <HardDrive className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-sm font-bold text-slate-100">Общо Натоварване на Компютъра (Хоста)</span>
-              <p className="text-xs text-slate-400">Всички процеси в Windows / macOS</p>
+              <span className="text-sm font-bold text-slate-100">{t('monitor.hostSystem')}</span>
+              <p className="text-xs text-slate-400">{language === 'bg' ? 'Всички процеси в операционната система' : 'Total workload across operating system'}</p>
             </div>
           </div>
         </div>
@@ -273,7 +288,7 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
           <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-400 font-bold flex items-center gap-1.5">
-                <Cpu className="w-3.5 h-3.5 text-cyan-400" /> Общо CPU на компютъра:
+                <Cpu className="w-3.5 h-3.5 text-cyan-400" /> {t('monitor.hostCpu')}:
               </span>
               <span className="font-mono font-bold text-cyan-400">{hostCpuPercent}%</span>
             </div>
@@ -286,7 +301,7 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
               />
             </div>
             <div className="text-[11px] text-slate-500 font-mono truncate">
-              {systemInfo?.cpuModel || 'Процесор'}
+              {systemInfo?.cpuModel || (language === 'bg' ? 'Процесор' : 'CPU')}
             </div>
           </div>
 
@@ -294,7 +309,7 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
           <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-400 font-bold flex items-center gap-1.5">
-                <HardDrive className="w-3.5 h-3.5 text-emerald-400" /> Общо RAM на компютъра:
+                <HardDrive className="w-3.5 h-3.5 text-emerald-400" /> {t('monitor.hostRam')}:
               </span>
               <span className="font-mono font-bold text-emerald-400">
                 {usedRam} / {totalRam} GB ({hostRamPercent}%)
@@ -309,8 +324,8 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
               />
             </div>
             <div className="flex justify-between text-[11px] text-slate-500 font-mono">
-              <span>Свободни: {freeRam} GB</span>
-              <span>Общо: {totalRam} GB</span>
+              <span>{language === 'bg' ? 'Свободни:' : 'Free:'} {freeRam} GB</span>
+              <span>{language === 'bg' ? 'Общо:' : 'Total:'} {totalRam} GB</span>
             </div>
           </div>
         </div>
@@ -321,14 +336,14 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
         {/* Network & Port info */}
         <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
-            <Network className="w-4 h-4 text-emerald-400" /> Мрежов Порт & Адрес
+            <Network className="w-4 h-4 text-emerald-400" /> {language === 'bg' ? 'Мрежов Порт & Адрес' : 'Network Port & Address'}
           </div>
           <div className="flex items-center justify-between text-xs font-mono">
-            <span className="text-slate-400">Сървърен порт:</span>
+            <span className="text-slate-400">{t('common.port')}:</span>
             <span className="text-emerald-400 font-bold">:{server.port}</span>
           </div>
           <div className="flex items-center justify-between text-xs font-mono">
-            <span className="text-slate-400">Локален LAN IP:</span>
+            <span className="text-slate-400">Local LAN IP:</span>
             <span className="text-slate-200">{systemInfo?.localIp || '127.0.0.1'}</span>
           </div>
         </div>
@@ -336,14 +351,14 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
         {/* OS info */}
         <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
-            <Zap className="w-4 h-4 text-amber-400" /> Среда & Операционна система
+            <Zap className="w-4 h-4 text-amber-400" /> {language === 'bg' ? 'Среда & Платформа' : 'Platform & Environment'}
           </div>
           <div className="flex items-center justify-between text-xs font-mono">
-            <span className="text-slate-400">Платформа:</span>
+            <span className="text-slate-400">{language === 'bg' ? 'Платформа:' : 'Platform:'}</span>
             <span className="text-slate-200 uppercase">{systemInfo?.platform || 'Windows'}</span>
           </div>
           <div className="flex items-center justify-between text-xs font-mono">
-            <span className="text-slate-400">Сървър тип:</span>
+            <span className="text-slate-400">{t('common.software')}:</span>
             <span className="text-emerald-400 font-bold uppercase">{server.software} v{server.version}</span>
           </div>
         </div>

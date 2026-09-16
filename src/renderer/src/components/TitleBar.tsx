@@ -1,12 +1,16 @@
 import React from 'react';
+import { Globe } from 'lucide-react';
 import craftDockLogo from '../assets/icon.png';
 import { ServerProfile } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 
 interface TitleBarProps {
   activeServer?: ServerProfile | null;
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({ activeServer }) => {
+  const { language, toggleLanguage } = useLanguage();
+
   return (
     <header
       className="h-[38px] min-h-[38px] max-h-[38px] w-full bg-[#070a14] border-b border-white/[0.08] flex items-center justify-between px-3.5 select-none shrink-0 z-50 relative"
@@ -26,7 +30,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ activeServer }) => {
           CraftDock
         </span>
         <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-300 border border-sky-400/20 font-bold">
-          v2.0.0
+          v2.0.9
         </span>
         <span className="text-slate-600 text-xs hidden sm:inline">•</span>
         <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
@@ -54,13 +58,31 @@ export const TitleBar: React.FC<TitleBarProps> = ({ activeServer }) => {
           </div>
         ) : (
           <span className="text-[11px] text-slate-500 font-mono tracking-wider opacity-60">
-            CraftDock • Премести прозореца оттук
+            {language === 'en' ? 'CraftDock • Drag window from here' : 'CraftDock • Премести прозореца оттук'}
           </span>
         )}
       </div>
 
-      {/* Right side: 140px space reserved for native Windows titleBarOverlay buttons */}
-      <div className="w-[140px] shrink-0 pointer-events-none" />
+      {/* Right side: Language Switcher + reserved 140px space for native Windows titleBarOverlay buttons */}
+      <div className="flex items-center">
+        <div
+          className="flex items-center mr-2"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
+          <button
+            type="button"
+            onClick={toggleLanguage}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] text-[11px] font-mono text-slate-200 hover:text-white transition-all shadow-sm active:scale-95 cursor-pointer"
+            title={language === 'en' ? 'Превключи на Български (BG)' : 'Switch to English (EN)'}
+          >
+            <Globe className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="font-bold text-sky-300">{language.toUpperCase()}</span>
+            <span className="text-[9px] opacity-40">|</span>
+            <span className="text-[10px] text-slate-400">{language === 'en' ? 'BG' : 'EN'}</span>
+          </button>
+        </div>
+        <div className="w-[140px] shrink-0 pointer-events-none" />
+      </div>
     </header>
   );
 };

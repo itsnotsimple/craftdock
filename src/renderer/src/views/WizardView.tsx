@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { ServerSoftware, SystemInfo, VersionInfo } from '../types';
 import { RamSlider } from '../components/RamSlider';
+import { useLanguage } from '../context/LanguageContext';
 
 interface WizardViewProps {
   systemInfo: SystemInfo | null;
@@ -38,7 +39,8 @@ export const WizardView: React.FC<WizardViewProps> = ({
   downloadProgress,
   isCreating,
 }) => {
-  const [name, setName] = useState('Survival с Аверите');
+  const { t, language } = useLanguage();
+  const [name, setName] = useState(language === 'bg' ? 'Survival с Аверите' : 'Survival SMP');
   const [software, setSoftware] = useState<ServerSoftware>('paper');
   const [version, setVersion] = useState<string>('1.21.4');
   const [hardcore, setHardcore] = useState<boolean>(false);
@@ -47,14 +49,15 @@ export const WizardView: React.FC<WizardViewProps> = ({
 
   const [targetPlayers, setTargetPlayers] = useState<number>(4);
   const [ramGb, setRamGb] = useState<number>(() => {
-    // Recommend around 4GB if system has at least 8GB
     if (systemInfo && systemInfo.totalRamGb >= 16) return 6;
     if (systemInfo && systemInfo.totalRamGb >= 8) return 4;
     return 2;
   });
 
   const [port, setPort] = useState<number>(25565);
-  const [motd, setMotd] = useState<string>('Добре дошли в нашия личен домашен сървър!');
+  const [motd, setMotd] = useState<string>(
+    language === 'bg' ? 'Добре дошли в нашия личен домашен сървър!' : 'Welcome to our private Minecraft server!'
+  );
 
   // Fetch versions dynamically from online APIs
   useEffect(() => {
@@ -104,27 +107,27 @@ export const WizardView: React.FC<WizardViewProps> = ({
   }> = [
     {
       id: 'paper',
-      name: 'PaperMC',
-      badge: 'Препоръчително ⚡',
-      desc: 'Най-добрата производителност, 20 TPS, поддържа Spigot/Paper плъгини без лаг.',
+      name: t('wizard.software.paper.name'),
+      badge: t('wizard.software.paper.badge'),
+      desc: t('wizard.software.paper.desc'),
     },
     {
       id: 'purpur',
-      name: 'Purpur',
-      badge: 'Още по-бърз',
-      desc: 'Paper базиран с допълнителни оптимизации и настройки на геймплея.',
+      name: t('wizard.software.purpur.name'),
+      badge: t('wizard.software.purpur.badge'),
+      desc: t('wizard.software.purpur.desc'),
     },
     {
       id: 'fabric',
-      name: 'Fabric',
-      badge: 'Модове',
-      desc: 'Модерен и лек модлоудър за модове като Lithium, Sodium, Voice Chat.',
+      name: t('wizard.software.fabric.name'),
+      badge: t('wizard.software.fabric.badge'),
+      desc: t('wizard.software.fabric.desc'),
     },
     {
       id: 'vanilla',
-      name: 'Vanilla Mojang',
-      badge: 'Оригинален',
-      desc: 'Чистият официален Mojang сървър без модификации.',
+      name: t('wizard.software.vanilla.name'),
+      badge: t('wizard.software.vanilla.badge'),
+      desc: t('wizard.software.vanilla.desc'),
     },
   ];
 
@@ -140,10 +143,10 @@ export const WizardView: React.FC<WizardViewProps> = ({
 
             <div>
               <h3 className="text-lg font-black text-slate-100 mb-1">
-                Подготвяне на сървъра...
+                {t('wizard.overlayTitle')}
               </h3>
               <p className="text-xs text-slate-400">
-                {downloadProgress?.message || 'Изтегляне на най-новите файлове от официалното API...'}
+                {downloadProgress?.message || t('wizard.overlaySubtitle')}
               </p>
             </div>
 
@@ -164,7 +167,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
             </div>
 
             <p className="text-[11px] text-slate-500">
-              Приложението не заема място предварително – сваля само това, което ти трябва!
+              {t('wizard.overlayFooter')}
             </p>
           </div>
         </div>
@@ -181,10 +184,10 @@ export const WizardView: React.FC<WizardViewProps> = ({
           </button>
           <div>
             <h2 className="text-2xl font-black text-slate-100 tracking-tight flex items-center gap-2">
-              Server Wizard (Създаване на Сървър)
+              {t('wizard.title')}
             </h2>
             <p className="text-xs text-slate-400">
-              Настрой персоналния си домашен сървър само в 3 бързи стъпки
+              {t('wizard.subtitle')}
             </p>
           </div>
         </div>
@@ -194,17 +197,17 @@ export const WizardView: React.FC<WizardViewProps> = ({
         {/* Step 1: Server Name & Software */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 text-sm font-extrabold text-indigo-400 uppercase tracking-wider">
-            <span>Стъпка 1</span> • Име и Тип Сървър
+            <span>{t('wizard.step1')}</span> • {t('wizard.step1Desc')}
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300">Име на твоя сървър</label>
+            <label className="text-xs font-bold text-slate-300">{t('wizard.serverNameLabel')}</label>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="напр. Survival с Аверите"
+              placeholder={t('wizard.serverNamePlaceholder')}
               className="w-full px-4 py-2.5 rounded-xl glass-input text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-400 transition-colors"
             />
           </div>
@@ -243,11 +246,11 @@ export const WizardView: React.FC<WizardViewProps> = ({
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm font-extrabold text-cyan-400 uppercase tracking-wider">
-              <span>Стъпка 2</span> • Версия на Minecraft (Онлайн API)
+              <span>{t('wizard.step2')}</span> • {t('wizard.step2Desc')}
             </div>
             {loadingVersions && (
               <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" /> Зареждане на версии на живо...
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" /> {t('wizard.loadingVersions')}
               </span>
             )}
           </div>
@@ -255,9 +258,9 @@ export const WizardView: React.FC<WizardViewProps> = ({
           <div className="p-4 rounded-2xl glass-card space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-slate-300">
-                Избери версия за <strong className="text-cyan-400">{software.toUpperCase()}</strong>:
+                {t('wizard.chooseVersionFor')} <strong className="text-cyan-400">{software.toUpperCase()}</strong>:
               </label>
-              <span className="text-[11px] text-slate-500">Дърпа се директно от официалното API</span>
+              <span className="text-[11px] text-slate-500">{t('wizard.apiSourceNotice')}</span>
             </div>
 
             <select
@@ -268,7 +271,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
             >
               {versionsList.map((v) => (
                 <option key={v.version} value={v.version}>
-                  Minecraft v{v.version} {v.isLatest ? '⭐ (Най-нова официална)' : ''}
+                  Minecraft v{v.version} {v.isLatest ? `⭐ ${t('wizard.latestOfficial')}` : ''}
                 </option>
               ))}
             </select>
@@ -278,7 +281,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
         {/* Step 3: RAM Slider & Intelligent Capacity Advisor */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 text-sm font-extrabold text-purple-400 uppercase tracking-wider">
-            <span>Стъпка 3</span> • RAM Памет & Капацитет за Играчи
+            <span>{t('wizard.step3')}</span> • {t('wizard.step3Desc')}
           </div>
 
           <div className="p-6 rounded-2xl glass-card">
@@ -318,18 +321,18 @@ export const WizardView: React.FC<WizardViewProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-black text-slate-100">
-                    Hardcore Режим (1 Живот & Permadeath)
+                    {t('wizard.hardcoreLabel')}
                   </span>
                   {hardcore && (
                     <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 uppercase font-mono animate-pulse">
-                      ВКЛЮЧЕН
+                      {t('wizard.hardcoreActiveBadge')}
                     </span>
                   )}
                 </div>
                 <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
                   {hardcore
-                    ? '💀 ВНИМАНИЕ: Всеки играч има точно 1 живот! При смърт – крайно отпадане (Spectator) и заключена трудност Hard.'
-                    : 'Стандартно оцеляване с възможност за нормално прераждане на спаун или легло.'}
+                    ? t('wizard.hardcoreActiveDesc')
+                    : t('wizard.hardcoreDisabledDesc')}
                 </p>
               </div>
             </div>
@@ -350,12 +353,12 @@ export const WizardView: React.FC<WizardViewProps> = ({
           {/* Optional Settings (Port, MOTD) */}
           <div className="p-5 rounded-2xl glass-card space-y-4">
             <div className="flex items-center gap-2 text-xs font-bold text-amber-400">
-              <Settings className="w-4 h-4 text-amber-400" /> Допълнителни мрежови настройки
+              <Settings className="w-4 h-4 text-amber-400" /> {t('wizard.optionalNetworkSettings')}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-xs text-slate-400 font-medium">Мрежов Порт (По подразбиране: 25565)</label>
+                <label className="text-xs text-slate-400 font-medium">{t('wizard.networkPortLabel')}</label>
                 <input
                   type="number"
                   value={port}
@@ -364,7 +367,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-slate-400 font-medium">MOTD (Описание в сървър листа)</label>
+                <label className="text-xs text-slate-400 font-medium">{t('wizard.motdLabel')}</label>
                 <input
                   type="text"
                   value={motd}
@@ -383,7 +386,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
             onClick={onCancel}
             className="px-5 py-2.5 rounded-xl glass-card hover:bg-white/[0.08] text-slate-300 font-semibold text-xs transition-all cursor-pointer"
           >
-            Отказ
+            {t('common.cancel')}
           </button>
 
           <button
@@ -392,7 +395,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
             className="flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-sm transition-all shadow-xl shadow-emerald-950/60 glow-green cursor-pointer disabled:opacity-50"
           >
             <Sparkles className="w-4 h-4" />
-            Създай и Изтегли Сървъра (1 Клик)
+            {t('wizard.createBtn')}
           </button>
         </div>
       </form>

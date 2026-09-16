@@ -2,6 +2,7 @@ import React from 'react';
 import { PlusCircle, Server as ServerIcon, Sparkles } from 'lucide-react';
 import { ServerProfile } from '../types';
 import { ServerCard } from '../components/ServerCard';
+import { useLanguage } from '../context/LanguageContext';
 
 interface LibraryViewProps {
   servers: ServerProfile[];
@@ -24,6 +25,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   onDeleteServer,
   onNavigateToWizard,
 }) => {
+  const { t, language } = useLanguage();
   const runningCount = servers.filter((s) => s.status === 'running').length;
 
   return (
@@ -33,10 +35,10 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-black text-slate-100 tracking-tight flex items-center gap-2.5">
-              Моите Сървъри
+              {t('library.title')}
             </h2>
             <span className="text-xs px-3 py-1 rounded-full bg-slate-900 text-slate-300 font-bold border border-slate-800 font-mono">
-              {servers.length} общо
+              {servers.length} {language === 'en' ? (servers.length === 1 ? 'total' : 'total') : 'общо'}
             </span>
             {runningCount > 0 && (
               <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 font-semibold border border-emerald-400/30 flex items-center gap-2">
@@ -44,12 +46,12 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                {runningCount} активен
+                {runningCount} {language === 'en' ? 'active' : 'активен'}
               </span>
             )}
           </div>
           <p className="text-sm text-slate-400 mt-1.5">
-            Управлявай твоите лични домашни Minecraft светове без месечни такси и без лаг
+            {t('library.subtitle')}
           </p>
         </div>
 
@@ -57,7 +59,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           onClick={onNavigateToWizard}
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold text-sm transition-all shadow-xl shadow-indigo-950/50 glow-purple cursor-pointer"
         >
-          <PlusCircle className="w-4 h-4 text-emerald-300" /> Създай Нов Сървър
+          <PlusCircle className="w-4 h-4 text-emerald-300" /> {t('library.createNew')}
         </button>
       </div>
 
@@ -67,15 +69,15 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           <div className="w-16 h-16 rounded-2xl bg-indigo-500/15 text-indigo-400 flex items-center justify-center mb-4 border border-indigo-400/30">
             <ServerIcon className="w-8 h-8" />
           </div>
-          <h3 className="text-lg font-bold text-slate-100 mb-2">Все още нямаш създадени сървъри</h3>
+          <h3 className="text-lg font-bold text-slate-100 mb-2">{t('library.emptyTitle')}</h3>
           <p className="text-xs text-slate-400 leading-relaxed mb-6 max-w-md">
-            Забрави за умрелите безплатни хостове с 1 GB RAM, опашки и прекъсвания! Превърни твоя мощен компютър в гейминг хост за твоите авери с един клик.
+            {t('library.emptySubtitle')}
           </p>
           <button
             onClick={onNavigateToWizard}
             className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-sm transition-all shadow-xl shadow-emerald-950/60 glow-green cursor-pointer"
           >
-            <Sparkles className="w-4 h-4 text-amber-300" /> Стартирай Server Wizard
+            <Sparkles className="w-4 h-4 text-amber-300" /> {t('library.createNew')}
           </button>
         </div>
       ) : (

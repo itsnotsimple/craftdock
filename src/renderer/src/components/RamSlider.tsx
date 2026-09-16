@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Cpu, HardDrive, AlertTriangle, CheckCircle2, Flame, Users, Sparkles, Wand2 } from 'lucide-react';
 import { calculateRamAdvice, getRecommendedRam } from '../utils/ramCalculator';
 import { ServerSoftware } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 
 interface RamSliderProps {
   ramGb: number;
@@ -22,9 +23,10 @@ export const RamSlider: React.FC<RamSliderProps> = ({
   systemTotalRamGb,
   systemFreeRamGb,
 }) => {
+  const { t, language } = useLanguage();
   const [isCustomPlayers, setIsCustomPlayers] = useState<boolean>(![2, 4, 8, 12, 16].includes(targetPlayers));
   const maxSliderRam = Math.min(32, Math.max(12, Math.floor(systemTotalRamGb)));
-  const advice = calculateRamAdvice(ramGb, targetPlayers, software, systemTotalRamGb, systemFreeRamGb);
+  const advice = calculateRamAdvice(ramGb, targetPlayers, software, systemTotalRamGb, systemFreeRamGb, language);
   const recommendedRam = getRecommendedRam(targetPlayers, software);
 
   const getStatusColor = () => {
@@ -45,25 +47,25 @@ export const RamSlider: React.FC<RamSliderProps> = ({
       case 'danger':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30">
-            <AlertTriangle className="w-3.5 h-3.5" /> Критичен лаг!
+            <AlertTriangle className="w-3.5 h-3.5" /> {t('ramSlider.dangerBadge')}
           </span>
         );
       case 'warning':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30">
-            <AlertTriangle className="w-3.5 h-3.5" /> На ръба (Спад на TPS)
+            <AlertTriangle className="w-3.5 h-3.5" /> {t('ramSlider.warningBadge')}
           </span>
         );
       case 'optimal':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Идеално съотношение
+            <CheckCircle2 className="w-3.5 h-3.5" /> {t('ramSlider.optimalBadge')}
           </span>
         );
       case 'beast':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-            <Flame className="w-3.5 h-3.5" /> Звяр производителност
+            <Flame className="w-3.5 h-3.5" /> {t('ramSlider.beastBadge')}
           </span>
         );
     }
@@ -78,16 +80,16 @@ export const RamSlider: React.FC<RamSliderProps> = ({
             <HardDrive className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-slate-400 font-medium">Твоят компютър разполага с:</div>
+            <div className="text-xs text-slate-400 font-medium">{t('ramSlider.pcHas')}</div>
             <div className="font-semibold text-slate-200">
-              <span className="text-sky-400">{systemTotalRamGb} GB</span> Общо RAM /{' '}
-              <span className="text-cyan-400">{systemFreeRamGb} GB</span> Свободни
+              <span className="text-sky-400">{systemTotalRamGb} GB</span> {t('ramSlider.totalRam')} /{' '}
+              <span className="text-cyan-400">{systemFreeRamGb} GB</span> {t('ramSlider.freeRam')}
             </div>
           </div>
         </div>
         <div className="hidden sm:block text-right text-xs text-slate-400">
-          <span className="text-sky-400 font-semibold">Истински Домашен Хост</span>
-          <br />(Без 1GB ограничения и без опашки)
+          <span className="text-sky-400 font-semibold">{t('ramSlider.realHomeHost')}</span>
+          <br />{t('ramSlider.noLimits')}
         </div>
       </div>
 
@@ -96,10 +98,10 @@ export const RamSlider: React.FC<RamSliderProps> = ({
         <div className="flex items-center justify-between">
           <label className="text-sm font-semibold text-slate-300 flex items-center gap-2">
             <Users className="w-4 h-4 text-sky-400" />
-            Колко приятели ще играете?
+            {t('ramSlider.howManyPlayers')}
           </label>
           <span className="text-sm font-bold px-3 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sky-400">
-            {targetPlayers} {targetPlayers === 1 ? 'играч' : 'играчи'}
+            {targetPlayers} {targetPlayers === 1 ? t('common.player') : t('common.players')}
           </span>
         </div>
 
@@ -119,11 +121,11 @@ export const RamSlider: React.FC<RamSliderProps> = ({
                   : 'bg-white/[0.03] border-white/[0.08] text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]'
               }`}
             >
-              {count === 2 && '2 авери'}
-              {count === 4 && '4 човека'}
-              {count === 8 && '8 играчи'}
-              {count === 12 && '12 души'}
-              {count === 16 && '16 тайфа'}
+              {count === 2 && t('ramSlider.preset2')}
+              {count === 4 && t('ramSlider.preset4')}
+              {count === 8 && t('ramSlider.preset8')}
+              {count === 12 && t('ramSlider.preset12')}
+              {count === 16 && t('ramSlider.preset16')}
             </button>
           ))}
 
@@ -136,14 +138,14 @@ export const RamSlider: React.FC<RamSliderProps> = ({
                 : 'bg-white/[0.03] border-white/[0.08] text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]'
             }`}
           >
-            ✏️ Друг брой
+            {t('ramSlider.customCount')}
           </button>
         </div>
 
         {/* Custom Players Input */}
         {isCustomPlayers && (
           <div className="flex items-center gap-3 p-3 rounded-xl glass-card">
-            <span className="text-xs text-slate-400 font-medium">Въведи точен брой играчи:</span>
+            <span className="text-xs text-slate-400 font-medium">{t('ramSlider.enterCustomCount')}</span>
             <input
               type="number"
               min="1"
@@ -153,7 +155,7 @@ export const RamSlider: React.FC<RamSliderProps> = ({
               className="w-24 px-3 py-1.5 rounded-lg glass-input text-sm font-bold text-sky-400 focus:outline-none focus:border-sky-400 font-mono"
             />
             <span className="text-xs text-slate-500">
-              (Калкулаторът ще пресметне автоматично нужната RAM)
+              {t('ramSlider.calcNotice')}
             </span>
           </div>
         )}
@@ -164,7 +166,7 @@ export const RamSlider: React.FC<RamSliderProps> = ({
         <div className="flex items-center justify-between">
           <label className="text-sm font-semibold text-slate-300 flex items-center gap-2">
             <Cpu className="w-4 h-4 text-sky-400" />
-            Задели RAM памет за сървъра:
+            {t('ramSlider.allocateRam')}
           </label>
           <div className="flex items-center gap-3">
             {/* Auto-set recommended RAM button */}
@@ -173,10 +175,10 @@ export const RamSlider: React.FC<RamSliderProps> = ({
                 type="button"
                 onClick={() => onRamChange(Math.min(maxSliderRam, recommendedRam))}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 text-xs font-semibold transition-all cursor-pointer"
-                title="Задай автоматично препоръчаната RAM за избраните играчи"
+                title={t('ramSlider.setRecommended', { ram: recommendedRam })}
               >
                 <Wand2 className="w-3.5 h-3.5" />
-                Задай препоръчана ({recommendedRam} GB)
+                {t('ramSlider.setRecommended', { ram: recommendedRam })}
               </button>
             )}
 
@@ -242,10 +244,10 @@ export const RamSlider: React.FC<RamSliderProps> = ({
 
         <div className="mt-3 pt-3 border-t border-slate-800/60 flex items-center justify-between text-xs">
           <span className="text-slate-400">
-            Препоръчително за: <strong className="text-slate-200">{advice.recommendedUse}</strong>
+            {t('ramSlider.recommendedFor')} <strong className="text-slate-200">{advice.recommendedUse}</strong>
           </span>
           <span className="text-slate-400">
-            Препоръчана RAM за {targetPlayers} {targetPlayers === 1 ? 'играч' : 'играчи'}:{' '}
+            {t('ramSlider.recommendedRamFor', { players: targetPlayers })}{' '}
             <strong className="text-cyan-300 font-bold">{recommendedRam} GB</strong>
           </span>
         </div>
@@ -254,7 +256,7 @@ export const RamSlider: React.FC<RamSliderProps> = ({
           <div className="mt-3 p-2.5 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
             <span>
-              Внимание: Избирате {ramGb} GB при {systemFreeRamGb} GB налични. Компютърът ви може да се забави.
+              {t('ramSlider.overSystemWarning', { ram: ramGb, free: systemFreeRamGb })}
             </span>
           </div>
         )}

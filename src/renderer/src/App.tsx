@@ -8,8 +8,10 @@ import { NetworkModal } from './components/NetworkModal';
 import { ServerConflictModal } from './components/ServerConflictModal';
 import { ServerProfile, SystemInfo, LogEntry, ServerSoftware, ServerStats } from './types';
 import { useDialog } from './context/DialogContext';
+import { useLanguage } from './context/LanguageContext';
 
 export const App: React.FC = () => {
+  const { t } = useLanguage();
   const { showConfirm, showAlert } = useDialog();
   const [currentTab, setCurrentTab] = useState<'library' | 'wizard' | 'dashboard'>('library');
   const [servers, setServers] = useState<ServerProfile[]>([]);
@@ -275,20 +277,12 @@ export const App: React.FC = () => {
 
   const handleDeleteServer = async (id: string) => {
     const target = servers.find((s) => s.id === id);
-    const serverName = target ? target.name : 'този сървър';
+    const serverName = target ? target.name : (target ? target.name : 'server');
     const confirmed = await showConfirm({
-      title: 'Изтриване на сървър',
-      message: (
-        <span>
-          Сигурен ли си, че искаш напълно да изтриеш <strong className="text-white font-semibold">"{serverName}"</strong>?
-          <br />
-          <span className="text-xs text-rose-400/80 mt-1.5 block">
-            Всички светове, плъгини и файлове ще бъдат премахнати безвъзвратно!
-          </span>
-        </span>
-      ),
-      confirmText: 'Изтрий сървъра',
-      cancelText: 'Отказ',
+      title: t('dialogs.deleteServerTitle'),
+      message: t('dialogs.deleteServerMsg', { name: serverName }),
+      confirmText: t('dialogs.deleteServerBtn'),
+      cancelText: t('common.cancel'),
       danger: true,
       icon: 'trash',
     });
@@ -320,7 +314,7 @@ export const App: React.FC = () => {
       percent: 5,
       downloadedMb: 0,
       totalMb: 0,
-      message: 'Инициализация на сървърните файлове...',
+      message: t('wizard.overlaySubtitle'),
     });
 
     try {
@@ -335,9 +329,9 @@ export const App: React.FC = () => {
     } catch (err: any) {
       await showAlert({
         type: 'error',
-        title: 'Грешка при създаване',
-        message: err.message || 'Възникна грешка при създаването на сървъра.',
-        buttonText: 'Разбрах',
+        title: t('dialogs.createError'),
+        message: err.message || t('dialogs.createError'),
+        buttonText: t('common.understand'),
       });
     } finally {
       setIsCreating(false);

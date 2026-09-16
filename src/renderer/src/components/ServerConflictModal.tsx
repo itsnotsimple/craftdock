@@ -1,6 +1,7 @@
 import React from 'react';
-import { AlertTriangle, Square, Play, X, ArrowRight, ExternalLink } from 'lucide-react';
+import { AlertTriangle, Play, X, ArrowRight } from 'lucide-react';
 import { ServerProfile } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 
 interface ServerConflictModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export const ServerConflictModal: React.FC<ServerConflictModalProps> = ({
   onStopAndSwitch,
   onGoToRunning,
 }) => {
+  const { t } = useLanguage();
   if (!isOpen) return null;
 
   const isStarting = runningServer.status === 'starting';
@@ -34,10 +36,10 @@ export const ServerConflictModal: React.FC<ServerConflictModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-black text-slate-100 tracking-tight">
-                Само 1 активен сървър наведнъж
+                {t('conflict.title')}
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Конфликт между сървъри
+                {t('conflict.subtitle')}
               </p>
             </div>
           </div>
@@ -55,11 +57,11 @@ export const ServerConflictModal: React.FC<ServerConflictModalProps> = ({
           <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-white/[0.08] space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] uppercase font-bold text-slate-400">
-                В момента работи:
+                {t('conflict.currentlyRunning')}
               </span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-400/30 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                {isStarting ? 'Стартира...' : 'Онлайн'}
+                {isStarting ? t('common.starting') : t('common.online')}
               </span>
             </div>
             <div className="font-bold text-sm text-slate-100 flex items-center gap-2">
@@ -69,11 +71,11 @@ export const ServerConflictModal: React.FC<ServerConflictModalProps> = ({
           </div>
 
           <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-200/90 text-[11px] leading-relaxed">
-            💡 <strong>Защо само един сървър?</strong> За да играят твоите приятели лесно без отваряне на портове (Port Forwarding), CraftDock поддържа един активен <strong>Playit мрежов тунел</strong> и пази ресурсите на компютъра ти от забиване.
+            💡 <strong>{t('conflict.whyOnlyOneTitle')}</strong> {t('conflict.whyOnlyOneDesc')}
           </div>
 
           <p className="text-slate-400 text-xs">
-            Искаш ли да спреш <strong>«{runningServer.name}»</strong> и да стартираш <strong>«{targetServer.name}»</strong>?
+            {t('conflict.switchPrompt', { running: runningServer.name, target: targetServer.name })}
           </p>
         </div>
 
@@ -84,7 +86,7 @@ export const ServerConflictModal: React.FC<ServerConflictModalProps> = ({
             className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-950/50 glow-green cursor-pointer"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
-            <span>Спри «{runningServer.name}» и пусни «{targetServer.name}»</span>
+            <span>{t('conflict.switchBtn', { running: runningServer.name, target: targetServer.name })}</span>
           </button>
 
           <div className="flex items-center gap-2 pt-1">
@@ -92,7 +94,7 @@ export const ServerConflictModal: React.FC<ServerConflictModalProps> = ({
               onClick={onGoToRunning}
               className="flex-1 py-2 px-3 rounded-xl glass-card hover:bg-white/[0.08] text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border border-white/[0.08] cursor-pointer"
             >
-              <span>Отвори конзолата на «{runningServer.name}»</span>
+              <span>{t('conflict.goToRunningBtn', { running: runningServer.name })}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
 
@@ -100,7 +102,7 @@ export const ServerConflictModal: React.FC<ServerConflictModalProps> = ({
               onClick={onClose}
               className="py-2 px-4 rounded-xl glass-card hover:bg-white/[0.08] text-slate-400 hover:text-slate-200 text-xs font-semibold transition-all border border-white/[0.08] cursor-pointer"
             >
-              Отказ
+              {t('conflict.cancelBtn')}
             </button>
           </div>
         </div>

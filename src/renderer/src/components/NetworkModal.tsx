@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Copy, Check, Globe, Wifi, ShieldAlert, Sparkles, ExternalLink } from 'lucide-react';
 import { ServerProfile } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 
 interface NetworkModalProps {
   server: ServerProfile;
@@ -9,6 +10,7 @@ interface NetworkModalProps {
 }
 
 export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onClose }) => {
+  const { t, language } = useLanguage();
   const [networkInfo, setNetworkInfo] = useState<{ localIp: string; publicIp: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedType, setCopiedType] = useState<string | null>(null);
@@ -29,7 +31,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
         api.getNetworkStatus(server.port).then((data: any) => {
           setNetworkInfo({
             localIp: data.localIp || '127.0.0.1',
-            publicIp: data.publicIp || 'Няма връзка',
+            publicIp: data.publicIp || (language === 'bg' ? 'Няма връзка' : 'No connection'),
           });
           setLoading(false);
         }).catch(() => {
@@ -50,7 +52,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
         };
       }
     }
-  }, [isOpen, server.port]);
+  }, [isOpen, server.port, language]);
 
   if (!isOpen) return null;
 
@@ -62,19 +64,19 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
     try {
       if (tunnelStatus.isRunning) {
         await api.stopTunnel();
-        setTunnelStatus({ isRunning: false, log: 'Тунелът е спрян' });
+        setTunnelStatus({ isRunning: false, log: language === 'bg' ? 'Тунелът е спрян' : 'Tunnel stopped' });
       } else {
         setTunnelStatus((prev) => ({
           ...prev,
           isRunning: true,
-          log: 'Инициализация на Playit тунел...',
+          log: language === 'bg' ? 'Инициализация на Playit тунел...' : 'Initializing Playit tunnel...',
         }));
         const status = await api.startTunnel(server.port);
         if (status) setTunnelStatus(status);
       }
     } catch (e: any) {
       console.error(e);
-      setTunnelStatus({ isRunning: false, log: `Грешка: ${e.message}` });
+      setTunnelStatus({ isRunning: false, log: `Error: ${e.message}` });
     } finally {
       setTunnelActionLoading(false);
     }
@@ -87,9 +89,9 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
   };
 
   const publicAddress =
-    networkInfo && networkInfo.publicIp && networkInfo.publicIp !== 'Недостъпно (офлайн)'
+    networkInfo && networkInfo.publicIp && !networkInfo.publicIp.includes('Няма') && !networkInfo.publicIp.includes('No connection')
       ? `${networkInfo.publicIp}:${server.port}`
-      : 'Зареждане...';
+      : t('common.loading');
   const localAddress = `${networkInfo?.localIp || '127.0.0.1'}:${server.port}`;
 
   return (
@@ -102,8 +104,8 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
               <Globe className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-100 text-base">Връзка за играчите (IP Адреси)</h3>
-              <p className="text-xs text-slate-400">Дай този адрес на твоите авери, за да се свържат</p>
+              <h3 className="font-bold text-slate-100 text-base">{t('network.modalTitle')}</h3>
+              <p className="text-xs text-slate-400">{t('network.modalSubtitle')}</p>
             </div>
           </div>
           <button
@@ -120,7 +122,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
           <div className="p-4 rounded-xl glass-card space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-sky-300 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-sky-400" /> Playit.gg Вграден Тунел (100% Работещ)
+                <Sparkles className="w-4 h-4 text-sky-400" /> {t('network.playitTitle')}
               </span>
               <span
                 className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${
@@ -129,12 +131,12 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
                     : 'bg-white/[0.04] text-slate-400 border-white/[0.08]'
                 }`}
               >
-                {tunnelStatus.isRunning ? '🟢 Активен' : 'Препоръчително за аверите'}
+                {tunnelStatus.isRunning ? `🟢 ${t('common.online')}` : (language === 'bg' ? 'Препоръчително' : 'Recommended')}
               </span>
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              Заобикаля защитите на домашния рутер и интернет доставчика (A1, Vivacom, Yettel) без нужда от отваряне на портове (Port Forwarding).
+              {t('network.playitDesc')}
             </p>
 
             {/* Tunnel is running: show address and controls */}
@@ -143,7 +145,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
                 {tunnelStatus.address ? (
                   <div className="p-3 rounded-xl bg-slate-950/60 border border-sky-400/40 space-y-2">
                     <span className="text-[11px] text-sky-400 font-bold block">
-                      🎮 Адрес за игра (Копирай и прати на приятелите):
+                      🎮 {t('network.giveToFriends')}
                     </span>
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-sm font-bold text-slate-100 select-all">
@@ -155,11 +157,11 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
                       >
                         {copiedType === 'tunnel' ? (
                           <>
-                            <Check className="w-3.5 h-3.5" /> Копирано!
+                            <Check className="w-3.5 h-3.5" /> {t('common.copied')}
                           </>
                         ) : (
                           <>
-                            <Copy className="w-3.5 h-3.5" /> Копирай
+                            <Copy className="w-3.5 h-3.5" /> {t('common.copy')}
                           </>
                         )}
                       </button>
@@ -169,32 +171,33 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
                   <div className="space-y-2.5">
                     <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-indigo-400 animate-ping shrink-0" />
-                      <span className="truncate">{tunnelStatus.log || 'Свързване към Playit мрежата...'}</span>
+                      <span className="truncate">{tunnelStatus.log || (language === 'bg' ? 'Свързване към Playit мрежата...' : 'Connecting to Playit network...')}</span>
                     </div>
 
-                    {/* Step-by-step guidance when agent is connected but 0 tunnels are configured */}
                     {!tunnelStatus.claimUrl && (
                       <div className="p-3.5 rounded-xl bg-indigo-950/60 border border-indigo-500/40 space-y-2.5 text-xs">
                         <div className="flex items-center gap-2 text-indigo-300 font-bold">
                           <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
-                          <span>Агентът е потвърден! Остава 1 стъпка в сайта:</span>
+                          <span>{language === 'bg' ? 'Агентът е потвърден! Остава 1 стъпка в сайта:' : 'Agent verified! Final step on website:'}</span>
                         </div>
                         <div className="text-slate-300 space-y-1.5 pl-1 leading-relaxed text-[11px]">
                           <div className="flex items-start gap-2">
                             <span className="font-bold text-cyan-400">1.</span>
-                            <span>Отвори своето Playit табло чрез бутона по-долу.</span>
+                            <span>{language === 'bg' ? 'Отвори своето Playit табло чрез бутона по-долу.' : 'Open your Playit dashboard via the button below.'}</span>
                           </div>
                           <div className="flex items-start gap-2">
                             <span className="font-bold text-cyan-400">2.</span>
-                            <span>Натисни бутона <strong className="text-white bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">Add Tunnel</strong>.</span>
+                            <span>{language === 'bg' ? 'Натисни бутона Add Tunnel.' : 'Click Add Tunnel.'}</span>
                           </div>
                           <div className="flex items-start gap-2">
                             <span className="font-bold text-cyan-400">3.</span>
-                            <span>Избери <strong className="text-white bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">Minecraft Java</strong> (порт {server.port}) и цъкни <strong className="text-white bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">Add Tunnel</strong>.</span>
+                            <span>{language === 'bg' ? `Избери Minecraft Java (порт ${server.port}) и цъкни Add Tunnel.` : `Select Minecraft Java (port ${server.port}) and click Add Tunnel.`}</span>
                           </div>
                         </div>
                         <p className="text-[10px] text-cyan-300/80 italic pt-0.5">
-                          Веднага след като го добавиш в сайта, CraftDock автоматично ще засече адреса и ще го покаже тук в зелено!
+                          {language === 'bg'
+                            ? 'Веднага след като го добавиш в сайта, CraftDock автоматично ще засече адреса и ще го покаже тук в зелено!'
+                            : 'Once added on the website, CraftDock will automatically detect the address and display it here!'}
                         </p>
                         <button
                           type="button"
@@ -209,7 +212,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
                           className="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
-                          <span>🌐 Отвори Playit Тунели (playit.gg/account/tunnels)</span>
+                          <span>{t('network.openTunnelsBtn')}</span>
                         </button>
                       </div>
                     )}
@@ -220,8 +223,8 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
                 {tunnelStatus.claimUrl && (
                   <div className="p-3 rounded-lg bg-amber-950/40 border border-amber-500/30 text-xs text-amber-200 flex items-center justify-between gap-2">
                     <div>
-                      <div className="font-bold">Първоначално свързване с Playit:</div>
-                      <div className="text-[11px] text-amber-300/80">Потвърди агента в браузъра (еднократно):</div>
+                      <div className="font-bold">{language === 'bg' ? 'Първоначално свързване с Playit:' : 'Initial Playit Claim:'}</div>
+                      <div className="text-[11px] text-amber-300/80">{language === 'bg' ? 'Потвърди агента в браузъра (еднократно):' : 'Confirm the agent in your browser (one-time):'}</div>
                     </div>
                     <button
                       type="button"
@@ -235,7 +238,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
                       }}
                       className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1 shrink-0 transition-all cursor-pointer"
                     >
-                      <span>Потвърди</span>
+                      <span>{t('common.confirm')}</span>
                       <ExternalLink className="w-3 h-3" />
                     </button>
                   </div>
@@ -243,14 +246,14 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
 
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-[11px] text-slate-400 font-mono">
-                    {tunnelStatus.log || 'Връзката е активна'}
+                    {tunnelStatus.log || (language === 'bg' ? 'Връзката е активна' : 'Connection active')}
                   </span>
                   <button
                     onClick={handleToggleTunnel}
                     disabled={tunnelActionLoading}
                     className="px-3.5 py-1.5 rounded-lg bg-rose-600/20 text-rose-300 hover:bg-rose-600/30 border border-rose-500/30 font-bold text-xs transition-all"
                   >
-                    {tunnelActionLoading ? 'Спиране...' : '⏹️ Спри Тунела'}
+                    {tunnelActionLoading ? t('common.stopping') : `⏹️ ${t('network.stopTunnel')}`}
                   </button>
                 </div>
               </div>
@@ -264,8 +267,8 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
                   <Sparkles className="w-4 h-4" />
                   <span>
                     {tunnelActionLoading
-                      ? 'Инициализация на тунела...'
-                      : '⚡ Пусни Външен Тунел (1 Клик)'}
+                      ? t('common.loading')
+                      : `⚡ ${t('network.startTunnel')}`}
                   </span>
                 </button>
               </div>
@@ -276,14 +279,14 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
           <div className="p-4 rounded-xl glass-card space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Globe className="w-3.5 h-3.5 text-cyan-400" /> Директен публичен IP
+                <Globe className="w-3.5 h-3.5 text-cyan-400" /> {t('network.publicIpTitle')}
               </span>
-              <span className="text-[11px] text-slate-400">Изисква Port Forward</span>
+              <span className="text-[11px] text-slate-400">{language === 'bg' ? 'Изисква Port Forward' : 'Requires Port Forward'}</span>
             </div>
 
             <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950/50 border border-white/[0.08]">
               <span className="font-mono text-sm font-semibold text-slate-100 select-all">
-                {loading ? 'Откриване на публичен IP...' : publicAddress}
+                {loading ? t('common.loading') : publicAddress}
               </span>
               <button
                 onClick={() => copyToClipboard(publicAddress, 'public')}
@@ -292,17 +295,17 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
               >
                 {copiedType === 'public' ? (
                   <>
-                    <Check className="w-3.5 h-3.5 text-cyan-400" /> Копирано!
+                    <Check className="w-3.5 h-3.5 text-cyan-400" /> {t('common.copied')}
                   </>
                 ) : (
                   <>
-                    <Copy className="w-3.5 h-3.5" /> Копирай
+                    <Copy className="w-3.5 h-3.5" /> {t('common.copy')}
                   </>
                 )}
               </button>
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              Работи само ако си отворил порт {server.port} в твоя домашен рутер (Port Forwarding).
+              {t('network.publicIpDesc', { port: server.port })}
             </p>
           </div>
 
@@ -310,9 +313,9 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
           <div className="p-4 rounded-xl glass-card space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Wifi className="w-3.5 h-3.5 text-emerald-400" /> За игра в една стая (LAN / Wi-Fi)
+                <Wifi className="w-3.5 h-3.5 text-emerald-400" /> {t('network.localIpTitle')}
               </span>
-              <span className="text-[11px] text-slate-400">Еднаква мрежа</span>
+              <span className="text-[11px] text-slate-400">{language === 'bg' ? 'Еднаква мрежа' : 'Same Network'}</span>
             </div>
 
             <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950/50 border border-white/[0.08]">
@@ -325,11 +328,11 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
               >
                 {copiedType === 'local' ? (
                   <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" /> Копирано!
+                    <Check className="w-3.5 h-3.5 text-emerald-400" /> {t('common.copied')}
                   </>
                 ) : (
                   <>
-                    <Copy className="w-3.5 h-3.5" /> Копирай
+                    <Copy className="w-3.5 h-3.5" /> {t('common.copy')}
                   </>
                 )}
               </button>
@@ -343,7 +346,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
             onClick={onClose}
             className="px-4 py-2 rounded-xl glass-card hover:bg-white/[0.08] text-slate-200 text-xs font-semibold transition-all cursor-pointer"
           >
-            Затвори
+            {t('common.close')}
           </button>
         </div>
       </div>

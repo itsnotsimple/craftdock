@@ -1,6 +1,7 @@
 import React from 'react';
 import { Play, Square, Terminal, FolderOpen, Trash2, Globe, Users, Cpu, ShieldCheck, Loader2 } from 'lucide-react';
 import { ServerProfile } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 
 interface ServerCardProps {
   server: ServerProfile;
@@ -23,6 +24,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
   onDelete,
   activeRunningServer,
 }) => {
+  const { t, language } = useLanguage();
   const isRunning = server.status === 'running';
   const isStarting = server.status === 'starting';
   const isStopping = server.status === 'stopping';
@@ -69,7 +71,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                Онлайн
+                {t('common.online')}
               </span>
             )}
             {isStarting && (
@@ -78,17 +80,17 @@ export const ServerCard: React.FC<ServerCardProps> = ({
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
                 </span>
-                Стартира се...
+                {t('common.starting')}
               </span>
             )}
             {isStopping && (
               <span className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/15 text-rose-300 border border-rose-400/30">
-                Спира се...
+                {t('common.stopping')}
               </span>
             )}
             {!isRunning && !isStarting && !isStopping && (
               <span className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-white/[0.04] text-slate-400 border border-white/[0.08]">
-                <span className="w-2 h-2 rounded-full bg-slate-600" /> Офлайн
+                <span className="w-2 h-2 rounded-full bg-slate-600" /> {t('common.offline')}
               </span>
             )}
           </div>
@@ -98,11 +100,11 @@ export const ServerCard: React.FC<ServerCardProps> = ({
         <div className="grid grid-cols-2 gap-2 my-3.5 p-3 rounded-xl bg-slate-950/40 border border-white/[0.06] text-xs font-mono">
           <div className="flex items-center gap-2 text-slate-300">
             <Cpu className="w-3.5 h-3.5 text-purple-400" />
-            <span>RAM: <strong className="text-slate-100">{server.allocatedRamGb} GB</strong></span>
+            <span>{t('common.ram')}: <strong className="text-slate-100">{server.allocatedRamGb} GB</strong></span>
           </div>
           <div className="flex items-center gap-2 text-slate-300">
             <Users className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Играчи: <strong className="text-slate-100">{isRunning ? (server.playerCount || 0) : 0}/{server.maxPlayers || 20}</strong></span>
+            <span>{t('common.players')}: <strong className="text-slate-100">{isRunning ? (server.playerCount || 0) : 0}/{server.maxPlayers || 20}</strong></span>
           </div>
         </div>
       </div>
@@ -122,7 +124,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
               disabled={isStopping}
               className="flex-1 py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-rose-950/50 cursor-pointer disabled:opacity-50"
             >
-              <Square className="w-3.5 h-3.5 fill-current" /> {isStopping ? 'Спира се...' : 'Спри Сървъра'}
+              <Square className="w-3.5 h-3.5 fill-current" /> {isStopping ? t('common.stopping') : t('common.stop')}
             </button>
           ) : isStarting ? (
             <button
@@ -130,7 +132,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
               className="flex-1 py-2.5 px-3.5 rounded-xl bg-amber-500/20 text-amber-200 border border-amber-400/30 font-bold text-xs flex items-center justify-center gap-2 shadow-sm cursor-not-allowed opacity-90"
             >
               <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
-              <span>Стартира се...</span>
+              <span>{t('common.starting')}</span>
             </button>
           ) : isStopping ? (
             <button
@@ -138,7 +140,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
               className="flex-1 py-2.5 px-3.5 rounded-xl bg-rose-500/20 text-rose-200 border border-rose-400/30 font-bold text-xs flex items-center justify-center gap-2 shadow-sm cursor-not-allowed opacity-90"
             >
               <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
-              <span>Спира се...</span>
+              <span>{t('common.stopping')}</span>
             </button>
           ) : activeRunningServer && activeRunningServer.id !== server.id ? (
             <button
@@ -147,10 +149,10 @@ export const ServerCard: React.FC<ServerCardProps> = ({
                 onStart(server.id);
               }}
               className="flex-1 py-2.5 px-3.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-all border border-amber-400/30 cursor-pointer shadow-sm shadow-amber-950/40"
-              title={`В момента работи «${activeRunningServer.name}». Кликни за смяна.`}
+              title={t('serverCard.runningAnother', { name: activeRunningServer.name })}
             >
               <Play className="w-3.5 h-3.5 fill-current text-amber-400" />
-              <span className="truncate">Смени на този</span>
+              <span className="truncate">{t('serverCard.switchToThis')}</span>
             </button>
           ) : (
             <button
@@ -160,7 +162,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
               }}
               className="flex-1 py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-950/50 glow-green cursor-pointer"
             >
-              <Play className="w-3.5 h-3.5 fill-current" /> Стартирай (1 Клик)
+              <Play className="w-3.5 h-3.5 fill-current" /> {t('common.startOneClick')}
             </button>
           )}
 
@@ -169,7 +171,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
               e.stopPropagation();
               onOpenDashboard(server.id);
             }}
-            title="Конзола и управление"
+            title={t('serverCard.console')}
             className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 hover:text-white transition-all border border-white/[0.08] hover:border-emerald-400/40 cursor-pointer"
           >
             <Terminal className="w-4 h-4 text-emerald-400" />
@@ -180,7 +182,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
               e.stopPropagation();
               onOpenNetwork(server);
             }}
-            title="Връзка и IP за играчите"
+            title={t('dashboard.ipForFriends')}
             className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 hover:text-white transition-all border border-white/[0.08] hover:border-cyan-400/40 cursor-pointer"
           >
             <Globe className="w-4 h-4 text-cyan-400" />
@@ -196,7 +198,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
             }}
             className="flex items-center gap-1.5 text-slate-400 hover:text-amber-300 transition-colors cursor-pointer"
           >
-            <FolderOpen className="w-3.5 h-3.5 text-amber-400" /> Отвори папка
+            <FolderOpen className="w-3.5 h-3.5 text-amber-400" /> {language === 'en' ? 'Open Folder' : 'Отвори папка'}
           </button>
           <button
             onClick={(e) => {
@@ -206,7 +208,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
             disabled={isRunning}
             className="flex items-center gap-1 text-slate-500 hover:text-rose-400 transition-colors disabled:opacity-30 cursor-pointer"
           >
-            <Trash2 className="w-3.5 h-3.5" /> Изтрий
+            <Trash2 className="w-3.5 h-3.5" /> {t('common.delete')}
           </button>
         </div>
       </div>
