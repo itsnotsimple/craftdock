@@ -90,6 +90,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
               onOpenNetwork={onOpenNetwork}
               onOpenFolder={onOpenFolder}
               onDelete={onDeleteServer}
+              activeRunningServer={servers.find((s) => s.status === 'running' || s.status === 'starting')}
             />
           ))}
         </div>

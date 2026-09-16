@@ -33,6 +33,7 @@ interface DashboardViewProps {
   players: string[];
   systemInfo?: SystemInfo | null;
   serverStats?: ServerStats | null;
+  activeRunningServer?: ServerProfile | null;
   onUpdateServer?: (server: ServerProfile) => void;
   onStartServer: (id: string) => void;
   onStopServer: (id: string) => void;
@@ -49,6 +50,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   players,
   systemInfo,
   serverStats,
+  activeRunningServer,
   onUpdateServer,
   onStartServer,
   onStopServer,
@@ -205,6 +207,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             >
               <Square className="w-3.5 h-3.5 fill-current text-rose-200" />
               <span>{isStopping ? 'Спира...' : 'Спри Сървъра'}</span>
+            </button>
+          ) : activeRunningServer && activeRunningServer.id !== server.id ? (
+            <button
+              onClick={() => onStartServer(server.id)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-bold text-xs transition-all border border-amber-400/30 cursor-pointer shadow-sm shadow-amber-950/40"
+              title={`В момента работи «${activeRunningServer.name}». Кликни за смяна.`}
+            >
+              <Play className="w-3.5 h-3.5 fill-current text-amber-400" />
+              <span>Смени на този сървър</span>
             </button>
           ) : (
             <button

@@ -5,6 +5,7 @@ import { LibraryView } from './views/LibraryView';
 import { WizardView } from './views/WizardView';
 import { DashboardView } from './views/DashboardView';
 import { NetworkModal } from './components/NetworkModal';
+import { ServerConflictModal } from './components/ServerConflictModal';
 import { ServerProfile, SystemInfo, LogEntry, ServerSoftware, ServerStats } from './types';
 
 export const App: React.FC = () => {
@@ -12,6 +13,12 @@ export const App: React.FC = () => {
   const [servers, setServers] = useState<ServerProfile[]>([]);
   const [activeServerId, setActiveServerId] = useState<string | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+
+  // Server Conflict Modal state (strictly enforces 1 active server at a time)
+  const [conflictModal, setConflictModal] = useState<{
+    runningServer: ServerProfile;
+    targetServer: ServerProfile;
+  } | null>(null);
 
   // Active server logs, stats & players mapped per serverId
   const [serverLogs, setServerLogs] = useState<Record<string, LogEntry[]>>({});
@@ -183,12 +190,60 @@ export const App: React.FC = () => {
   const handleStartServer = async (id: string) => {
     const api = (window as any).api;
     if (!api) return;
+
+    const targetServer = servers.find((s) => s.id === id);
+    if (!targetServer) return;
+
+    // Check if another server is already running or starting
+    const alreadyActive = servers.find(
+      (s) => s.id !== id && (s.status === 'running' || s.status === 'starting')
+    );
+
+    if (alreadyActive) {
+      setConflictModal({
+        runningServer: alreadyActive,
+        targetServer,
+      });
+      return;
+    }
+
     setActiveServerId(id);
     setServers((prev) =>
       prev.map((s) => (s.id === id ? { ...s, status: 'starting' } : s))
     );
     await api.startServer(id);
     refreshServers();
+  };
+
+  const handleStopAndSwitch = async () => {
+    if (!conflictModal) return;
+    const { runningServer, targetServer } = conflictModal;
+    setConflictModal(null);
+
+    const api = (window as any).api;
+    if (!api) return;
+
+    // Stop currently running server
+    setServers((prev) =>
+      prev.map((s) => (s.id === runningServer.id ? { ...s, status: 'stopping' } : s))
+    );
+    await api.stopServer(runningServer.id);
+
+    // Switch active server and start new one
+    setActiveServerId(targetServer.id);
+    setServers((prev) =>
+      prev.map((s) => (s.id === targetServer.id ? { ...s, status: 'starting' } : s))
+    );
+    await api.startServer(targetServer.id);
+    refreshServers();
+  };
+
+  const handleGoToRunning = () => {
+    if (!conflictModal) return;
+    const { runningServer } = conflictModal;
+    setConflictModal(null);
+    setActiveServerId(runningServer.id);
+    setCurrentTab('dashboard');
   };
 
   const handleStopServer = async (id: string) => {
@@ -315,6 +370,7 @@ export const App: React.FC = () => {
           {currentTab === 'dashboard' && activeServer && (
             <DashboardView
               server={activeServer}
+              activeRunningServer={servers.find((s) => s.status === 'running' || s.status === 'starting')}
               logs={serverLogs[activeServer.id] || []}
               players={serverPlayers[activeServer.id] || []}
               serverStats={serverStats[activeServer.id] || null}
@@ -350,6 +406,18 @@ export const App: React.FC = () => {
           server={networkModalServer}
           isOpen={!!networkModalServer}
           onClose={() => setNetworkModalServer(null)}
+        />
+      )}
+
+      {/* Server Conflict Modal (Enforce 1 active server at a time) */}
+      {conflictModal && (
+        <ServerConflictModal
+          isOpen={!!conflictModal}
+          runningServer={conflictModal.runningServer}
+          targetServer={conflictModal.targetServer}
+          onClose={() => setConflictModal(null)}
+          onStopAndSwitch={handleStopAndSwitch}
+          onGoToRunning={handleGoToRunning}
         />
       )}
     </div>

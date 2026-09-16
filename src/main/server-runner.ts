@@ -186,6 +186,19 @@ export function updateServerProperties(serverDir: string, port: number, motd?: s
 }
 
 export async function startServer(server: ServerProfile): Promise<boolean> {
+  // Prevent running multiple servers simultaneously
+  for (const [activeId] of activeServers.entries()) {
+    if (activeId !== server.id) {
+      console.warn(`Cannot start server ${server.id}: Server ${activeId} is already running.`);
+      appendServerLog(
+        server.id,
+        `[CraftDock Грешка] Сървърът не може да стартира, защото вече работи друг сървър! Първо го спрете.`,
+        true
+      );
+      return false;
+    }
+  }
+
   if (activeServers.has(server.id)) {
     console.warn(`Server ${server.id} is already running.`);
     return false;

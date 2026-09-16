@@ -10,6 +10,7 @@ interface ServerCardProps {
   onOpenNetwork: (server: ServerProfile) => void;
   onOpenFolder: (id: string) => void;
   onDelete: (id: string) => void;
+  activeRunningServer?: ServerProfile | null;
 }
 
 export const ServerCard: React.FC<ServerCardProps> = ({
@@ -20,6 +21,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
   onOpenNetwork,
   onOpenFolder,
   onDelete,
+  activeRunningServer,
 }) => {
   const isRunning = server.status === 'running';
   const isStarting = server.status === 'starting';
@@ -117,6 +119,18 @@ export const ServerCard: React.FC<ServerCardProps> = ({
               className="flex-1 py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-rose-950/50 cursor-pointer disabled:opacity-50"
             >
               <Square className="w-3.5 h-3.5 fill-current" /> Спри Сървъра
+            </button>
+          ) : activeRunningServer && activeRunningServer.id !== server.id ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onStart(server.id);
+              }}
+              className="flex-1 py-2.5 px-3.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-all border border-amber-400/30 cursor-pointer shadow-sm shadow-amber-950/40"
+              title={`В момента работи «${activeRunningServer.name}». Кликни за смяна.`}
+            >
+              <Play className="w-3.5 h-3.5 fill-current text-amber-400" />
+              <span className="truncate">Смени на този</span>
             </button>
           ) : (
             <button
