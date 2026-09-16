@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { getSystemInfo } from './system-info';
@@ -12,6 +12,11 @@ import {
   getVanillaDownloadUrl,
   getFabricDownloadUrl,
   downloadFileWithProgress,
+  searchModrinthModpacks,
+  searchModrinthResourcePacks,
+  searchModrinthPlugins,
+  getModrinthProjectVersions,
+  getModrinthVersionFile,
 } from './api-service';
 import {
   loadServers,
@@ -19,8 +24,18 @@ import {
   deleteServer,
   updateServer,
   getDefaultServerFolder,
+  calculateServerStorage,
+  getDataDirectory,
   ServerProfile,
 } from './server-store';
+import { getSystemJavaVersion } from './java-manager';
+import {
+  loadAppSettings,
+  saveAppSettings,
+  getNetworkDiagnostics,
+  getDiskDiagnostics,
+  clearAppCache,
+} from './app-settings';
 import {
   startServer,
   stopServer,
@@ -66,6 +81,59 @@ if (process.platform === 'darwin') {
 }
 
 let mainWindow: BrowserWindow | null = null;
+let tray: Tray | null = null;
+let isQuitting = false;
+
+function createTray() {
+  if (tray) return;
+  const iconPath = path.join(__dirname, '../resources/icon.png');
+  let iconImage = nativeImage.createEmpty();
+  if (fs.existsSync(iconPath)) {
+    iconImage = nativeImage.createFromPath(iconPath);
+  }
+  tray = new Tray(iconImage.resize({ width: 16, height: 16 }));
+  tray.setToolTip('CraftDock - Minecraft Server Manager');
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Open CraftDock',
+      click: () => {
+        if (mainWindow) {
+          if (!mainWindow.isVisible()) mainWindow.show();
+          mainWindow.focus();
+        }
+      },
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit CraftDock',
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      },
+    },
+  ]);
+
+  tray.setContextMenu(contextMenu);
+
+  tray.on('click', () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.focus();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    }
+  });
+
+  tray.on('double-click', () => {
+    if (mainWindow) {
+      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
 
 function createWindow() {
   const isMac = process.platform === 'darwin';
@@ -112,12 +180,104 @@ function createWindow() {
     mainWindow?.show();
   });
 
+  mainWindow.webContents.once('did-finish-load', () => {
+    // Auto-start last played server
+    const appSettings = loadAppSettings();
+    if (appSettings.autoStartLastServer) {
+      const allServers = loadServers();
+      if (allServers.length > 0) {
+        const lastPlayed = allServers
+          .filter((s) => s.lastPlayedAt)
+          .sort((a, b) => new Date(b.lastPlayedAt!).getTime() - new Date(a.lastPlayedAt!).getTime())[0]
+          ?? allServers[allServers.length - 1];
+
+        if (lastPlayed) {
+          console.log(`[CraftDock] Auto-starting last server: ${lastPlayed.name}`);
+          setTimeout(() => startServer(lastPlayed), 2000);
+        }
+      }
+    }
+
+    // Auto-update check
+    if (appSettings.autoUpdate) {
+      checkForUpdatesAndNotify();
+    }
+  });
+
+  mainWindow.on('close', (event) => {
+    const appSettings = loadAppSettings();
+    if (!isQuitting && appSettings.minimizeToTray) {
+      event.preventDefault();
+      mainWindow?.hide();
+
+      if (!appSettings.hasSeenTrayNotice) {
+        saveAppSettings({ hasSeenTrayNotice: true });
+        if (tray && process.platform === 'win32') {
+          const isBg = appSettings.language === 'bg';
+          tray.displayBalloon({
+            title: isBg ? 'CraftDock работи на заден план' : 'CraftDock is running in background',
+            content: isBg
+              ? 'Приложението е минимизирано в системната лента (до часовника). Сървърите продължават да работят.'
+              : 'CraftDock was minimized to the system tray. Your servers remain online.',
+            iconType: 'info',
+          });
+        }
+      }
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 }
 
+// ── GitHub release update checker ─────────────────────────────────────────────
+const GITHUB_RELEASES_URL = 'https://api.github.com/repos/itsnotsimple/craftdock/releases/latest';
+
+function semverGt(a: string, b: string): boolean {
+  const pa = a.replace(/^v/, '').split('.').map(Number);
+  const pb = b.replace(/^v/, '').split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    const diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff > 0) return true;
+    if (diff < 0) return false;
+  }
+  return false;
+}
+
+async function checkForUpdatesAndNotify(): Promise<void> {
+  try {
+    const currentVersion = app.getVersion();
+    const res = await fetch(GITHUB_RELEASES_URL, {
+      headers: {
+        'User-Agent': `CraftDock/${currentVersion}`,
+        Accept: 'application/vnd.github+json',
+      },
+    });
+    if (!res.ok) return;
+    const release = (await res.json()) as { tag_name: string; html_url: string; name: string };
+    const latestTag = release.tag_name || '';
+    if (semverGt(latestTag, currentVersion)) {
+      const wins = BrowserWindow.getAllWindows();
+      for (const win of wins) {
+        if (!win.isDestroyed()) {
+          win.webContents.send('update-available', {
+            currentVersion,
+            latestVersion: latestTag,
+            releaseName: release.name,
+            releaseUrl: release.html_url,
+          });
+        }
+      }
+    }
+  } catch (e) {
+    // silently ignore — network may be offline
+    console.warn('[CraftDock] Update check failed:', e);
+  }
+}
+
 app.whenReady().then(() => {
+  createTray();
   createWindow();
 
   app.on('activate', () => {
@@ -125,9 +285,16 @@ app.whenReady().then(() => {
   });
 });
 
+app.on('before-quit', () => {
+  isQuitting = true;
+});
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    app.quit();
+    const appSettings = loadAppSettings();
+    if (!appSettings.minimizeToTray || isQuitting) {
+      app.quit();
+    }
   }
 });
 
@@ -165,6 +332,7 @@ ipcMain.handle('get-servers', async () => {
       ...s,
       maxPlayers: props?.maxPlayers ?? s.maxPlayers ?? 20,
       motd: props?.motd ?? s.motd ?? s.name,
+      hardcore: props?.hardcore ?? s.hardcore ?? false,
       status: resolvedStatus,
       playerCount: getServerPlayers(s.id).length,
     };
@@ -180,9 +348,17 @@ ipcMain.handle(
       software: 'paper' | 'purpur' | 'vanilla' | 'fabric';
       version: string;
       allocatedRamGb: number;
+      storageQuotaGb?: number;
       port: number;
       motd: string;
       hardcore?: boolean;
+      maxPlayers?: number;
+      difficulty?: 'peaceful' | 'easy' | 'normal' | 'hard';
+      gamemode?: 'survival' | 'creative' | 'adventure' | 'spectator';
+      onlineMode?: boolean;
+      pvp?: boolean;
+      viewDistance?: number;
+      spawnProtection?: number;
     }
   ) => {
     const folder = getDefaultServerFolder(options.name);
@@ -192,59 +368,90 @@ ipcMain.handle(
 
     const jarPath = path.join(folder, 'server.jar');
 
-    event.sender.send('download-progress', {
-      percent: 5,
-      downloadedMb: 0,
-      totalMb: 0,
-      message: `Търсене на инсталатор за ${options.software.toUpperCase()} v${options.version}...`,
-    });
-
-    let downloadUrl = '';
-    switch (options.software) {
-      case 'paper':
-        downloadUrl = await getPaperDownloadUrl(options.version);
-        break;
-      case 'purpur':
-        downloadUrl = await getPurpurDownloadUrl(options.version);
-        break;
-      case 'fabric':
-        downloadUrl = await getFabricDownloadUrl(options.version);
-        break;
-      case 'vanilla':
-      default:
-        downloadUrl = await getVanillaDownloadUrl(options.version);
-        break;
-    }
-
-    await downloadFileWithProgress(downloadUrl, jarPath, (percent, downloadedMb, totalMb) => {
+    try {
       event.sender.send('download-progress', {
-        percent,
-        downloadedMb,
-        totalMb,
-        message: `Изтегляне на сървърни файлове (${percent}% - ${downloadedMb}MB / ${totalMb}MB)...`,
+        percent: 5,
+        downloadedMb: 0,
+        totalMb: 0,
+        message: `Търсене на инсталатор за ${options.software.toUpperCase()} v${options.version}...`,
       });
-    });
 
-    autoAcceptEula(folder);
-    updateServerProperties(folder, options.port, options.motd, options.hardcore);
+      let downloadUrl = '';
+      switch (options.software) {
+        case 'paper':
+          downloadUrl = await getPaperDownloadUrl(options.version);
+          break;
+        case 'purpur':
+          downloadUrl = await getPurpurDownloadUrl(options.version);
+          break;
+        case 'fabric':
+          downloadUrl = await getFabricDownloadUrl(options.version);
+          break;
+        case 'vanilla':
+        default:
+          downloadUrl = await getVanillaDownloadUrl(options.version);
+          break;
+      }
 
-    const profile: ServerProfile = {
-      id: `srv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      name: options.name,
-      software: options.software,
-      version: options.version,
-      allocatedRamGb: options.allocatedRamGb,
-      port: options.port,
-      path: folder,
-      status: 'stopped',
-      createdAt: new Date().toISOString(),
-      playerCount: 0,
-      maxPlayers: 20,
-      motd: options.motd || `${options.name} - CraftDock Server`,
-    };
+      await downloadFileWithProgress(downloadUrl, jarPath, (percent, downloadedMb, totalMb) => {
+        event.sender.send('download-progress', {
+          percent,
+          downloadedMb,
+          totalMb,
+          message: `Изтегляне на сървърни файлове (${percent}% - ${downloadedMb}MB / ${totalMb}MB)...`,
+        });
+      });
 
-    addServer(profile);
-    return profile;
+      autoAcceptEula(folder);
+      writeServerProperties(folder, {
+        port: options.port,
+        motd: options.motd || `${options.name} - CraftDock Server`,
+        hardcore: options.hardcore ?? false,
+        difficulty: options.hardcore ? 'hard' : (options.difficulty || 'normal'),
+        gamemode: options.gamemode || 'survival',
+        maxPlayers: options.maxPlayers || 20,
+        onlineMode: options.onlineMode ?? false,
+        pvp: options.pvp ?? true,
+        viewDistance: options.viewDistance || 10,
+        spawnProtection: options.spawnProtection ?? 16,
+      });
+      updateServerProperties(
+        folder,
+        options.port,
+        options.motd,
+        options.hardcore,
+        options.maxPlayers || 20
+      );
+
+      const profile: ServerProfile = {
+        id: `srv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        name: options.name,
+        software: options.software,
+        version: options.version,
+        allocatedRamGb: options.allocatedRamGb,
+        storageQuotaGb: options.storageQuotaGb || 0,
+        port: options.port,
+        path: folder,
+        status: 'stopped',
+        createdAt: new Date().toISOString(),
+        playerCount: 0,
+        maxPlayers: options.maxPlayers || 20,
+        motd: options.motd || `${options.name} - CraftDock Server`,
+        hardcore: options.hardcore ?? false,
+      };
+
+      addServer(profile);
+      return profile;
+    } catch (err: any) {
+      console.error('Failed to create server:', err);
+      // Clean up newly created folder if jar failed to download
+      try {
+        if (fs.existsSync(folder) && (!fs.existsSync(jarPath) || fs.statSync(jarPath).size === 0)) {
+          fs.rmSync(folder, { recursive: true, force: true });
+        }
+      } catch (cleanErr) {}
+      throw new Error(`Грешка при сваляне/създаване на ${options.software.toUpperCase()} (${options.version}): ${err.message}`);
+    }
   }
 );
 
@@ -323,6 +530,15 @@ ipcMain.handle('save-server-properties', async (_event, id: string, props: any) 
     sendServerCommand(id, `setviewdistance ${props.viewDistance}`);
     sendServerCommand(id, `setsimulationdistance ${props.viewDistance}`);
   }
+  if (props.storageQuotaGb !== undefined) {
+    updates.storageQuotaGb = Number(props.storageQuotaGb) || 0;
+  }
+  if (props.allocatedRamGb !== undefined) {
+    updates.allocatedRamGb = Math.max(1, Number(props.allocatedRamGb) || 2);
+  }
+  if (props.hardcore !== undefined) {
+    updates.hardcore = !!props.hardcore;
+  }
 
   const updated = updateServer(id, updates);
 
@@ -334,6 +550,69 @@ ipcMain.handle('save-server-properties', async (_event, id: string, props: any) 
   });
 
   return updated;
+});
+
+// Storage and Quota Handlers
+ipcMain.handle('get-server-storage', async (_event, id: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return null;
+  return calculateServerStorage(server.path, server.id, server.storageQuotaGb || 0);
+});
+
+// Modrinth API Handlers
+ipcMain.handle('search-modrinth-modpacks', async (_event, query = '', limit = 24) => {
+  return await searchModrinthModpacks(query, limit);
+});
+
+ipcMain.handle('search-modrinth-resourcepacks', async (_event, query = '', limit = 24) => {
+  return await searchModrinthResourcePacks(query, limit);
+});
+
+ipcMain.handle('search-modrinth-plugins', async (_event, query = '', limit = 24, software: any = 'paper') => {
+  return await searchModrinthPlugins(query, limit, software);
+});
+
+ipcMain.handle('get-modrinth-versions', async (_event, projectIdOrSlug: string, loaders?: string[], gameVersion?: string) => {
+  return await getModrinthProjectVersions(projectIdOrSlug, loaders, gameVersion);
+});
+
+ipcMain.handle('get-modrinth-pack-file', async (_event, projectIdOrSlug: string) => {
+  return await getModrinthVersionFile(projectIdOrSlug);
+});
+
+ipcMain.handle('install-remote-resourcepack', async (event, id: string, downloadUrl: string, fileName: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return false;
+  const packsDir = getResourcePacksDir(server.path);
+  const destPath = path.join(packsDir, fileName);
+  await downloadFileWithProgress(downloadUrl, destPath, (percent, downloadedMb, totalMb) => {
+    event.sender.send('download-progress', {
+      percent,
+      downloadedMb,
+      totalMb,
+      message: `Изтегляне на ресурс пакет: ${fileName} (${percent}%)...`,
+    });
+  });
+  return true;
+});
+
+ipcMain.handle('install-remote-plugin', async (event, id: string, downloadUrl: string, fileName: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return false;
+  const pluginsDir = getPluginsDir(server.path);
+  const destPath = path.join(pluginsDir, fileName);
+  await downloadFileWithProgress(downloadUrl, destPath, (percent, downloadedMb, totalMb) => {
+    event.sender.send('download-progress', {
+      percent,
+      downloadedMb,
+      totalMb,
+      message: `Инсталиране на плъгин: ${fileName} (${percent}%)...`,
+    });
+  });
+  return true;
 });
 
 ipcMain.handle('get-installed-plugins', async (_event, id: string) => {
@@ -493,6 +772,85 @@ ipcMain.handle('open-external', async (_event, url: string) => {
     return true;
   }
   return false;
+});
+
+ipcMain.handle('set-titlebar-theme', async (_event, theme: 'dark' | 'light') => {
+  if (process.platform === 'win32' && mainWindow && !mainWindow.isDestroyed()) {
+    try {
+      if (typeof (mainWindow as any).setTitleBarOverlay === 'function') {
+        if (theme === 'light') {
+          (mainWindow as any).setTitleBarOverlay({
+            color: '#ffffff',
+            symbolColor: '#0f172a',
+            height: 38,
+          });
+        } else {
+          (mainWindow as any).setTitleBarOverlay({
+            color: '#070a14',
+            symbolColor: '#cbd5e1',
+            height: 38,
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to set titlebar overlay:', err);
+    }
+  }
+  return true;
+});
+
+// Global App Settings IPC Handlers
+ipcMain.handle('get-app-settings', async () => {
+  return loadAppSettings();
+});
+
+ipcMain.handle('save-app-settings', async (_event, updates) => {
+  return saveAppSettings(updates);
+});
+
+ipcMain.handle('get-global-diagnostics', async () => {
+  const network = await getNetworkDiagnostics();
+  const disk = await getDiskDiagnostics();
+  const java = await getSystemJavaVersion();
+  return { network, disk, java };
+});
+
+ipcMain.handle('open-servers-folder', async () => {
+  const serversBase = path.join(getDataDirectory(), 'servers');
+  if (!fs.existsSync(serversBase)) {
+    fs.mkdirSync(serversBase, { recursive: true });
+  }
+  await shell.openPath(serversBase);
+  return true;
+});
+
+ipcMain.handle('open-app-logs', async () => {
+  const dataDir = getDataDirectory();
+  await shell.openPath(dataDir);
+  return true;
+});
+
+ipcMain.handle('clear-app-cache', async () => {
+  return clearAppCache();
+});
+
+ipcMain.handle('uninstall-app', async () => {
+  try {
+    const dataDir = getDataDirectory();
+    if (fs.existsSync(dataDir)) {
+      fs.rmSync(dataDir, { recursive: true, force: true });
+    }
+  } catch (err) {
+    console.error('[uninstall-app] Error deleting data dir:', err);
+  }
+  isQuitting = true;
+  app.quit();
+  return true;
+});
+
+ipcMain.handle('check-for-updates', async () => {
+  await checkForUpdatesAndNotify();
+  return true;
 });
 
 // Periodic live RAM & System Info update (every 2.5s)

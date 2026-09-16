@@ -48,7 +48,7 @@ export function calculateRamAdvice(
     if (targetPlayers >= 6) {
       return {
         status: 'danger',
-        title: isBg ? `Критично малко за ${targetPlayers} играчи! ⚠️` : `Critically low for ${targetPlayers} players! ⚠️`,
+        title: isBg ? `Критично малко за ${targetPlayers} играчи!` : `Critically low for ${targetPlayers} players!`,
         description: isBg
           ? `${ramGb} GB за ${targetPlayers} човека ще срине TPS под 10. Сървърът ще изостава, стрелите и мобовете ще се телепортират. За ${targetPlayers} души препоръчваме поне ${recommended} GB!`
           : `${ramGb} GB for ${targetPlayers} players will drop TPS below 10. The server will lag, arrows and mobs will glitch. For ${targetPlayers} players we recommend at least ${recommended} GB!`,
@@ -71,7 +71,7 @@ export function calculateRamAdvice(
     }
     return {
       status: 'optimal',
-      title: isBg ? 'Добре за 2-ма авери 👍' : 'Great for 2 Friends 👍',
+      title: isBg ? 'Добре за 2-ма авери' : 'Great for 2 Friends',
       description: isBg
         ? `${ramGb} GB е напълно достатъчно за 1-2 души на чиста Vanilla или Paper карта при стандартна дистанция.`
         : `${ramGb} GB is plenty for 1-2 players on pure Vanilla or Paper with standard view distance.`,
@@ -97,7 +97,7 @@ export function calculateRamAdvice(
     }
     return {
       status: 'optimal',
-      title: isBg ? 'Златната среда за малка компания! 🟢' : 'Sweet Spot for Small Groups! 🟢',
+      title: isBg ? 'Златната среда за малка компания!' : 'Sweet Spot for Small Groups!',
       description: isBg
         ? `${ramGb} GB за ${targetPlayers} играчи осигурява гладък геймплей с 20 TPS, стабилен рендер и свобода за Redstone ферми и плъгини (Essentials, Skins, Auth).`
         : `${ramGb} GB for ${targetPlayers} players provides silky-smooth 20 TPS gameplay, stable rendering, and headroom for Redstone farms & plugins (Essentials, Skins, Auth).`,
@@ -123,7 +123,7 @@ export function calculateRamAdvice(
     }
     return {
       status: 'optimal',
-      title: isBg ? `Идеално за ${targetPlayers} играчи! 🚀` : `Perfect for ${targetPlayers} Players! 🚀`,
+      title: isBg ? `Идеално за ${targetPlayers} играчи!` : `Perfect for ${targetPlayers} Players!`,
       description: isBg
         ? `${ramGb} GB е точно препоръчаният капацитет за ${targetPlayers} човека. Позволява висока видимост (12-16 чанка), паралелни светове (Nether, End) и модове без никакъв лаг.`
         : `${ramGb} GB is the recommended capacity for ${targetPlayers} players. Enables high view distance (12-16 chunks), parallel dimensions (Nether, End), and mods with zero lag.`,
@@ -137,7 +137,7 @@ export function calculateRamAdvice(
   if (ramGb >= 10 && ramGb <= 14) {
     return {
       status: 'beast',
-      title: isBg ? 'Звяр производителност! 👑' : 'Beast Performance! 👑',
+      title: isBg ? 'Звяр производителност!' : 'Beast Performance!',
       description: isBg
         ? `${ramGb} GB е професионален хост ресурс. Идеално за 10-20+ играчи, тежки Modpacks (All The Mods, Better MC, Cobblemon) или сървър с много плъгини и мини-игри.`
         : `${ramGb} GB is professional host capacity. Ideal for 10-20+ players, heavy modpacks (All The Mods, Better MC, Cobblemon) or multi-plugin minigame setups.`,
@@ -150,7 +150,7 @@ export function calculateRamAdvice(
   // 15+ GB RAM evaluation
   return {
     status: 'beast',
-    title: isBg ? 'Максимален Мега-Хост ⚡' : 'Maximum Mega-Host ⚡',
+    title: isBg ? 'Максимален Мега-Хост' : 'Maximum Mega-Host',
     description: isBg
       ? `${ramGb} GB осигурява безумна мощ за десетки играчи едновременно, огромни модпакове и екстремни генератори на светове.`
       : `${ramGb} GB provides insane power for dozens of concurrent players, mega modpacks, and extreme terrain generation.`,

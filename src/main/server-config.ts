@@ -5,6 +5,7 @@ import { execSync } from 'child_process';
 import { downloadFileWithProgress } from './api-service';
 
 export interface ServerProperties {
+  port?: number;
   onlineMode: boolean;
   whiteList: boolean;
   difficulty: 'peaceful' | 'easy' | 'normal' | 'hard';
@@ -128,6 +129,7 @@ export function readServerProperties(serverDir: string): ServerProperties {
   }
 
   return {
+    port: parseInt(map['server-port'] || '25565', 10),
     onlineMode: map['online-mode'] !== 'false',
     whiteList: map['white-list'] === 'true',
     difficulty: (map['difficulty'] as any) || 'normal',
@@ -136,7 +138,7 @@ export function readServerProperties(serverDir: string): ServerProperties {
     viewDistance: parseInt(map['view-distance'] || '10', 10),
     simulationDistance: parseInt(map['simulation-distance'] || map['view-distance'] || '10', 10),
     maxPlayers: parseInt(map['max-players'] || '20', 10),
-    motd: map['motd'] || defaults.motd,
+    motd: (map['motd'] || defaults.motd).replace(/\\n/g, '\n'),
     spawnProtection: parseInt(map['spawn-protection'] || '16', 10),
     hardcore: map['hardcore'] === 'true',
     resourcePack: map['resource-pack'] || '',
@@ -160,6 +162,11 @@ export function writeServerProperties(serverDir: string, props: Partial<ServerPr
     }
   }
 
+  if (props.port !== undefined) {
+    map['server-port'] = String(props.port);
+    map['query.port'] = String(props.port);
+  }
+
   if (props.onlineMode !== undefined) map['online-mode'] = String(props.onlineMode);
   if (props.whiteList !== undefined) {
     map['white-list'] = String(props.whiteList);
@@ -179,7 +186,7 @@ export function writeServerProperties(serverDir: string, props: Partial<ServerPr
     map['simulation-distance'] = String(props.simulationDistance ?? props.viewDistance);
   }
   if (props.maxPlayers !== undefined) map['max-players'] = String(props.maxPlayers);
-  if (props.motd !== undefined) map['motd'] = String(props.motd);
+  if (props.motd !== undefined) map['motd'] = String(props.motd).replace(/\r?\n/g, '\\n');
   if (props.spawnProtection !== undefined) map['spawn-protection'] = String(props.spawnProtection);
   if (props.resourcePack !== undefined) map['resource-pack'] = props.resourcePack;
   if (props.resourcePackSha1 !== undefined) map['resource-pack-sha1'] = props.resourcePackSha1;

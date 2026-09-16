@@ -22,10 +22,16 @@ import {
   PowerOff,
   Radio,
   FileArchive,
+  Search,
+  Lock,
+  Link,
+  MessageSquare,
+  HardDrive,
 } from 'lucide-react';
 import { ServerProfile } from '../types';
 import { useDialog } from '../context/DialogContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import { translations, TranslationKey } from '../i18n/translations';
 
 interface InstalledPlugin {
@@ -60,6 +66,7 @@ interface PluginManagerProps {
 
 export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
   const { t, language } = useLanguage();
+  const { theme } = useTheme();
   const { showConfirm, showAlert } = useDialog();
   const [subTab, setSubTab] = useState<'plugins' | 'resourcepacks'>('plugins');
   const [installed, setInstalled] = useState<InstalledPlugin[]>([]);
@@ -75,6 +82,21 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
 
   // Resource Pack Library
   const [savedPacks, setSavedPacks] = useState<SavedResourcePack[]>([]);
+
+  // Modrinth Resource Packs
+  const [modrinthPacks, setModrinthPacks] = useState<any[]>([]);
+  const [modrinthSearch, setModrinthSearch] = useState<string>('');
+  const [loadingModrinthPacks, setLoadingModrinthPacks] = useState<boolean>(false);
+  const [installingPackId, setInstallingPackId] = useState<string | null>(null);
+
+  // Modrinth Plugins
+  const [modrinthPlugins, setModrinthPlugins] = useState<any[]>([]);
+  const [modrinthPluginSearch, setModrinthPluginSearch] = useState<string>('');
+  const [loadingModrinthPlugins, setLoadingModrinthPlugins] = useState<boolean>(false);
+  const [installingPluginId, setInstallingPluginId] = useState<string | null>(null);
+  const [selectedPluginVersions, setSelectedPluginVersions] = useState<Record<string, any>>({});
+  const [loadedPluginVersions, setLoadedPluginVersions] = useState<Record<string, any[]>>({});
+  const [loadingPluginVersionsFor, setLoadingPluginVersionsFor] = useState<string | null>(null);
 
   // Form for adding a new pack
   const [newPack, setNewPack] = useState({
@@ -146,9 +168,169 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
     }
   };
 
+  const loadModrinthPacks = async (query = '') => {
+    setLoadingModrinthPacks(true);
+    try {
+      const api = (window as any).api;
+      if (api?.searchModrinthResourcePacks) {
+        const results = await api.searchModrinthResourcePacks(query, 16);
+        setModrinthPacks(results);
+      }
+    } catch (err) {
+      console.error('Failed to load Modrinth resource packs', err);
+    } finally {
+      setLoadingModrinthPacks(false);
+    }
+  };
+
+  const loadModrinthPlugins = async (query = '') => {
+    if (server.software === 'vanilla') return;
+    setLoadingModrinthPlugins(true);
+    try {
+      const api = (window as any).api;
+      if (api?.searchModrinthPlugins) {
+        const results = await api.searchModrinthPlugins(query, 18, server.software);
+        setModrinthPlugins(results || []);
+      }
+    } catch (err) {
+      console.error('Failed to load Modrinth plugins:', err);
+    } finally {
+      setLoadingModrinthPlugins(false);
+    }
+  };
+
+  const handleFetchPluginVersions = async (projectIdOrSlug: string) => {
+    if (loadedPluginVersions[projectIdOrSlug]) return;
+    setLoadingPluginVersionsFor(projectIdOrSlug);
+    try {
+      const api = (window as any).api;
+      if (api?.getModrinthProjectVersions) {
+        const loaders = server.software === 'fabric' ? ['fabric'] : ['paper', 'spigot', 'purpur', 'bukkit'];
+        const versions = await api.getModrinthProjectVersions(projectIdOrSlug, loaders, server.version);
+        setLoadedPluginVersions((prev) => ({ ...prev, [projectIdOrSlug]: versions || [] }));
+        if (versions && versions.length > 0 && !selectedPluginVersions[projectIdOrSlug]) {
+          setSelectedPluginVersions((prev) => ({ ...prev, [projectIdOrSlug]: versions[0] }));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load plugin versions:', err);
+    } finally {
+      setLoadingPluginVersionsFor(null);
+    }
+  };
+
+  const handleInstallModrinthPlugin = async (plugin: any) => {
+    const api = (window as any).api;
+    if (!api) return;
+
+    setInstallingPluginId(plugin.id);
+    try {
+      let chosenVersion = selectedPluginVersions[plugin.id];
+      if (!chosenVersion) {
+        const loaders = server.software === 'fabric' ? ['fabric'] : ['paper', 'spigot', 'purpur', 'bukkit'];
+        const versions = await api.getModrinthProjectVersions(plugin.id, loaders, server.version);
+        if (versions && versions.length > 0) {
+          chosenVersion = versions[0];
+          setSelectedPluginVersions((prev) => ({ ...prev, [plugin.id]: versions[0] }));
+        }
+      }
+
+      if (!chosenVersion || !chosenVersion.file?.url) {
+        throw new Error(
+          language === 'bg'
+            ? 'Не беше открит файл за сваляне за тази версия.'
+            : 'No download file found for this version.'
+        );
+      }
+
+      const fileName = chosenVersion.file.filename || `${plugin.slug}.jar`;
+      await api.installRemotePlugin(server.id, chosenVersion.file.url, fileName);
+
+      setSaveFeedback(
+        language === 'bg'
+          ? `Плъгин ${plugin.title} беше успешно инсталиран!`
+          : `Plugin ${plugin.title} was installed successfully!`
+      );
+      setTimeout(() => setSaveFeedback(null), 3000);
+      await loadData();
+    } catch (err: any) {
+      await showAlert({
+        type: 'error',
+        title: language === 'bg' ? 'Грешка при инсталация' : 'Installation Error',
+        message: err.message || 'Failed to install plugin from Modrinth',
+        buttonText: t('common.understand'),
+      });
+    } finally {
+      setInstallingPluginId(null);
+    }
+  };
+
   useEffect(() => {
     loadData();
-  }, [server.id]);
+    loadModrinthPacks();
+    loadModrinthPlugins();
+  }, [server.id, server.software]);
+
+  const handleApplyModrinthPack = async (pack: any) => {
+    const api = (window as any).api;
+    if (!api?.getModrinthPackFile) return;
+    setInstallingPackId(pack.id);
+    try {
+      const fileInfo = await api.getModrinthPackFile(pack.id);
+      if (fileInfo?.url) {
+        await api.saveServerProperties(server.id, {
+          resourcePack: fileInfo.url,
+          resourcePackSha1: fileInfo.sha1 || '',
+          requireResourcePack: false,
+          resourcePackPrompt: `Textures for ${pack.title}`,
+        });
+        setActivePackUrl(fileInfo.url);
+        setActivePackSha1(fileInfo.sha1 || '');
+        setActivePackRequired(false);
+        setActivePackPrompt(`Textures for ${pack.title}`);
+
+        const alreadyInLibrary = savedPacks.some((p) => p.url === fileInfo.url);
+        if (!alreadyInLibrary) {
+          const newEntry: SavedResourcePack = {
+            id: 'pack_' + Date.now(),
+            name: pack.title,
+            url: fileInfo.url,
+            sha1: fileInfo.sha1 || '',
+            required: false,
+            prompt: `Textures for ${pack.title}`,
+            addedAt: new Date().toISOString(),
+          };
+          const updatedList = [newEntry, ...savedPacks];
+          setSavedPacks(updatedList);
+          await api.saveResourcePacksList(server.id, updatedList);
+        }
+        setSaveFeedback(language === 'bg' ? `Активиран: ${pack.title}!` : `Activated: ${pack.title}!`);
+        setTimeout(() => setSaveFeedback(null), 3000);
+      }
+    } catch (err) {
+      console.error('Failed to apply modrinth pack', err);
+    } finally {
+      setInstallingPackId(null);
+    }
+  };
+
+  const handleDownloadModrinthPack = async (pack: any) => {
+    const api = (window as any).api;
+    if (!api?.getModrinthPackFile || !api?.installRemoteResourcePack) return;
+    setInstallingPackId(pack.id);
+    try {
+      const fileInfo = await api.getModrinthPackFile(pack.id);
+      if (fileInfo?.url && fileInfo?.filename) {
+        await api.installRemoteResourcePack(server.id, fileInfo.url, fileInfo.filename);
+        setSaveFeedback(language === 'bg' ? `Свален в папка resourcepacks!` : `Downloaded to resourcepacks folder!`);
+        setTimeout(() => setSaveFeedback(null), 3000);
+      }
+    } catch (err) {
+      console.error('Failed to download modrinth pack', err);
+    } finally {
+      setInstallingPackId(null);
+    }
+  };
 
   const handleInstall = async (plugin: CuratedPlugin) => {
     const api = (window as any).api;
@@ -407,15 +589,23 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
   };
 
   return (
-    <div className="h-full glass-panel rounded-2xl p-6 overflow-y-auto space-y-6">
+    <div className={`h-full rounded-2xl p-6 overflow-y-auto space-y-6 ${
+      theme === 'light' ? 'bg-white border border-slate-200 shadow-sm' : 'glass-panel'
+    }`}>
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-white/[0.08] gap-3">
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b gap-3 ${
+        theme === 'light' ? 'border-slate-200' : 'border-white/[0.08]'
+      }`}>
         <div>
-          <h3 className="text-lg font-black text-slate-100 flex items-center gap-2">
-            <Package className="w-5 h-5 text-purple-400" />
+          <h3 className={`text-lg font-black flex items-center gap-2 ${
+            theme === 'light' ? 'text-slate-900' : 'text-slate-100'
+          }`}>
+            <Package className="w-5 h-5 text-purple-500" />
             {t('plugins.title')}
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className={`text-xs mt-0.5 ${
+            theme === 'light' ? 'text-slate-500' : 'text-slate-400'
+          }`}>
             {t('plugins.subtitle')}
           </p>
         </div>
@@ -424,37 +614,53 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           <button
             type="button"
             onClick={() => (window as any).api?.openPluginsFolder(server.id)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-card hover:bg-white/[0.08] text-slate-200 text-xs font-semibold transition-all border border-white/[0.08] shadow-sm cursor-pointer"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border shadow-xs cursor-pointer ${
+              theme === 'light'
+                ? 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                : 'glass-card hover:bg-white/[0.08] text-slate-200 border-white/[0.08]'
+            }`}
             title={t('plugins.openPluginsFolder')}
           >
-            <FolderOpen className="w-4 h-4 text-purple-400" />
+            <FolderOpen className="w-4 h-4 text-purple-500" />
             <span>plugins</span>
           </button>
 
           <button
             type="button"
             onClick={() => (window as any).api?.openResourcePacksFolder(server.id)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-card hover:bg-white/[0.08] text-slate-200 text-xs font-semibold transition-all border border-white/[0.08] shadow-sm cursor-pointer"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border shadow-xs cursor-pointer ${
+              theme === 'light'
+                ? 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                : 'glass-card hover:bg-white/[0.08] text-slate-200 border-white/[0.08]'
+            }`}
             title={t('plugins.openPacksFolder')}
           >
-            <FolderOpen className="w-4 h-4 text-pink-400" />
+            <FolderOpen className="w-4 h-4 text-pink-500" />
             <span>resourcepacks</span>
           </button>
         </div>
       </div>
 
       {/* Sub-tab Pill Switcher */}
-      <div className="flex items-center gap-2 p-1 glass-card rounded-xl border border-white/[0.08] w-fit">
+      <div className={`flex items-center gap-2 p-1 rounded-xl border w-fit ${
+        theme === 'light'
+          ? 'bg-slate-100 border-slate-200'
+          : 'glass-card border-white/[0.08]'
+      }`}>
         <button
           type="button"
           onClick={() => setSubTab('plugins')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             subTab === 'plugins'
-              ? 'bg-purple-500/20 text-purple-200 border border-purple-400/40 shadow-sm shadow-purple-950/40'
+              ? theme === 'light'
+                ? 'bg-white text-purple-900 border border-slate-200 shadow-xs'
+                : 'bg-purple-500/20 text-purple-200 border border-purple-400/40 shadow-sm shadow-purple-950/40'
+              : theme === 'light'
+              ? 'text-slate-600 hover:text-slate-900'
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Box className={`w-3.5 h-3.5 ${subTab === 'plugins' ? 'text-purple-400' : 'text-slate-400'}`} />
+          <Box className={`w-3.5 h-3.5 ${subTab === 'plugins' ? (theme === 'light' ? 'text-purple-600' : 'text-purple-400') : (theme === 'light' ? 'text-slate-500' : 'text-slate-400')}`} />
           <span>{t('plugins.tabPlugins')} ({installed.length})</span>
         </button>
 
@@ -463,11 +669,15 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           onClick={() => setSubTab('resourcepacks')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             subTab === 'resourcepacks'
-              ? 'bg-pink-500/20 text-pink-200 border border-pink-400/40 shadow-sm shadow-pink-950/40'
+              ? theme === 'light'
+                ? 'bg-white text-pink-900 border border-slate-200 shadow-xs'
+                : 'bg-pink-500/20 text-pink-200 border border-pink-400/40 shadow-sm shadow-pink-950/40'
+              : theme === 'light'
+              ? 'text-slate-600 hover:text-slate-900'
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Palette className={`w-3.5 h-3.5 ${subTab === 'resourcepacks' ? 'text-pink-400' : 'text-slate-400'}`} />
+          <Palette className={`w-3.5 h-3.5 ${subTab === 'resourcepacks' ? (theme === 'light' ? 'text-pink-600' : 'text-pink-400') : (theme === 'light' ? 'text-slate-500' : 'text-slate-400')}`} />
           <span>{t('plugins.tabPacks')} ({savedPacks.length})</span>
           {activePackUrl && (
             <span className="flex h-2 w-2 relative ml-1">
@@ -480,8 +690,12 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
 
       {/* Feedback Banner */}
       {saveFeedback && (
-        <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-400/30 text-purple-200 text-xs font-bold flex items-center gap-2 backdrop-blur-xl animate-in fade-in">
-          <Check className="w-4 h-4 text-purple-400 shrink-0" />
+        <div className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 backdrop-blur-xl animate-in fade-in border ${
+          theme === 'light'
+            ? 'bg-purple-50 border-purple-200 text-purple-900 shadow-xs'
+            : 'bg-purple-950/40 border-purple-400/30 text-purple-200'
+        }`}>
+          <Check className="w-4 h-4 text-purple-500 shrink-0" />
           <span>{saveFeedback}</span>
         </div>
       )}
@@ -490,16 +704,20 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
       {subTab === 'plugins' && (
         <div className="space-y-6">
           {server.software === 'vanilla' ? (
-            <div className="p-6 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-3">
-              <div className="flex items-center gap-2.5 text-amber-300">
-                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
-                <span className="text-sm font-bold text-amber-200">
+            <div className={`p-6 rounded-2xl space-y-3 border ${
+              theme === 'light'
+                ? 'bg-amber-50 border-amber-200 text-amber-900 shadow-xs'
+                : 'bg-amber-500/10 border-amber-500/30'
+            }`}>
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+                <span className={`text-sm font-bold ${theme === 'light' ? 'text-amber-900' : 'text-amber-200'}`}>
                   {language === 'bg'
                     ? 'Препоръчаните плъгини са скрити, защото сървърът е на ядро Vanilla'
                     : 'Recommended plugins are hidden because the server engine is Vanilla'}
                 </span>
               </div>
-              <p className="text-xs text-amber-300/80 leading-relaxed">
+              <p className={`text-xs leading-relaxed ${theme === 'light' ? 'text-amber-800' : 'text-amber-300/80'}`}>
                 {language === 'bg'
                   ? 'Официалният чист Vanilla Minecraft не поддържа плъгини от папка plugins/. Затова бутоните за инсталиране на плъгини са деактивирани тук.'
                   : 'Official pure Vanilla Minecraft does not load plugins from plugins/. Therefore plugin installation is disabled here.'}
@@ -508,11 +726,15 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           ) : (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+                <span className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                  theme === 'light' ? 'text-slate-700' : 'text-slate-300'
+                }`}>
+                  <Sparkles className="w-3.5 h-3.5 text-sky-500" />
                   {t('plugins.curatedTitle')}
                 </span>
-                <span className="text-[11px] text-slate-500">{t('plugins.curatedDesc')}</span>
+                <span className={`text-[11px] ${theme === 'light' ? 'text-slate-500' : 'text-slate-500'}`}>
+                  {t('plugins.curatedDesc')}
+                </span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -523,29 +745,47 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                   return (
                     <div
                       key={plugin.id}
-                      className="p-4 rounded-2xl glass-card hover:border-white/[0.15] flex flex-col justify-between transition-all"
+                      className={`p-4 rounded-2xl flex flex-col justify-between transition-all border ${
+                        theme === 'light'
+                          ? 'bg-slate-50/80 border-slate-200 shadow-xs hover:border-purple-400 hover:shadow-md'
+                          : 'glass-card hover:border-white/[0.15]'
+                      }`}
                     >
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center gap-2">
                             {getCategoryIcon(plugin.category)}
-                            <span className="font-extrabold text-sm text-slate-100">{getPluginName(plugin)}</span>
+                            <span className={`font-extrabold text-sm ${
+                              theme === 'light' ? 'text-slate-900' : 'text-slate-100'
+                            }`}>{getPluginName(plugin)}</span>
                           </div>
                           {plugin.recommended && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-400/30 font-bold">
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                              theme === 'light'
+                                ? 'bg-sky-50 text-sky-800 border-sky-300 shadow-xs'
+                                : 'bg-sky-500/15 text-sky-300 border-sky-400/30'
+                            }`}>
                               {language === 'bg' ? 'Топ избор' : 'Top Choice'}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-slate-400 leading-relaxed mb-4">{getPluginDesc(plugin)}</p>
+                        <p className={`text-xs leading-relaxed mb-4 ${
+                          theme === 'light' ? 'text-slate-600' : 'text-slate-400'
+                        }`}>{getPluginDesc(plugin)}</p>
                       </div>
 
-                      <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between">
-                        <span className="text-[11px] text-slate-500 font-mono">{plugin.fileName}</span>
+                      <div className={`pt-2 border-t flex items-center justify-between ${
+                        theme === 'light' ? 'border-slate-200' : 'border-white/[0.08]'
+                      }`}>
+                        <span className={`text-[11px] font-mono ${
+                          theme === 'light' ? 'text-slate-500' : 'text-slate-500'
+                        }`}>{plugin.fileName}</span>
 
                         {installedState ? (
-                          <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> {t('plugins.installed')}
+                          <span className={`flex items-center gap-1.5 text-xs font-bold ${
+                            theme === 'light' ? 'text-emerald-700' : 'text-emerald-400'
+                          }`}>
+                            <CheckCircle2 className={`w-4 h-4 ${theme === 'light' ? 'text-emerald-600' : 'text-emerald-400'}`} /> {t('plugins.installed')}
                           </span>
                         ) : (
                           <button
@@ -566,12 +806,16 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           )}
 
           {/* Installed Plugins List */}
-          <div className="space-y-3 pt-4 border-t border-slate-800">
+          <div className={`space-y-3 pt-4 border-t ${
+            theme === 'light' ? 'border-slate-200' : 'border-slate-800'
+          }`}>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+              <span className={`text-xs font-bold uppercase tracking-wider ${
+                theme === 'light' ? 'text-slate-900' : 'text-slate-300'
+              }`}>
                 {t('plugins.installedTitle')} ({installed.length})
               </span>
-              <span className="text-[11px] text-slate-500">
+              <span className={`text-[11px] ${theme === 'light' ? 'text-slate-500' : 'text-slate-500'}`}>
                 {language === 'bg'
                   ? 'За да добавиш други плъгини, просто ги пусни в папка plugins'
                   : 'To add other plugins, simply drop them into the plugins folder'}
@@ -579,7 +823,11 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
             </div>
 
             {installed.length === 0 ? (
-              <div className="p-8 rounded-xl bg-slate-950/40 border border-dashed border-slate-800 text-center text-xs text-slate-500">
+              <div className={`p-8 rounded-xl border border-dashed text-center text-xs ${
+                theme === 'light'
+                  ? 'bg-slate-50/70 border-slate-200 text-slate-500'
+                  : 'bg-slate-950/40 border-slate-800 text-slate-500'
+              }`}>
                 {t('plugins.noInstalled')}
               </div>
             ) : (
@@ -587,21 +835,37 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                 {installed.map((item) => (
                   <div
                     key={item.fileName}
-                    className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between"
+                    className={`p-3 rounded-xl flex items-center justify-between border shadow-xs ${
+                      theme === 'light'
+                        ? 'bg-slate-50/80 border-slate-200'
+                        : 'bg-slate-950 border-slate-800'
+                    }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-emerald-400">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${
+                        theme === 'light'
+                          ? 'bg-white border-slate-200 text-emerald-600'
+                          : 'bg-slate-900 border-slate-800 text-emerald-400'
+                      }`}>
                         <Box className="w-4 h-4" />
                       </div>
                       <div>
-                        <span className="text-xs font-mono font-bold text-slate-200">{item.fileName}</span>
-                        <span className="text-[11px] text-slate-500 ml-3">({item.sizeMb} MB)</span>
+                        <span className={`text-xs font-mono font-bold ${
+                          theme === 'light' ? 'text-slate-800' : 'text-slate-200'
+                        }`}>{item.fileName}</span>
+                        <span className={`text-[11px] ml-3 ${
+                          theme === 'light' ? 'text-slate-500' : 'text-slate-500'
+                        }`}>({item.sizeMb} MB)</span>
                       </div>
                     </div>
 
                     <button
                       onClick={() => handleDeletePlugin(item.fileName)}
-                      className="p-2 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 transition-all cursor-pointer"
+                      className={`p-2 rounded-lg transition-all cursor-pointer ${
+                        theme === 'light'
+                          ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
+                          : 'text-slate-500 hover:text-rose-400 hover:bg-rose-950/30'
+                      }`}
                       title={t('common.delete')}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -612,14 +876,225 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
             )}
           </div>
 
+          {/* ================= ONLINE MODRINTH PLUGINS EXPLORER ================= */}
+          {server.software !== 'vanilla' && (
+            <div className={`space-y-4 pt-4 border-t ${
+              theme === 'light' ? 'border-slate-200' : 'border-slate-800'
+            }`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <span className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                    theme === 'light' ? 'text-slate-900' : 'text-slate-300'
+                  }`}>
+                    <Sparkles className="w-4 h-4 text-purple-500" />
+                    {t('plugins.onlinePluginsTitle')}
+                  </span>
+                  <p className={`text-[11px] mt-0.5 ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {t('plugins.onlinePluginsDesc')}
+                  </p>
+                </div>
+
+                {/* Search input */}
+                <div className="relative min-w-[260px]">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={modrinthPluginSearch}
+                    onChange={(e) => {
+                      setModrinthPluginSearch(e.target.value);
+                      loadModrinthPlugins(e.target.value);
+                    }}
+                    placeholder={t('plugins.searchPluginsPlaceholder')}
+                    className={`w-full pl-8 pr-3 py-1.5 rounded-xl text-xs focus:outline-none border ${
+                      theme === 'light'
+                        ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-purple-500 shadow-xs'
+                        : 'glass-input text-slate-200 placeholder:text-slate-500 focus:border-purple-400'
+                    }`}
+                  />
+                </div>
+              </div>
+
+              {loadingModrinthPlugins ? (
+                <div className="p-8 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
+                  <Sparkles className="w-4 h-4 text-purple-500 animate-spin" />
+                  <span>{t('common.loading')}</span>
+                </div>
+              ) : modrinthPlugins.length === 0 ? (
+                <div className={`p-6 rounded-xl text-center text-xs border border-dashed ${
+                  theme === 'light' ? 'bg-slate-50/70 border-slate-200 text-slate-500' : 'glass-card text-slate-500'
+                }`}>
+                  {t('plugins.noResults')}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {modrinthPlugins.map((plugin) => {
+                    const isInstallingThis = installingPluginId === plugin.id;
+                    const alreadyInstalled = isInstalled(`${plugin.slug}.jar`) || installed.some((i) => i.name.toLowerCase().includes(plugin.title.toLowerCase()) || i.fileName.toLowerCase().includes(plugin.slug.toLowerCase()));
+                    const versions = loadedPluginVersions[plugin.id] || [];
+                    const selectedVersion = selectedPluginVersions[plugin.id] || (versions.length > 0 ? versions[0] : null);
+                    const isLoadingVer = loadingPluginVersionsFor === plugin.id;
+
+                    return (
+                      <div
+                        key={plugin.id}
+                        className={`p-3.5 rounded-xl flex flex-col justify-between transition-all space-y-3 border ${
+                          theme === 'light'
+                            ? 'bg-slate-50/80 border-slate-200 shadow-xs hover:border-purple-400 hover:bg-white'
+                            : 'glass-card hover:border-purple-400/40'
+                        }`}
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2.5">
+                            {plugin.iconUrl ? (
+                              <img
+                                src={plugin.iconUrl}
+                                alt={plugin.title}
+                                className={`w-10 h-10 rounded-lg object-cover shrink-0 border ${
+                                  theme === 'light' ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-white/[0.08]'
+                                }`}
+                              />
+                            ) : (
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${
+                                theme === 'light' ? 'bg-purple-50 text-purple-600 border-purple-200' : 'bg-purple-500/10 text-purple-400'
+                              }`}>
+                                <Package className="w-5 h-5" />
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <h5 className={`font-bold text-xs truncate ${
+                                theme === 'light' ? 'text-slate-900' : 'text-slate-100'
+                              }`} title={plugin.title}>
+                                {plugin.title}
+                              </h5>
+                              <span className={`text-[10px] truncate block ${
+                                theme === 'light' ? 'text-slate-500' : 'text-slate-400'
+                              }`}>
+                                {t('modrinth.author')} {plugin.author} • {plugin.downloads?.toLocaleString()} {t('modrinth.downloads')}
+                              </span>
+                            </div>
+                          </div>
+
+                          <p className={`text-[11px] line-clamp-2 leading-relaxed ${
+                            theme === 'light' ? 'text-slate-600' : 'text-slate-400'
+                          }`}>
+                            {plugin.description}
+                          </p>
+
+                          {/* Category / Loader Badges */}
+                          <div className="flex flex-wrap gap-1">
+                            {plugin.categories?.slice(0, 3).map((cat: string) => (
+                              <span
+                                key={cat}
+                                className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-semibold border ${
+                                  theme === 'light'
+                                    ? 'bg-white text-slate-600 border-slate-200'
+                                    : 'bg-white/[0.04] text-slate-400 border-white/[0.06]'
+                                }`}
+                              >
+                                {cat}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Version selector & Actions */}
+                        <div className={`pt-2 border-t space-y-2 ${
+                          theme === 'light' ? 'border-slate-200' : 'border-white/[0.08]'
+                        }`}>
+                          {/* Version picker dropdown */}
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-[10px] font-semibold shrink-0 ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
+                              {language === 'bg' ? 'Версия:' : 'Version:'}
+                            </span>
+                            <div className="flex-1 relative">
+                              <select
+                                onFocus={() => handleFetchPluginVersions(plugin.id)}
+                                onClick={() => handleFetchPluginVersions(plugin.id)}
+                                value={selectedVersion?.id || ''}
+                                onChange={(e) => {
+                                  const targetVer = versions.find((v) => v.id === e.target.value);
+                                  if (targetVer) {
+                                    setSelectedPluginVersions((prev) => ({ ...prev, [plugin.id]: targetVer }));
+                                  }
+                                }}
+                                className={`w-full py-1 px-2 text-[10px] rounded-lg border font-mono truncate focus:outline-none cursor-pointer ${
+                                  theme === 'light'
+                                    ? 'bg-white border-slate-200 text-slate-800 focus:border-purple-500 shadow-xs'
+                                    : 'glass-input text-slate-200 focus:border-purple-400'
+                                }`}
+                              >
+                                {isLoadingVer ? (
+                                  <option value="">{language === 'bg' ? 'Зареждане на версии...' : 'Loading versions...'}</option>
+                                ) : versions.length === 0 ? (
+                                  <option value="">{language === 'bg' ? 'Последна съвместима' : 'Latest compatible'}</option>
+                                ) : (
+                                  versions.map((ver) => (
+                                    <option key={ver.id} value={ver.id}>
+                                      {ver.versionNumber || ver.name} ({ver.loaders?.join(', ')})
+                                    </option>
+                                  ))
+                                )}
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons: Install & Open on Modrinth */}
+                          <div className="flex items-center gap-2">
+                            {alreadyInstalled ? (
+                              <span className={`flex-1 py-1.5 px-2.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 border ${
+                                theme === 'light'
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                  : 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30'
+                              }`}>
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                                <span>{t('plugins.installed')}</span>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleInstallModrinthPlugin(plugin)}
+                                disabled={isInstallingThis}
+                                className="flex-1 py-1.5 px-2.5 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md shadow-purple-950/40 cursor-pointer disabled:opacity-50 btn-bounce"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                                <span>{isInstallingThis ? t('plugins.downloadingPlugin') : t('plugins.install')}</span>
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => (window as any).api?.openExternal(`https://modrinth.com/plugin/${plugin.slug}`)}
+                              className={`p-1.5 rounded-lg transition-all cursor-pointer border ${
+                                theme === 'light'
+                                  ? 'bg-white hover:bg-slate-100 text-slate-600 hover:text-purple-600 border-slate-200 shadow-xs'
+                                  : 'glass-card hover:bg-white/[0.08] text-slate-300 hover:text-white border-white/[0.08]'
+                              }`}
+                              title={t('plugins.viewOnModrinth')}
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Online Repositories & Mods Directory */}
-          <div className="space-y-3 pt-4 border-t border-slate-800">
+          <div className={`space-y-3 pt-4 border-t ${
+            theme === 'light' ? 'border-slate-200' : 'border-slate-800'
+          }`}>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Globe className="w-3.5 h-3.5 text-cyan-400" />
+              <span className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                theme === 'light' ? 'text-slate-900' : 'text-slate-300'
+              }`}>
+                <Globe className="w-3.5 h-3.5 text-cyan-500" />
                 {language === 'bg' ? 'Търси още добавки и ресурси онлайн' : 'Search more plugins and resources online'}
               </span>
-              <span className="text-[11px] text-slate-500">
+              <span className={`text-[11px] ${theme === 'light' ? 'text-slate-500' : 'text-slate-500'}`}>
                 {language === 'bg' ? 'Свали .jar файл и го пусни в папката' : 'Download .jar file and drop it in plugins/'}
               </span>
             </div>
@@ -629,21 +1104,29 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
               <button
                 type="button"
                 onClick={() => (window as any).api?.openExternal('https://www.curseforge.com/minecraft')}
-                className="p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 hover:border-orange-500/50 hover:bg-orange-500/5 transition-all text-left group flex flex-col justify-between cursor-pointer"
+                className={`p-3.5 rounded-xl border transition-all text-left group flex flex-col justify-between cursor-pointer ${
+                  theme === 'light'
+                    ? 'bg-slate-50/70 border-slate-200 hover:border-orange-400 hover:bg-white shadow-xs'
+                    : 'bg-slate-950/90 border-slate-800 hover:border-orange-500/50 hover:bg-orange-500/5'
+                }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <Flame className="w-4 h-4 text-orange-400 group-hover:scale-110 transition-transform" />
-                      <span className="text-xs font-bold text-slate-200 group-hover:text-orange-300">CurseForge</span>
+                      <Flame className="w-4 h-4 text-orange-500 group-hover:scale-110 transition-transform" />
+                      <span className={`text-xs font-bold group-hover:text-orange-600 ${
+                        theme === 'light' ? 'text-slate-900' : 'text-slate-200'
+                      }`}>CurseForge</span>
                     </div>
-                    <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-orange-400" />
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-orange-500" />
                   </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                  <p className={`text-[11px] leading-relaxed ${
+                    theme === 'light' ? 'text-slate-600' : 'text-slate-400'
+                  }`}>
                     {language === 'bg' ? 'Хиляди популярни плъгини, текстури и модификации.' : 'Thousands of popular plugins, textures, and mods.'}
                   </p>
                 </div>
-                <span className="text-[10px] text-orange-400/80 font-mono mt-3 inline-flex items-center gap-1">
+                <span className="text-[10px] text-orange-600 font-mono mt-3 inline-flex items-center gap-1 font-semibold">
                   curseforge.com &rarr;
                 </span>
               </button>
@@ -652,21 +1135,29 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
               <button
                 type="button"
                 onClick={() => (window as any).api?.openExternal('https://modrinth.com/plugins')}
-                className="p-3.5 rounded-xl glass-card hover:border-sky-400/40 hover:bg-sky-500/5 transition-all text-left group flex flex-col justify-between cursor-pointer"
+                className={`p-3.5 rounded-xl border transition-all text-left group flex flex-col justify-between cursor-pointer ${
+                  theme === 'light'
+                    ? 'bg-slate-50/70 border-slate-200 hover:border-sky-400 hover:bg-white shadow-xs'
+                    : 'glass-card hover:border-sky-400/40 hover:bg-sky-500/5'
+                }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-sky-400 group-hover:scale-110 transition-transform" />
-                      <span className="text-xs font-bold text-slate-200 group-hover:text-sky-300">Modrinth</span>
+                      <Layers className="w-4 h-4 text-sky-500 group-hover:scale-110 transition-transform" />
+                      <span className={`text-xs font-bold group-hover:text-sky-600 ${
+                        theme === 'light' ? 'text-slate-900' : 'text-slate-200'
+                      }`}>Modrinth</span>
                     </div>
-                    <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-sky-400" />
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-500" />
                   </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                  <p className={`text-[11px] leading-relaxed ${
+                    theme === 'light' ? 'text-slate-600' : 'text-slate-400'
+                  }`}>
                     {language === 'bg' ? 'Модерен, бърз каталог с отворен код за плъгини и оптимизации.' : 'Modern, fast open-source catalog for plugins and optimizations.'}
                   </p>
                 </div>
-                <span className="text-[10px] text-sky-400/80 font-mono mt-3 inline-flex items-center gap-1">
+                <span className="text-[10px] text-sky-600 font-mono mt-3 inline-flex items-center gap-1 font-semibold">
                   modrinth.com &rarr;
                 </span>
               </button>
@@ -675,21 +1166,29 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
               <button
                 type="button"
                 onClick={() => (window as any).api?.openExternal('https://www.spigotmc.org/resources/')}
-                className="p-3.5 rounded-xl glass-card hover:border-sky-400/40 hover:bg-sky-500/5 transition-all text-left group flex flex-col justify-between cursor-pointer"
+                className={`p-3.5 rounded-xl border transition-all text-left group flex flex-col justify-between cursor-pointer ${
+                  theme === 'light'
+                    ? 'bg-slate-50/70 border-slate-200 hover:border-amber-400 hover:bg-white shadow-xs'
+                    : 'glass-card hover:border-amber-400/40 hover:bg-amber-500/5'
+                }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <Box className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
-                      <span className="text-xs font-bold text-slate-200 group-hover:text-amber-300">SpigotMC</span>
+                      <Box className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
+                      <span className={`text-xs font-bold group-hover:text-amber-600 ${
+                        theme === 'light' ? 'text-slate-900' : 'text-slate-200'
+                      }`}>SpigotMC</span>
                     </div>
-                    <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400" />
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-500" />
                   </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                  <p className={`text-[11px] leading-relaxed ${
+                    theme === 'light' ? 'text-slate-600' : 'text-slate-400'
+                  }`}>
                     {language === 'bg' ? 'Класически ресурси, мини-игри, икономика и сървърни инструменти.' : 'Classic server resources, minigames, economy, and tools.'}
                   </p>
                 </div>
-                <span className="text-[10px] text-amber-400/80 font-mono mt-3 inline-flex items-center gap-1">
+                <span className="text-[10px] text-amber-600 font-mono mt-3 inline-flex items-center gap-1 font-semibold">
                   spigotmc.org &rarr;
                 </span>
               </button>
@@ -698,21 +1197,29 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
               <button
                 type="button"
                 onClick={() => (window as any).api?.openExternal('https://hangar.papermc.io/')}
-                className="p-3.5 rounded-xl glass-card hover:border-sky-400/40 hover:bg-sky-500/5 transition-all text-left group flex flex-col justify-between cursor-pointer"
+                className={`p-3.5 rounded-xl border transition-all text-left group flex flex-col justify-between cursor-pointer ${
+                  theme === 'light'
+                    ? 'bg-slate-50/70 border-slate-200 hover:border-sky-400 hover:bg-white shadow-xs'
+                    : 'glass-card hover:border-sky-400/40 hover:bg-sky-500/5'
+                }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-sky-400 group-hover:scale-110 transition-transform" />
-                      <span className="text-xs font-bold text-slate-200 group-hover:text-sky-300">Hangar (PaperMC)</span>
+                      <Sparkles className="w-4 h-4 text-sky-500 group-hover:scale-110 transition-transform" />
+                      <span className={`text-xs font-bold group-hover:text-sky-600 ${
+                        theme === 'light' ? 'text-slate-900' : 'text-slate-200'
+                      }`}>Hangar (PaperMC)</span>
                     </div>
-                    <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-sky-400" />
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-500" />
                   </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                  <p className={`text-[11px] leading-relaxed ${
+                    theme === 'light' ? 'text-slate-600' : 'text-slate-400'
+                  }`}>
                     {language === 'bg' ? 'Официален портал на PaperMC за проверени и безопасни добавки.' : 'Official PaperMC portal for verified and secure plugins.'}
                   </p>
                 </div>
-                <span className="text-[10px] text-sky-400/80 font-mono mt-3 inline-flex items-center gap-1">
+                <span className="text-[10px] text-sky-600 font-mono mt-3 inline-flex items-center gap-1 font-semibold">
                   hangar.papermc.io &rarr;
                 </span>
               </button>
@@ -728,33 +1235,61 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           <div
             className={`p-5 rounded-2xl border transition-all ${
               activePackUrl
-                ? 'bg-gradient-to-r from-pink-950/40 via-slate-950/70 to-slate-950/70 border-pink-400/40 shadow-lg shadow-pink-950/30 backdrop-blur-xl'
+                ? theme === 'light'
+                  ? 'bg-white border-2 border-pink-400/90 shadow-md ring-1 ring-pink-200'
+                  : 'bg-gradient-to-r from-pink-950/40 via-slate-950/70 to-slate-950/70 border-pink-400/40 shadow-lg shadow-pink-950/30 backdrop-blur-xl'
+                : theme === 'light'
+                ? 'bg-slate-50/80 border-slate-200 shadow-xs'
                 : 'glass-card'
             }`}
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
+            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b ${
+              theme === 'light' ? 'border-slate-200' : 'border-white/[0.08]'
+            }`}>
               <div className="flex items-center gap-3">
                 <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    activePackUrl ? 'bg-pink-500/20 text-pink-300' : 'bg-white/[0.04] text-slate-400'
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
+                    activePackUrl
+                      ? theme === 'light'
+                        ? 'bg-pink-100 text-pink-700 border-pink-300'
+                        : 'bg-pink-500/20 text-pink-300 border-pink-400/30'
+                      : theme === 'light'
+                      ? 'bg-white text-slate-400 border-slate-200'
+                      : 'bg-white/[0.04] text-slate-400 border-white/[0.08]'
                   }`}
                 >
-                  <Palette className="w-5 h-5 text-pink-400" />
+                  <Palette className="w-5 h-5 text-pink-500" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-extrabold text-slate-100">
-                      {activePackUrl
-                        ? (language === 'bg' ? '🟢 Активен Сървърен Ресурс Пакет' : '🟢 Active Server Resource Pack')
-                        : (language === 'bg' ? '⚪ Няма активен ресурс пакет' : '⚪ No Active Resource Pack')}
+                    <h4 className={`text-sm font-black flex items-center gap-1.5 ${
+                      theme === 'light' ? 'text-slate-950' : 'text-slate-100'
+                    }`}>
+                      {activePackUrl ? (
+                        <>
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-ping" />
+                          <span>{language === 'bg' ? 'Активен Сървърен Ресурс Пакет' : 'Active Server Resource Pack'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
+                          <span>{language === 'bg' ? 'Няма активен ресурс пакет' : 'No Active Resource Pack'}</span>
+                        </>
+                      )}
                     </h4>
                     {activePackUrl && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 font-bold border border-pink-400/30 font-mono">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-black border font-mono ${
+                        theme === 'light'
+                          ? 'bg-pink-100 text-pink-900 border-pink-300'
+                          : 'bg-pink-500/20 text-pink-300 border-pink-400/30'
+                      }`}>
                         {language === 'bg' ? 'Записан в server.properties' : 'Saved in server.properties'}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className={`text-xs mt-0.5 font-medium ${
+                    theme === 'light' ? 'text-slate-700' : 'text-slate-400'
+                  }`}>
                     {activePackUrl
                       ? t('plugins.activePackDesc')
                       : (language === 'bg'
@@ -769,10 +1304,14 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                   <button
                     type="button"
                     onClick={() => (window as any).api?.openExternal(activePackUrl)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-card hover:bg-white/[0.08] text-slate-200 text-xs font-semibold border border-white/[0.08] transition-all cursor-pointer"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-xs ${
+                      theme === 'light'
+                        ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                        : 'glass-card hover:bg-white/[0.08] text-slate-200 border-white/[0.08]'
+                    }`}
                     title={language === 'bg' ? 'Свали и провери файла' : 'Download and verify link'}
                   >
-                    <Download className="w-3.5 h-3.5 text-pink-400" />
+                    <Download className="w-3.5 h-3.5 text-pink-600" />
                     <span>{language === 'bg' ? 'Тествай линка' : 'Test URL'}</span>
                   </button>
 
@@ -780,10 +1319,14 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                     type="button"
                     onClick={handleDeactivatePack}
                     disabled={savingAction}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold border border-rose-500/30 transition-all cursor-pointer"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black border transition-all cursor-pointer shadow-xs ${
+                      theme === 'light'
+                        ? 'bg-rose-100 hover:bg-rose-200 text-rose-900 border-rose-300'
+                        : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'
+                    }`}
                     title={t('plugins.deactivate')}
                   >
-                    <PowerOff className="w-3.5 h-3.5" />
+                    <PowerOff className="w-3.5 h-3.5 text-rose-600" />
                     <span>{t('plugins.deactivate')}</span>
                   </button>
                 </div>
@@ -792,40 +1335,74 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
 
             {activePackUrl && (
               <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                <div className="p-3 rounded-xl glass-card">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                <div className={`p-3 rounded-xl border shadow-xs ${
+                  theme === 'light' ? 'bg-slate-50 border-slate-300' : 'glass-card'
+                }`}>
+                  <span className={`text-[10px] uppercase font-black block mb-1 ${
+                    theme === 'light' ? 'text-slate-600' : 'text-slate-400'
+                  }`}>
                     {language === 'bg' ? 'Директен линк:' : 'Direct URL:'}
                   </span>
-                  <p className="font-mono text-slate-200 text-[11px] truncate" title={activePackUrl}>
+                  <p className={`font-mono text-[11px] truncate font-bold ${
+                    theme === 'light' ? 'text-slate-900' : 'text-slate-200'
+                  }`} title={activePackUrl}>
                     {activePackUrl}
                   </p>
                 </div>
 
-                <div className="p-3 rounded-xl glass-card">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                <div className={`p-3 rounded-xl border shadow-xs ${
+                  theme === 'light' ? 'bg-slate-50 border-slate-300' : 'glass-card'
+                }`}>
+                  <span className={`text-[10px] uppercase font-black block mb-1 ${
+                    theme === 'light' ? 'text-slate-600' : 'text-slate-400'
+                  }`}>
                     {language === 'bg' ? 'Задължителен за играчите:' : 'Required for players:'}
                   </span>
-                  <span className={`font-bold text-[11px] ${activePackRequired ? 'text-amber-400' : 'text-pink-300'}`}>
-                    {activePackRequired
-                      ? (language === 'bg' ? '🔒 ДА (Задължителен)' : '🔒 YES (Required)')
-                      : (language === 'bg' ? '🟢 НЕ (По избор на играча)' : '🟢 NO (Optional)')}
+                  <span className={`font-black text-[11px] flex items-center gap-1 ${
+                    activePackRequired
+                      ? theme === 'light' ? 'text-amber-800' : 'text-amber-400'
+                      : theme === 'light' ? 'text-emerald-800' : 'text-pink-300'
+                  }`}>
+                    {activePackRequired ? (
+                      <>
+                        <Lock className="w-3 h-3 inline text-amber-600" />
+                        <span>{language === 'bg' ? 'ДА (Задължителен)' : 'YES (Required)'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-3 h-3 inline text-emerald-600" />
+                        <span>{language === 'bg' ? 'НЕ (По избор на играча)' : 'NO (Optional)'}</span>
+                      </>
+                    )}
                   </span>
                 </div>
 
-                <div className="p-3 rounded-xl glass-card">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                <div className={`p-3 rounded-xl border shadow-xs ${
+                  theme === 'light' ? 'bg-slate-50 border-slate-300' : 'glass-card'
+                }`}>
+                  <span className={`text-[10px] uppercase font-black block mb-1 ${
+                    theme === 'light' ? 'text-slate-600' : 'text-slate-400'
+                  }`}>
                     {language === 'bg' ? 'Съобщение при запитване:' : 'Join Prompt Message:'}
                   </span>
-                  <span className="text-slate-200 text-[11px] italic">
+                  <span className={`text-[11px] italic font-semibold ${
+                    theme === 'light' ? 'text-slate-800' : 'text-slate-200'
+                  }`}>
                     {activePackPrompt || (language === 'bg' ? 'Стандартно питане от Minecraft' : 'Default Minecraft prompt')}
                   </span>
                 </div>
 
-                <div className="p-3 rounded-xl glass-card">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                <div className={`p-3 rounded-xl border shadow-xs ${
+                  theme === 'light' ? 'bg-slate-50 border-slate-300' : 'glass-card'
+                }`}>
+                  <span className={`text-[10px] uppercase font-black block mb-1 ${
+                    theme === 'light' ? 'text-slate-600' : 'text-slate-400'
+                  }`}>
                     {language === 'bg' ? 'Кеш Хеш (SHA-1):' : 'Cache Hash (SHA-1):'}
                   </span>
-                  <span className="font-mono text-slate-400 text-[11px] truncate block" title={activePackSha1 || 'Automatic'}>
+                  <span className={`font-mono text-[11px] truncate block font-bold ${
+                    theme === 'light' ? 'text-slate-800' : 'text-slate-400'
+                  }`} title={activePackSha1 || 'Automatic'}>
                     {activePackSha1 ? `${activePackSha1.slice(0, 16)}...` : (language === 'bg' ? 'Автоматичен кеш' : 'Automatic cache')}
                   </span>
                 </div>
@@ -837,24 +1414,30 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <FileArchive className="w-3.5 h-3.5 text-pink-400" />
+                <span className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                  theme === 'light' ? 'text-slate-900' : 'text-slate-300'
+                }`}>
+                  <FileArchive className="w-3.5 h-3.5 text-pink-500" />
                   {t('plugins.savedPacksLibrary')} ({savedPacks.length})
                 </span>
-                <p className="text-[11px] text-slate-400 mt-0.5">
+                <p className={`text-[11px] mt-0.5 ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
                   {language === 'bg'
                     ? 'Можеш да запазваш множество пакети и да ги сменяш с 1 клик'
                     : 'Save multiple resource packs and switch between them in 1-click'}
                 </p>
               </div>
 
-              <span className="text-[11px] text-slate-500 font-mono">
+              <span className={`text-[11px] font-mono ${theme === 'light' ? 'text-slate-500' : 'text-slate-500'}`}>
                 {savedPacks.length} {language === 'bg' ? 'добавени' : 'saved'}
               </span>
             </div>
 
             {savedPacks.length === 0 ? (
-              <div className="p-6 rounded-2xl glass-card border border-dashed border-white/[0.1] text-center text-xs text-slate-400">
+              <div className={`p-6 rounded-2xl border border-dashed text-center text-xs ${
+                theme === 'light'
+                  ? 'bg-slate-50/70 border-slate-200 text-slate-500'
+                  : 'glass-card border-white/[0.1] text-slate-400'
+              }`}>
                 {t('plugins.noPacks')}
               </div>
             ) : (
@@ -867,52 +1450,92 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                       key={pack.id}
                       className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
                         isActive
-                          ? 'glass-card border-pink-400/60 shadow-md shadow-pink-950/40 ring-1 ring-pink-400/30'
+                          ? theme === 'light'
+                            ? 'bg-pink-50/40 border-pink-400 shadow-xs ring-1 ring-pink-300'
+                            : 'glass-card border-pink-400/60 shadow-md shadow-pink-950/40 ring-1 ring-pink-400/30'
+                          : theme === 'light'
+                          ? 'bg-slate-50/80 border-slate-200 shadow-xs hover:border-slate-300'
                           : 'glass-card hover:border-white/[0.15]'
                       }`}
                     >
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <Palette className={`w-4 h-4 ${isActive ? 'text-pink-400' : 'text-slate-400'}`} />
-                            <span className="font-extrabold text-sm text-slate-100">{pack.name}</span>
+                            <Palette className={`w-4 h-4 ${isActive ? 'text-pink-500' : theme === 'light' ? 'text-slate-400' : 'text-slate-400'}`} />
+                            <span className={`font-extrabold text-sm ${
+                              theme === 'light' ? 'text-slate-900' : 'text-slate-100'
+                            }`}>{pack.name}</span>
                           </div>
 
                           {isActive ? (
-                            <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-400/40 font-bold flex items-center gap-1">
+                            <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 border ${
+                              theme === 'light'
+                                ? 'bg-pink-100 text-pink-800 border-pink-300'
+                                : 'bg-pink-500/20 text-pink-300 border-pink-400/40'
+                            }`}>
                               <CheckCircle2 className="w-3 h-3" /> {t('plugins.activeBadge')}
                             </span>
                           ) : (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] text-slate-400 border border-white/[0.08]">
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                              theme === 'light'
+                                ? 'bg-white text-slate-600 border-slate-200'
+                                : 'bg-white/[0.04] text-slate-400 border-white/[0.08]'
+                            }`}>
                               {language === 'bg' ? 'В наличност' : 'Saved'}
                             </span>
                           )}
                         </div>
 
-                        <p className="text-[11px] font-mono text-slate-400 truncate mb-2" title={pack.url}>
-                          🔗 {pack.url}
+                        <p className={`text-[11px] font-mono truncate mb-2 flex items-center gap-1.5 ${
+                          theme === 'light' ? 'text-slate-600' : 'text-slate-400'
+                        }`} title={pack.url}>
+                          <Link className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate">{pack.url}</span>
                         </p>
 
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 mb-4">
-                          <span className="px-2 py-0.5 rounded-md glass-card">
-                            {pack.required
-                              ? (language === 'bg' ? '🔒 Задължителен' : '🔒 Required')
-                              : (language === 'bg' ? '🟢 По избор' : '🟢 Optional')}
+                        <div className={`flex flex-wrap items-center gap-2 text-[11px] mb-4 ${
+                          theme === 'light' ? 'text-slate-600' : 'text-slate-400'
+                        }`}>
+                          <span className={`px-2 py-0.5 rounded-md flex items-center gap-1 border ${
+                            theme === 'light'
+                              ? 'bg-white border-slate-200 shadow-xs'
+                              : 'glass-card'
+                          }`}>
+                            {pack.required ? (
+                              <>
+                                <Lock className="w-3 h-3 text-amber-500" />
+                                <span className={theme === 'light' ? 'text-amber-800 font-semibold' : ''}>{language === 'bg' ? 'Задължителен' : 'Required'}</span>
+                              </>
+                            ) : (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-500" />
+                                <span className={theme === 'light' ? 'text-emerald-800 font-semibold' : ''}>{language === 'bg' ? 'По избор' : 'Optional'}</span>
+                              </>
+                            )}
                           </span>
                           {pack.prompt && (
-                            <span className="px-2 py-0.5 rounded-md glass-card truncate max-w-[200px]" title={pack.prompt}>
-                              💬 {pack.prompt}
+                            <span className={`px-2 py-0.5 rounded-md truncate max-w-[200px] flex items-center gap-1 border ${
+                              theme === 'light' ? 'bg-white border-slate-200 shadow-xs text-slate-700' : 'glass-card'
+                            }`} title={pack.prompt}>
+                              <MessageSquare className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span className="truncate">{pack.prompt}</span>
                             </span>
                           )}
                         </div>
                       </div>
 
-                      <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between">
+                      <div className={`pt-3 border-t flex items-center justify-between ${
+                        theme === 'light' ? 'border-slate-200' : 'border-white/[0.08]'
+                      }`}>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => (window as any).api?.openExternal(pack.url)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] transition-all cursor-pointer"
+                            className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                              theme === 'light'
+                                ? 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]'
+                            }`}
                             title={language === 'bg' ? 'Свали пакета за тест' : 'Download pack'}
                           >
                             <Download className="w-3.5 h-3.5" />
@@ -921,7 +1544,11 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                           <button
                             type="button"
                             onClick={() => handleDeleteFromLibrary(pack.id)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 transition-all cursor-pointer"
+                            className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                              theme === 'light'
+                                ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
+                                : 'text-slate-500 hover:text-rose-400 hover:bg-rose-950/30'
+                            }`}
                             title={t('plugins.deletePack')}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -929,7 +1556,9 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                         </div>
 
                         {isActive ? (
-                          <span className="text-xs font-bold text-pink-400 flex items-center gap-1">
+                          <span className={`text-xs font-bold flex items-center gap-1 ${
+                            theme === 'light' ? 'text-pink-700' : 'text-pink-400'
+                          }`}>
                             <Check className="w-3.5 h-3.5" /> {language === 'bg' ? 'Зареден на сървъра' : 'Loaded on Server'}
                           </span>
                         ) : (
@@ -951,17 +1580,175 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
             )}
           </div>
 
+          {/* MODRINTH TEXTURE PACKS EXPLORER */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                  theme === 'light' ? 'text-slate-900' : 'text-slate-300'
+                }`}>
+                  <Palette className="w-4 h-4 text-pink-500" />
+                  {t('modrinth.resourcePacksTitle')}
+                </span>
+                <p className={`text-[11px] mt-0.5 ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
+                  {t('modrinth.resourcePacksSubtitle')}
+                </p>
+              </div>
+
+              {/* Search bar */}
+              <div className="relative min-w-[240px]">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={modrinthSearch}
+                  onChange={(e) => {
+                    setModrinthSearch(e.target.value);
+                    loadModrinthPacks(e.target.value);
+                  }}
+                  placeholder={t('modrinth.searchResourcePacks')}
+                  className={`w-full pl-8 pr-3 py-1.5 rounded-xl text-xs focus:outline-none border ${
+                    theme === 'light'
+                      ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-pink-500 shadow-xs'
+                      : 'glass-input text-slate-200 placeholder:text-slate-500 focus:border-pink-400'
+                  }`}
+                />
+              </div>
+            </div>
+
+            {loadingModrinthPacks ? (
+              <div className="p-8 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
+                <Sparkles className="w-4 h-4 text-pink-500 animate-spin" />
+                <span>{t('common.loading')}</span>
+              </div>
+            ) : modrinthPacks.length === 0 ? (
+              <div className={`p-6 rounded-xl text-center text-xs border border-dashed ${
+                theme === 'light' ? 'bg-slate-50/70 border-slate-200 text-slate-500' : 'glass-card text-slate-500'
+              }`}>
+                {t('modrinth.noResults')}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {modrinthPacks.map((pack) => {
+                  const isApplying = installingPackId === pack.id;
+                  const isAlreadyActive = activePackUrl.includes(pack.id) || activePackUrl.includes(pack.slug);
+
+                  return (
+                    <div
+                      key={pack.id}
+                      className={`p-3.5 rounded-xl flex flex-col justify-between transition-all space-y-3 border ${
+                        theme === 'light'
+                          ? 'bg-slate-50/80 border-slate-200 shadow-xs hover:border-pink-400 hover:bg-white'
+                          : 'glass-card hover:border-pink-400/40'
+                      }`}
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-start gap-2.5">
+                          {pack.iconUrl ? (
+                            <img
+                              src={pack.iconUrl}
+                              alt={pack.title}
+                              className={`w-10 h-10 rounded-lg object-cover shrink-0 border ${
+                                theme === 'light' ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-white/[0.08]'
+                              }`}
+                            />
+                          ) : (
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${
+                              theme === 'light' ? 'bg-pink-50 text-pink-600 border-pink-200' : 'bg-pink-500/10 text-pink-400'
+                            }`}>
+                              <Palette className="w-5 h-5" />
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <h5 className={`font-bold text-xs truncate ${
+                              theme === 'light' ? 'text-slate-900' : 'text-slate-100'
+                            }`} title={pack.title}>
+                              {pack.title}
+                            </h5>
+                            <span className={`text-[10px] truncate block ${
+                              theme === 'light' ? 'text-slate-500' : 'text-slate-400'
+                            }`}>
+                              {t('modrinth.author')} {pack.author} • {pack.downloads?.toLocaleString()} {t('modrinth.downloads')}
+                            </span>
+                          </div>
+                        </div>
+
+                        <p className={`text-[11px] line-clamp-2 leading-relaxed ${
+                          theme === 'light' ? 'text-slate-600' : 'text-slate-400'
+                        }`}>
+                          {pack.description}
+                        </p>
+                      </div>
+
+                      <div className={`pt-2 border-t flex items-center gap-2 ${
+                        theme === 'light' ? 'border-slate-200' : 'border-white/[0.08]'
+                      }`}>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyModrinthPack(pack)}
+                          disabled={isApplying}
+                          className={`flex-1 py-1.5 px-2.5 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50 btn-bounce border ${
+                            theme === 'light'
+                              ? 'bg-pink-100 hover:bg-pink-200 text-pink-900 border-pink-300 shadow-xs'
+                              : 'bg-pink-600/20 hover:bg-pink-600/30 text-pink-200 border-pink-500/30'
+                          }`}
+                        >
+                          <Palette className="w-3 h-3 text-pink-500" />
+                          <span>{isApplying ? t('common.loading') : isAlreadyActive ? t('plugins.activeBadge') : t('modrinth.applyResourcePack')}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadModrinthPack(pack)}
+                          disabled={isApplying}
+                          className={`p-1.5 rounded-lg transition-all cursor-pointer btn-bounce border ${
+                            theme === 'light'
+                              ? 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-200 shadow-xs'
+                              : 'glass-card hover:bg-white/[0.08] text-slate-300 hover:text-white border-white/[0.08]'
+                          }`}
+                          title={t('modrinth.downloadToFolder')}
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => (window as any).api?.openExternal(`https://modrinth.com/resourcepack/${pack.slug}`)}
+                          className={`p-1.5 rounded-lg transition-all cursor-pointer border btn-bounce ${
+                            theme === 'light'
+                              ? 'bg-white hover:bg-slate-100 text-slate-600 hover:text-pink-600 border-slate-200 shadow-xs'
+                              : 'glass-card hover:bg-white/[0.08] text-slate-300 hover:text-white border-white/[0.08]'
+                          }`}
+                          title={t('plugins.viewOnModrinth')}
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* 3. ADD NEW RESOURCE PACK FORM */}
           <form
             onSubmit={handleAddNewPack}
-            className="p-5 rounded-2xl glass-card space-y-4"
+            className={`p-5 rounded-2xl space-y-4 border ${
+              theme === 'light'
+                ? 'bg-slate-50/80 border-slate-200 shadow-xs'
+                : 'glass-card'
+            }`}
           >
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
-              <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Plus className="w-4 h-4 text-pink-400" />
+            <div className={`flex items-center justify-between pb-3 border-b ${
+              theme === 'light' ? 'border-slate-200' : 'border-white/[0.08]'
+            }`}>
+              <span className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${
+                theme === 'light' ? 'text-slate-900' : 'text-slate-200'
+              }`}>
+                <Plus className="w-4 h-4 text-pink-500" />
                 {t('plugins.addNewPack')}
               </span>
-              <span className="text-[11px] text-slate-500">
+              <span className={`text-[11px] ${theme === 'light' ? 'text-slate-500' : 'text-slate-500'}`}>
                 {language === 'bg' ? 'Ще бъде добавен към списъка и активиран веднага' : 'Will be saved and activated immediately'}
               </span>
             </div>
@@ -969,7 +1756,9 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Name */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300">
+                <label className={`text-xs font-bold ${
+                  theme === 'light' ? 'text-slate-900' : 'text-slate-300'
+                }`}>
                   {t('plugins.packNameLabel')}
                 </label>
                 <input
@@ -977,15 +1766,21 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                   value={newPack.name}
                   onChange={(e) => setNewPack({ ...newPack, name: e.target.value })}
                   placeholder={t('plugins.packNamePlaceholder')}
-                  className="w-full px-3.5 py-2 rounded-xl glass-input text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-pink-400"
+                  className={`w-full px-3.5 py-2 rounded-xl text-xs focus:outline-none border ${
+                    theme === 'light'
+                      ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-pink-500 shadow-xs'
+                      : 'glass-input text-slate-200 placeholder:text-slate-600 focus:border-pink-400'
+                  }`}
                 />
               </div>
 
               {/* Direct Download URL */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                <label className={`text-xs font-bold flex items-center justify-between ${
+                  theme === 'light' ? 'text-slate-900' : 'text-slate-300'
+                }`}>
                   <span>{t('plugins.packUrlLabel')} *</span>
-                  <span className="text-[10px] text-pink-400 font-mono">.zip URL</span>
+                  <span className={`text-[10px] font-mono ${theme === 'light' ? 'text-pink-600' : 'text-pink-400'}`}>.zip URL</span>
                 </label>
                 <input
                   type="url"
@@ -993,7 +1788,11 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                   value={newPack.url}
                   onChange={(e) => setNewPack({ ...newPack, url: e.target.value })}
                   placeholder="https://download.mc-packs.net/pack/...zip"
-                  className="w-full px-3.5 py-2 rounded-xl glass-input text-xs text-slate-200 font-mono placeholder:text-slate-600 focus:outline-none focus:border-pink-400"
+                  className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono focus:outline-none border ${
+                    theme === 'light'
+                      ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-pink-500 shadow-xs'
+                      : 'glass-input text-slate-200 placeholder:text-slate-600 focus:border-pink-400'
+                  }`}
                 />
               </div>
             </div>
@@ -1001,52 +1800,82 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
               {/* Require Toggle */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300">{t('plugins.requirePack')}</label>
+                <label className={`text-xs font-bold ${
+                  theme === 'light' ? 'text-slate-900' : 'text-slate-300'
+                }`}>{t('plugins.requirePack')}</label>
                 <button
                   type="button"
                   onClick={() => setNewPack({ ...newPack, required: !newPack.required })}
                   className={`w-full py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer text-center ${
                     newPack.required
-                      ? 'bg-pink-500/20 border-pink-400/50 text-pink-200'
+                      ? theme === 'light'
+                        ? 'bg-pink-100 border-pink-400 text-pink-900 shadow-xs'
+                        : 'bg-pink-500/20 border-pink-400/50 text-pink-200'
+                      : theme === 'light'
+                      ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 shadow-xs'
                       : 'bg-white/[0.03] border-white/[0.08] text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  {newPack.required
-                    ? (language === 'bg' ? '🔒 Задължителен' : '🔒 Required')
-                    : (language === 'bg' ? '🟢 По избор' : '🟢 Optional')}
+                  {newPack.required ? (
+                    <span className="flex items-center justify-center gap-1">
+                      <Lock className="w-3 h-3 text-amber-500" />
+                      <span>{language === 'bg' ? 'Задължителен' : 'Required'}</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-1">
+                      <Check className="w-3 h-3 text-emerald-500" />
+                      <span>{language === 'bg' ? 'По избор' : 'Optional'}</span>
+                    </span>
+                  )}
                 </button>
               </div>
 
               {/* Prompt */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300">{t('plugins.packPromptLabel')}</label>
+                <label className={`text-xs font-bold ${
+                  theme === 'light' ? 'text-slate-900' : 'text-slate-300'
+                }`}>{t('plugins.packPromptLabel')}</label>
                 <input
                   type="text"
                   value={newPack.prompt}
                   onChange={(e) => setNewPack({ ...newPack, prompt: e.target.value })}
                   placeholder={t('plugins.packPromptPlaceholder')}
-                  className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 focus:outline-none focus:border-pink-400"
+                  className={`w-full px-3 py-2 rounded-xl text-xs focus:outline-none border ${
+                    theme === 'light'
+                      ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-pink-500 shadow-xs'
+                      : 'glass-input text-slate-200 focus:border-pink-400'
+                  }`}
                 />
               </div>
 
               {/* SHA-1 */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300">SHA-1 Hash</label>
+                <label className={`text-xs font-bold ${
+                  theme === 'light' ? 'text-slate-900' : 'text-slate-300'
+                }`}>SHA-1 Hash</label>
                 <input
                   type="text"
                   value={newPack.sha1}
                   onChange={(e) => setNewPack({ ...newPack, sha1: e.target.value })}
                   placeholder="40-char sha1 code"
-                  className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 font-mono focus:outline-none focus:border-pink-400"
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-mono focus:outline-none border ${
+                    theme === 'light'
+                      ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-pink-500 shadow-xs'
+                      : 'glass-input text-slate-200 font-mono focus:border-pink-400'
+                  }`}
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-white/[0.08]">
-              <p className="text-[11px] text-slate-400">
+            <div className={`flex items-center justify-between pt-3 border-t ${
+              theme === 'light' ? 'border-slate-200' : 'border-white/[0.08]'
+            }`}>
+              <p className={`text-[11px] ${
+                theme === 'light' ? 'text-slate-500' : 'text-slate-400'
+              }`}>
                 {language === 'bg'
-                  ? '* При Vanilla сървър направи рестарт (Спри 🛑 и Пусни ▶️), за да влезе новият пакет в сила.'
-                  : '* For Vanilla servers, restart (Stop 🛑 and Start ▶️) to apply the resource pack in-game.'}
+                  ? '* При Vanilla сървър направи рестарт (Спиране и повторно Стартиране), за да влезе новият пакет в сила.'
+                  : '* For Vanilla servers, restart (Stop and then Start) to apply the resource pack in-game.'}
               </p>
 
               <button

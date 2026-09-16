@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { Trash2, AlertTriangle, AlertCircle, Info, CheckCircle2, X } from 'lucide-react';
 import { useLanguage } from './LanguageContext';
+import { useTheme } from './ThemeContext';
 
 export interface ConfirmOptions {
   title?: string;
@@ -48,6 +49,7 @@ type ActiveDialog =
 
 export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { t } = useLanguage();
+  const { theme } = useTheme();
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
 
   const showConfirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
@@ -108,15 +110,23 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       {/* Glassmorphic Modal Dialog Overlay */}
       {activeDialog && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
           <div
-            className="relative w-full max-w-md bg-[#0b101e]/90 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] flex flex-col items-center text-center overflow-hidden animate-in zoom-in-95 duration-200 select-none"
+            className={`relative w-full max-w-md rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center overflow-hidden animate-in zoom-in-95 duration-200 select-none ${
+              theme === 'light'
+                ? 'bg-white border border-slate-200 shadow-xl'
+                : 'bg-[#0b101e]/90 backdrop-blur-2xl border border-white/10'
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close X Button */}
             <button
               onClick={() => handleClose(false)}
-              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+              className={`absolute top-4 right-4 p-1.5 rounded-xl transition-colors cursor-pointer ${
+                theme === 'light'
+                  ? 'text-slate-400 hover:text-slate-800 hover:bg-slate-100'
+                  : 'text-slate-400 hover:text-white hover:bg-white/10'
+              }`}
               title={`${t('common.close')} (Esc)`}
             >
               <X className="w-4 h-4" />
@@ -129,17 +139,21 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 <div
                   className={`absolute -top-16 -left-16 w-48 h-48 rounded-full blur-3xl pointer-events-none ${
                     activeDialog.options.danger !== false
-                      ? 'bg-rose-600/20'
-                      : 'bg-sky-600/20'
+                      ? theme === 'light' ? 'bg-rose-500/10' : 'bg-rose-600/20'
+                      : theme === 'light' ? 'bg-sky-500/10' : 'bg-sky-600/20'
                   }`}
                 />
 
                 {/* Badge Icon */}
                 <div
-                  className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-200 ${
+                  className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-200 border ${
                     activeDialog.options.danger !== false
-                      ? 'bg-rose-500/10 border border-rose-500/30 text-rose-400 shadow-[0_0_25px_rgba(244,63,94,0.3)]'
-                      : 'bg-sky-500/10 border border-sky-500/30 text-sky-400 shadow-[0_0_25px_rgba(14,165,233,0.3)]'
+                      ? theme === 'light'
+                        ? 'bg-rose-50 border-rose-200 text-rose-600'
+                        : 'bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-[0_0_25px_rgba(244,63,94,0.3)]'
+                      : theme === 'light'
+                      ? 'bg-sky-50 border-sky-200 text-sky-600'
+                      : 'bg-sky-500/10 border-sky-500/30 text-sky-400 shadow-[0_0_25px_rgba(14,165,233,0.3)]'
                   }`}
                 >
                   {activeDialog.options.icon === 'trash' || activeDialog.options.danger !== false ? (
@@ -152,12 +166,16 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 </div>
 
                 {/* Title */}
-                <h3 className="text-lg font-bold text-white tracking-tight mb-2">
+                <h3 className={`text-lg font-bold tracking-tight mb-2 ${
+                  theme === 'light' ? 'text-slate-900' : 'text-white'
+                }`}>
                   {activeDialog.options.title || t('dialogs.confirmTitle')}
                 </h3>
 
                 {/* Message */}
-                <div className="text-sm text-slate-300 leading-relaxed mb-6 max-w-sm">
+                <div className={`text-sm leading-relaxed mb-6 max-w-sm ${
+                  theme === 'light' ? 'text-slate-600' : 'text-slate-300'
+                }`}>
                   {activeDialog.options.message}
                 </div>
 
@@ -166,7 +184,11 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                   <button
                     type="button"
                     onClick={() => handleClose(false)}
-                    className="flex-1 py-2.5 px-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-medium text-sm transition-all active:scale-95 focus:outline-none cursor-pointer"
+                    className={`flex-1 py-2.5 px-4 rounded-xl border font-medium text-sm transition-all active:scale-95 focus:outline-none cursor-pointer ${
+                      theme === 'light'
+                        ? 'border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700'
+                        : 'border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white'
+                    }`}
                   >
                     {activeDialog.options.cancelText || t('common.cancel')}
                   </button>
@@ -194,25 +216,33 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 <div
                   className={`absolute -top-16 -left-16 w-48 h-48 rounded-full blur-3xl pointer-events-none ${
                     activeDialog.options.type === 'error'
-                      ? 'bg-rose-600/20'
+                      ? theme === 'light' ? 'bg-rose-500/10' : 'bg-rose-600/20'
                       : activeDialog.options.type === 'warning'
-                      ? 'bg-amber-500/20'
+                      ? theme === 'light' ? 'bg-amber-500/10' : 'bg-amber-500/20'
                       : activeDialog.options.type === 'success'
-                      ? 'bg-emerald-500/20'
-                      : 'bg-sky-500/20'
+                      ? theme === 'light' ? 'bg-emerald-500/10' : 'bg-emerald-500/20'
+                      : theme === 'light' ? 'bg-sky-500/10' : 'bg-sky-500/20'
                   }`}
                 />
 
                 {/* Badge Icon */}
                 <div
-                  className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-200 ${
+                  className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-200 border ${
                     activeDialog.options.type === 'error'
-                      ? 'bg-rose-500/10 border border-rose-500/30 text-rose-400 shadow-[0_0_25px_rgba(244,63,94,0.3)]'
+                      ? theme === 'light'
+                        ? 'bg-rose-50 border-rose-200 text-rose-600'
+                        : 'bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-[0_0_25px_rgba(244,63,94,0.3)]'
                       : activeDialog.options.type === 'warning'
-                      ? 'bg-amber-500/10 border border-amber-500/30 text-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.3)]'
+                      ? theme === 'light'
+                        ? 'bg-amber-50 border-amber-200 text-amber-600'
+                        : 'bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.3)]'
                       : activeDialog.options.type === 'success'
-                      ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.3)]'
-                      : 'bg-sky-500/10 border border-sky-500/30 text-sky-400 shadow-[0_0_25px_rgba(14,165,233,0.3)]'
+                      ? theme === 'light'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                        : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.3)]'
+                      : theme === 'light'
+                      ? 'bg-sky-50 border-sky-200 text-sky-600'
+                      : 'bg-sky-500/10 border-sky-500/30 text-sky-400 shadow-[0_0_25px_rgba(14,165,233,0.3)]'
                   }`}
                 >
                   {activeDialog.options.type === 'error' ? (
@@ -227,7 +257,9 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 </div>
 
                 {/* Title */}
-                <h3 className="text-lg font-bold text-white tracking-tight mb-2">
+                <h3 className={`text-lg font-bold tracking-tight mb-2 ${
+                  theme === 'light' ? 'text-slate-900' : 'text-white'
+                }`}>
                   {activeDialog.options.title ||
                     (activeDialog.options.type === 'error'
                       ? t('dialogs.errorTitle')
@@ -239,7 +271,9 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 </h3>
 
                 {/* Message */}
-                <div className="text-sm text-slate-300 leading-relaxed mb-6 max-w-sm">
+                <div className={`text-sm leading-relaxed mb-6 max-w-sm ${
+                  theme === 'light' ? 'text-slate-600' : 'text-slate-300'
+                }`}>
                   {activeDialog.options.message}
                 </div>
 

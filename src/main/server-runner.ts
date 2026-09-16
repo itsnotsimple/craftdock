@@ -5,6 +5,7 @@ import os from 'os';
 import { BrowserWindow } from 'electron';
 import { updateServer, ServerProfile } from './server-store';
 import { getEffectiveJavaCommand } from './java-manager';
+import { loadAppSettings } from './app-settings';
 
 export interface ServerLogEntry {
   id: string;
@@ -156,7 +157,13 @@ export function autoAcceptEula(serverDir: string) {
   fs.writeFileSync(eulaPath, content, 'utf-8');
 }
 
-export function updateServerProperties(serverDir: string, port: number, motd?: string, hardcore?: boolean) {
+export function updateServerProperties(
+  serverDir: string,
+  port: number,
+  motd?: string,
+  hardcore?: boolean,
+  maxPlayers?: number
+) {
   const propPath = path.join(serverDir, 'server.properties');
   let content = '';
   if (fs.existsSync(propPath)) {
@@ -164,6 +171,13 @@ export function updateServerProperties(serverDir: string, port: number, motd?: s
     content = content.replace(/^server-port=.*$/m, `server-port=${port}`);
     if (motd) {
       content = content.replace(/^motd=.*$/m, `motd=${motd}`);
+    }
+    if (maxPlayers) {
+      if (content.match(/^max-players=.*$/m)) {
+        content = content.replace(/^max-players=.*$/m, `max-players=${maxPlayers}`);
+      } else {
+        content += `\nmax-players=${maxPlayers}`;
+      }
     }
     if (hardcore !== undefined) {
       if (content.match(/^hardcore=.*$/m)) {
@@ -181,7 +195,7 @@ export function updateServerProperties(serverDir: string, port: number, motd?: s
     }
   } else {
     // Default to online-mode=false (Cracked friendly) or true
-    content = `server-port=${port}\nmotd=${motd || 'CraftDock Minecraft Server'}\nquery.port=${port}\nonline-mode=false\nmax-players=20\nhardcore=${hardcore ?? false}\ndifficulty=${hardcore ? 'hard' : 'normal'}\n`;
+    content = `server-port=${port}\nmotd=${motd || 'CraftDock Minecraft Server'}\nquery.port=${port}\nonline-mode=false\nmax-players=${maxPlayers || 20}\nhardcore=${hardcore ?? false}\ndifficulty=${hardcore ? 'hard' : 'normal'}\n`;
   }
   fs.writeFileSync(propPath, content, 'utf-8');
 }
@@ -214,48 +228,65 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
 
   // Ensure EULA is accepted
   autoAcceptEula(serverDir);
-  updateServerProperties(serverDir, server.port, server.motd);
+  updateServerProperties(serverDir, server.port, server.motd, server.hardcore, server.maxPlayers);
 
   updateServer(server.id, { status: 'starting' });
   sendToWindow('server-status-changed', { serverId: server.id, status: 'starting' });
 
-  appendServerLog(server.id, `[CraftDock] Проверка на съвместима Java среда за Minecraft v${server.version}...`);
+  const appSettings = loadAppSettings();
 
   let javaExe = 'java';
-  try {
-    javaExe = await getEffectiveJavaCommand(server.version, (percent, msg) => {
-      sendToWindow('download-progress', {
-        percent,
-        downloadedMb: 0,
-        totalMb: 0,
-        message: msg,
+  if (appSettings.customJavaPath && fs.existsSync(appSettings.customJavaPath)) {
+    javaExe = appSettings.customJavaPath;
+    appendServerLog(server.id, `[CraftDock] Използване на персонализиран път до Java: ${javaExe}`);
+  } else {
+    appendServerLog(server.id, `[CraftDock] Проверка на съвместима Java среда за Minecraft v${server.version}...`);
+    try {
+      javaExe = await getEffectiveJavaCommand(server.version, (percent, msg) => {
+        sendToWindow('download-progress', {
+          percent,
+          downloadedMb: 0,
+          totalMb: 0,
+          message: msg,
+        });
+        appendServerLog(server.id, `[CraftDock] ${msg}`);
       });
-      appendServerLog(server.id, `[CraftDock] ${msg}`);
-    });
 
-    appendServerLog(server.id, `[CraftDock] Успешно подготвена Java среда: ${javaExe}`);
-  } catch (javaErr: any) {
-    appendServerLog(server.id, `[CraftDock Грешка] Неуспешно стартиране на Java: ${javaErr.message}`, true);
-    updateServer(server.id, { status: 'error' });
-    sendToWindow('server-status-changed', { serverId: server.id, status: 'error', error: javaErr.message });
-    return false;
+      appendServerLog(server.id, `[CraftDock] Успешно подготвена Java среда: ${javaExe}`);
+    } catch (javaErr: any) {
+      appendServerLog(server.id, `[CraftDock Грешка] Неуспешно стартиране на Java: ${javaErr.message}`, true);
+      updateServer(server.id, { status: 'error' });
+      sendToWindow('server-status-changed', { serverId: server.id, status: 'error', error: javaErr.message });
+      return false;
+    }
   }
 
   const ramGb = Math.max(1, server.allocatedRamGb);
   const minRam = ramGb <= 2 ? '512M' : `${Math.floor(ramGb / 2)}G`;
-  const javaArgs = [
+  const javaArgs: string[] = [
     `-Xms${minRam}`,
     `-Xmx${ramGb}G`,
-    '-XX:+UseG1GC',
-    '-XX:+ParallelRefProcEnabled',
-    '-XX:MaxGCPauseMillis=200',
-    '-XX:+UnlockExperimentalVMOptions',
-    '-XX:+DisableExplicitGC',
-    '-XX:MaxMetaspaceSize=256M',
-    '-jar',
-    'server.jar',
-    'nogui',
   ];
+
+  if (appSettings.useAikarFlags) {
+    javaArgs.push(
+      '-XX:+UseG1GC',
+      '-XX:+ParallelRefProcEnabled',
+      '-XX:MaxGCPauseMillis=200',
+      '-XX:+UnlockExperimentalVMOptions',
+      '-XX:+DisableExplicitGC',
+      '-XX:+AlwaysPreTouch',
+      '-XX:G1NewSizePercent=30',
+      '-XX:G1MaxNewSizePercent=40',
+      '-XX:G1ReservePercent=20',
+      '-XX:G1HeapRegionSize=8M',
+      '-XX:MaxMetaspaceSize=256M'
+    );
+  } else {
+    javaArgs.push('-XX:+UseG1GC', '-XX:MaxMetaspaceSize=256M');
+  }
+
+  javaArgs.push('-jar', 'server.jar', 'nogui');
 
   try {
     const child = spawn(javaExe, javaArgs, {
@@ -345,6 +376,7 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
 
     child.on('close', (code) => {
       console.log(`Server ${server.id} process exited with code ${code}`);
+      const wasStopping = instance.status === 'stopping';
       activeServers.delete(server.id);
       updateServer(server.id, { status: 'stopped', playerCount: 0 });
       sendToWindow('server-status-changed', { serverId: server.id, status: 'stopped' });
@@ -357,6 +389,22 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
         memoryPercent: 0,
         uptimeSeconds: 0,
       });
+
+      if (!wasStopping && code !== 0 && code !== null) {
+        const settings = loadAppSettings();
+        if (settings.autoRestartOnCrash) {
+          appendServerLog(
+            server.id,
+            `[CraftDock] Засечен неочакван срив на сървъра (код ${code}). Автоматичен рестарт след 5 секунди...`,
+            true
+          );
+          setTimeout(() => {
+            if (!activeServers.has(server.id)) {
+              startServer(server);
+            }
+          }, 5000);
+        }
+      }
     });
 
     child.on('error', (err) => {

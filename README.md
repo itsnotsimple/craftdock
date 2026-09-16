@@ -1,96 +1,109 @@
-# 🎮 CraftDock - Minecraft Server Manager
+# 🎮 CraftDock — Next-Gen Minecraft Server Manager
 
 <div align="center">
-  <img src="resources/icon.png" width="128" height="128" alt="CraftDock Icon" />
-  <h2>CraftDock v2.0.9</h2>
-  <p><b>Modern, ultra-fast, and elegant Minecraft Server Manager for Windows & macOS.</b></p>
+  <img src="resources/icon.png" width="130" height="130" alt="CraftDock Logo" style="border-radius: 28px; box-shadow: 0 10px 30px rgba(14, 165, 233, 0.3);" />
+  <h1 style="margin-top: 12px; margin-bottom: 4px;">CraftDock v2.2.8</h1>
+  <p><b>The ultimate, ultra-fast, and beautiful desktop Minecraft Server Manager for Windows & macOS.</b></p>
+  <p><i>Host, optimize, customize, and play with friends in under 60 seconds — 100% on your own hardware, zero subscription fees.</i></p>
+
   <p>
-    <img src="https://img.shields.io/badge/version-2.0.9-sky.svg" alt="Version 2.0.9" />
-    <img src="https://img.shields.io/badge/electron-44.3.0-blue.svg" alt="Electron" />
-    <img src="https://img.shields.io/badge/react-18.3.1-61dafb.svg" alt="React" />
-    <img src="https://img.shields.io/badge/typescript-5.5.4-3178c6.svg" alt="TypeScript" />
-    <img src="https://img.shields.io/badge/tailwindcss-3.4.10-38bdf8.svg" alt="Tailwind CSS" />
-    <img src="https://img.shields.io/badge/license-MIT-emerald.svg" alt="License" />
+    <a href="https://github.com/itsnotsimple/craftdock/releases/latest"><img src="https://img.shields.io/badge/version-2.2.8-sky.svg?style=for-the-badge&logo=electron" alt="Version 2.2.8" /></a>
+    <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-blue.svg?style=for-the-badge&logo=apple" alt="Platform" />
+    <img src="https://img.shields.io/badge/react-18.3.1-61dafb.svg?style=for-the-badge&logo=react" alt="React" />
+    <img src="https://img.shields.io/badge/typescript-5.5-3178c6.svg?style=for-the-badge&logo=typescript" alt="TypeScript" />
+    <img src="https://img.shields.io/badge/license-MIT-emerald.svg?style=for-the-badge" alt="License" />
+  </p>
+
+  <p>
+    <a href="#-quick-download"><b>⚡ Quick Download</b></a> •
+    <a href="#-key-features"><b>✨ Features</b></a> •
+    <a href="#-motd-designer"><b>🎨 MOTD Designer</b></a> •
+    <a href="#-global-settings--automation"><b>⚙️ Automation</b></a> •
+    <a href="#-development--building"><b>🛠️ Development</b></a> •
+    <a href="#-faq"><b>❓ FAQ</b></a>
   </p>
 </div>
 
 ---
 
-## ✨ Overview
+## ⚡ Quick Download
 
-**CraftDock** simplifies hosting and managing local Minecraft servers on your PC without terminal commands or complex config edits. Build, launch, and play with friends in under 60 seconds with zero network friction.
+Download the official compiled release for your operating system:
+
+| Platform | Processor Architecture | Download Link |
+|:---|:---|:---|
+| 🪟 **Windows** | 64-bit (x64) | [**`CraftDock-2.2.8-Windows-Setup.exe`**](https://github.com/itsnotsimple/craftdock/releases/latest) |
+| 🍏 **macOS** | Apple Silicon (**M1 / M2 / M3 / M4**) | [**`CraftDock-2.2.8-macOS-AppleSilicon-M-Chips.dmg`**](https://github.com/itsnotsimple/craftdock/releases/latest) |
+| 🍏 **macOS** | Intel Processor (x64) | [**`CraftDock-2.2.8-macOS-Intel.dmg`**](https://github.com/itsnotsimple/craftdock/releases/latest) |
+
+*Single-click installations. No bloatware, no telemetry, no background ads.*
 
 ---
 
-## 🚀 Key Features
+## ✨ Key Features
 
-### ⚡ 1-Click Server Wizard
-- Supports **PaperMC**, **Purpur**, **Fabric**, and **Vanilla Mojang**.
-- Automatic online API resolution for the latest Minecraft releases (1.21+, 1.20+, and legacy versions).
-- Zero bloat: Downloads server binaries and assets on-demand only.
+### 🚀 1-Click Server Wizard
+* **All Major Engines Supported**: **PaperMC**, **Purpur**, **Fabric**, and pure official **Vanilla Mojang**.
+* **Live API Version Resolver**: Automatically queries official feeds for Minecraft 1.21.x, 1.20.x down to legacy releases.
+* **On-Demand Minimal Storage**: Downloads binaries only when you need them.
 
-### 🧠 Intelligent Dynamic RAM Allocation Advisor
-- Inspects your host system hardware (total RAM and free available RAM).
-- Suggests realistic memory allocations based on target player count and server engine (Paper vs Fabric).
-- Real-time safety guard prevents host system freezes and memory exhaustion.
+### ☕ Automated Portable Java Environment (Adoptium OpenJDK)
+* **Zero Manual Java Setup**: CraftDock detects the exact Java runtime required for your Minecraft version and downloads portable Adoptium Temurin JDKs into isolated directories:
+  * **Java 21 / 25**: Minecraft 1.20.5+ through 1.21.x and future snapshots.
+  * **Java 17**: Minecraft 1.17 – 1.20.4.
+  * **Java 8**: Legacy Minecraft 1.16.5 and older.
+* **Aikar's Flags Integrated**: Optional 1-click toggle for Aikar's tuned G1GC garbage collection parameters to permanently eliminate tick stutter and memory stalls.
 
-### 💀 Hardcore Mode (1 Life & Permadeath)
-- 1-Click Hardcore toggle in both the Server Wizard and Server Properties tab.
-- Automatically locks difficulty to **Hard** and enforces spectator mode upon player death.
-- Glowing visual indicators and warnings in UI.
+### 🎨 Live Minecraft MOTD Designer & Preview Screen
+* **Pixel-Perfect Screen Compiler**: Authentic Minecraft multiplayer server list preview with genuine fonts, ping indicators, and server status.
+* **Full Formatting Palette**: 16 standard Minecraft colors (`§0`–`§f`), styles (Bold, Italic, Strikethrough, Underline, Obfuscated `§k`).
+* **5 Ready-to-use Presets**:
+  * ⚔️ *Survival SMP*
+  * 👥 *Friends Realm*
+  * 🌐 *Crossplay Java + Bedrock*
+  * 💀 *Hardcore Permadeath*
+  * ✨ *Clean Vanilla*
+* **Special Unicode Symbols**: 1-click insert for stars (`★`), swords (`⚔`), hearts (`❤`), shields, arrows, and borders.
 
 ### 🌐 Zero-Config Global Multiplayer (Playit.gg Embedded Tunnel)
-- Play with friends worldwide without port forwarding or router access.
-- Embedded, managed **Playit.gg** agent with instant tunnel generation.
-- 1-Click copy address (`*.joinmc.link`) ready to share with friends.
-- LAN IP display for players on the same local Wi-Fi.
+* **Play With Friends Anywhere**: No port forwarding, no router admin login, no exposing your private home IP.
+* **Embedded Tunnel Engine**: Launches a secure tunnel with 1 click and gives you a shareable `*.joinmc.link` address.
+* **Local LAN Support**: Automatic local Wi-Fi IP detector for zero-latency LAN parties.
 
-### 🛡️ Single-Server Concurrency Protection
-- Enforces strictly **1 active server at a time** to eliminate port collisions (`25565`) and prevent network tunnel conflicts.
-- Smart conflict modal lets you smoothly stop the running world and switch to the target world with one click.
+### 🧩 Modrinth Integration & Curated Plugins
+* **Modrinth API Browser**: Search, filter, and install mods, plugins, and resource packs directly from Modrinth with live download metrics.
+* **Curated 1-Click Essentials**:
+  * **GeyserMC & Floodgate**: Seamless crossplay allowing Bedrock players (iOS, Android, Xbox, PlayStation, Switch) to join your Java world.
+  * **SkinsRestorer**: Full player skin support for offline/cracked servers.
+  * **EssentialsX**: Full suite of `/sethome`, `/spawn`, `/tpa`, and economy commands.
+  * **ViaVersion**: Backwards/forwards compatibility across client versions.
+  * **Chunky**: Pre-generates terrain chunks to eliminate flight and elytra generation lag.
+* **Resource Pack Manager**: Direct HTTP links with automatic prompt and mandatory hash integration.
 
-### 💻 Real-Time Interactive Console
-- Live ANSI-colored log output with auto-scrolling.
-- Quick-action buttons: Day (`/time set day`), Clear Weather (`/weather clear`), Save World (`/save-all`), TPS (`/tps`).
-- Real-time player join/leave notices and admin commands execution.
+### 🤖 Smart Automations & System Tray
+* **Crash Detection & Auto-Restart**: Automatically recovers and restarts servers if they crash unexpectedly.
+* **Auto-Start Last Server on App Launch**: Immediately boots your last played world upon opening CraftDock.
+* **Minimize to System Tray**: Keeps servers running in the background when clicking **(X)**, with a friendly 1-time notification.
+* **GitHub Auto-Updater**: Checks for updates from [`itsnotsimple/craftdock`](https://github.com/itsnotsimple/craftdock) and notifies you with a 1-click download banner.
 
-### 🔌 Plugins & Resource Packs Manager
-- Curated 1-click installations for essential server plugins:
-  - **SkinsRestorer**: Displays skins for all players on offline/cracked servers (`/skin <name>`).
-  - **GeyserMC & Floodgate**: Seamless Bedrock crossplay (iOS, Android, Xbox, Nintendo Switch, PS).
-  - **EssentialsX**: Server essentials (`/sethome`, `/home`, `/spawn`, `/tpa`, `/warp`, economy).
-  - **ViaVersion**: Version compatibility so friends on different versions can connect.
-  - **Chunky**: World chunk pre-generation to eliminate chunk-loading lag while flying.
-- **Resource Pack Manager**: Add direct `.zip` URLs with join prompts and mandatory pack toggles. Direct integration with `server.properties` and free merge tools.
+### 🛡️ Hardware Safeguards & Server Protection
+* **Single-Server Concurrency Lock**: Strictly enforces 1 running server at a time to prevent port `25565` collisions and memory exhaustion.
+* **Dynamic RAM Advisor**: Reads host RAM and recommends safe minimum and maximum allocations based on player capacity.
+* **Storage Quota Sliders**: Set world quota limits (5GB – 100GB+) with breakdown charts (World, Plugins, Backups, Logs).
+* **64x64 Icon Auto-Cropper**: Upload any image (PNG, JPG, WEBP); CraftDock automatically resizes and converts it to Minecraft's exact `server-icon.png` base64 format.
+* **1-Click World Backups**: Instant compressed `.zip` snapshots stored in your local backups directory.
 
-### ⚙️ Full World Properties & Custom 64x64 Server Icon
-- Custom server icon uploader: automatically crops and resizes any image (PNG, JPG, WEBP) to the exact 64x64 pixel format required by Minecraft.
-- Real-time Minecraft multiplayer list preview (icon, MOTD, player count, signal strength).
-- Offline / Cracked mode toggle (allow friends using TLauncher or non-premium accounts).
-- Spawn Protection radius presets (0, 16, 32, 64 blocks).
-- Adjustable view distance, simulation distance, default gamemode, and PvP combat switch.
-
-### 👥 Player & Whitelist Management
-- Live list of currently connected players with 1-click **Make OP** and **Kick** actions.
-- Full Whitelist management: Add/remove usernames and toggle server protection.
-
-### 💾 1-Click World Backups
-- Instant world archiving to compressed `.zip` snapshots in `backups/`.
-- Protects world builds before updates, mod installations, or experiments.
-
-### 🌐 Dual Language Support (English Default + Bulgarian)
-- **English** is the default language across all views and dialogs.
-- Instant 1-click language switcher (`🌐 EN | BG`) located in both the TitleBar and Sidebar.
-- Selection is remembered across app restarts via persistent storage.
+### 🌓 Dual Themes & Bilingual UI
+* **Dark Obsidian** (Glassmorphic) & **Light Ice** (Clean White) themes.
+* Full bilingual support: **English (EN)** and **Bulgarian (BG)** toggleable in 1 click.
 
 ---
 
-## 🛠️ Development & Installation
+## 🛠️ Development & Building
 
-### Requirements
-- **Node.js** 18.x or 20.x
-- **npm** or **yarn**
-- **Java 17 / 21** installed on your system
+### Prerequisites
+* **Node.js** v20.x or v22.x
+* **npm** v10+
 
 ### 1. Clone the repository
 ```bash
@@ -103,52 +116,87 @@ cd craftdock
 npm install
 ```
 
-### 3. Run in development mode
+### 3. Start development mode
 ```bash
 npm run dev
 ```
 
-### 4. Build for production (Windows .exe installer)
+### 4. Production builds
 ```bash
+# Build TypeScript and Vite renderer
 npm run build
+
+# Package Windows installer (.exe)
 npm run dist:win
+
+# Package macOS Disk Images (.dmg for Apple Silicon and Intel)
+npm run dist:mac
 ```
-The installer executable (`CraftDock Setup 2.0.9.exe`) will be generated inside the `dist_release/` directory.
 
 ---
 
-## 📁 Architecture & File Layout
+## 📁 Architecture
 
 ```text
 craftdock/
-├── .github/workflows/          # Continuous Integration & Automated Release workflows
-├── resources/                  # App icon, visual assets, and binary dependencies
-│   ├── icon.ico                # Windows executable icon
-│   └── icon.png                # High-res application logo
+├── .github/workflows/          # Automated multi-platform GitHub Actions release CI
+├── resources/                  # App icon (.png, .ico) and native binary assets
 ├── src/
-│   ├── main/                   # Electron Main Process
-│   │   ├── main.ts             # Window lifecycle, native menus & IPC handlers
-│   │   ├── preload.ts          # Secure context bridge API
-│   │   ├── server-runner.ts    # Child process management & log streaming
-│   │   ├── server-config.ts    # server.properties & curated plugins definitions
-│   │   ├── server-store.ts     # JSON persistence for servers & profiles
-│   │   ├── system-info.ts      # Hardware metrics (RAM, CPU, IP addresses)
-│   │   ├── java-manager.ts     # System Java detection and verification
-│   │   └── tunnel-service.ts   # Embedded Playit.gg tunnel runner
+│   ├── main/                   # Electron Main Process (Node.js)
+│   │   ├── main.ts             # Window lifecycle, System Tray, IPC dispatch, Updater
+│   │   ├── preload.ts          # ContextBridge security barrier & typed API exports
+│   │   ├── app-settings.ts     # Global configuration, network & disk diagnostics
+│   │   ├── api-service.ts      # Paper/Purpur/Fabric/Vanilla & Modrinth API clients
+│   │   ├── java-manager.ts     # Automatic Adoptium OpenJDK runtime downloader
+│   │   ├── server-runner.ts    # Child process management, live log streaming, CPU/RAM metrics
+│   │   ├── server-config.ts    # server.properties read/write & plugin installation
+│   │   ├── server-store.ts     # JSON persistence for server profiles & storage metrics
+│   │   ├── system-info.ts      # Host hardware metrics (RAM, CPU, IP addresses)
+│   │   └── tunnel-service.ts   # Embedded Playit.gg agent controller
 │   │
-│   └── renderer/               # React Application
+│   └── renderer/               # React 18 Application (Vite)
 │       └── src/
-│           ├── i18n/           # English (en) & Bulgarian (bg) dictionaries
-│           ├── context/        # LanguageContext, DialogContext
-│           ├── components/     # TitleBar, Sidebar, RamSlider, ConsoleView, etc.
-│           ├── views/          # LibraryView, WizardView, DashboardView
-│           ├── types/          # TypeScript interfaces
-│           └── styles/         # Tailwind CSS & custom glassmorphism styles
+│           ├── components/     # TitleBar, Sidebar, MotdEditor, StorageSlider, ConsoleView...
+│           ├── views/          # LibraryView, WizardView, DashboardView, SettingsView
+│           ├── context/        # ThemeContext, LanguageContext, DialogContext
+│           ├── i18n/           # Bilingual translations (EN / BG)
+│           ├── types/          # Full TypeScript interfaces
+│           └── styles/         # Tailwind CSS & Glassmorphism design tokens
 ├── package.json
 └── tsconfig.json
 ```
 
 ---
 
-## 📜 License
-Distributed under the MIT License. Developed with ❤️ for the Minecraft community.
+## ❓ FAQ
+
+<details>
+<summary><b>Why is the Fabric server download only ~182 KB while Paper/Vanilla are ~60 MB?</b></summary>
+<br>
+The official Fabric server JAR is a lightweight <b>bootstrap installer shim (~182 KB)</b>. When you start a Fabric server for the first time, Fabric automatically connects to Mojang, downloads the vanilla server JAR and dependencies into <code>.fabric/</code> and <code>libraries/</code>, and patches them in memory. Paper and Vanilla, by contrast, are bundled monolithic ("fat") JARs containing all game files up front.
+</details>
+
+<details>
+<summary><b>Do my friends need CraftDock to join my server?</b></summary>
+<br>
+<b>No!</b> CraftDock runs the standard Minecraft server. Your friends simply use their regular Minecraft client (Java Edition or Bedrock Edition if Geyser is enabled) and paste the server address or Playit tunnel link into their multiplayer list.
+</details>
+
+<details>
+<summary><b>Can friends with cracked / TLauncher accounts connect?</b></summary>
+<br>
+<b>Yes!</b> In your server's settings tab, simply switch <b>Online Mode</b> to <code>Disabled (Offline/Cracked)</code>. You can also install the 1-click <b>SkinsRestorer</b> plugin so cracked accounts have their custom skins displayed.
+</details>
+
+<details>
+<summary><b>How does Minimize to Tray work?</b></summary>
+<br>
+When <code>Minimize to Tray</code> is enabled in Settings, clicking the window close button <b>(X)</b> hides CraftDock into the Windows notification tray (next to the clock) or macOS menu bar. Your Minecraft servers will stay online uninterrupted until you explicitly choose <b>Quit CraftDock</b> from the tray menu.
+</details>
+
+---
+
+## 📜 License & Credits
+
+Distributed under the **MIT License**. Created with ❤️ for the Minecraft community.
+CraftDock is not affiliated with Mojang Studios or Microsoft.

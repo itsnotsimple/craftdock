@@ -1,6 +1,6 @@
 {
   "name": "minecraft-server-manager",
-  "version": "2.1.0",
+  "version": "2.2.8",
   "description": "Personal Minecraft Server Host & Manager for Windows and Mac",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -28,11 +28,9 @@
       "resources/**/*"
     ],
     "win": {
-      "target": [
-        "nsis",
-        "portable"
-      ],
-      "icon": "resources/icon.png"
+      "target": "nsis",
+      "icon": "resources/icon.png",
+      "artifactName": "CraftDock-${version}-Windows-Setup.${ext}"
     },
     "mac": {
       "target": [
@@ -42,17 +40,14 @@
             "arm64",
             "x64"
           ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "arm64",
-            "x64"
-          ]
         }
       ],
       "category": "public.app-category.games",
-      "icon": "resources/icon.png"
+      "icon": "resources/icon.png",
+      "artifactName": "CraftDock-${version}-macOS-${arch}.${ext}"
+    },
+    "dmg": {
+      "artifactName": "CraftDock-${version}-macOS-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,

@@ -9,6 +9,7 @@ export interface ServerProfile {
   version: string;
   buildNumber?: string;
   allocatedRamGb: number;
+  storageQuotaGb?: number;
   port: number;
   path: string;
   status: ServerStatus;
@@ -17,6 +18,49 @@ export interface ServerProfile {
   playerCount: number;
   maxPlayers: number;
   motd: string;
+  hardcore?: boolean;
+}
+
+export interface ModrinthProjectVersion {
+  id: string;
+  name: string;
+  versionNumber: string;
+  gameVersions: string[];
+  loaders: string[];
+  datePublished: string;
+  downloads: number;
+  file: {
+    url: string;
+    filename: string;
+    sha1: string;
+    size: number;
+    primary: boolean;
+  };
+}
+
+export interface ServerStorageStats {
+  serverId: string;
+  worldMb: number;
+  pluginsMb: number;
+  backupsMb: number;
+  logsMb: number;
+  otherMb: number;
+  totalMb: number;
+  quotaGb?: number;
+}
+
+export interface ModrinthProject {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  iconUrl: string | null;
+  downloads: number;
+  follows: number;
+  categories: string[];
+  versions: string[];
+  author: string;
+  projectType: string;
 }
 
 export interface SystemInfo {
@@ -66,8 +110,41 @@ export interface CreateServerOptions {
   version: string;
   buildNumber?: string;
   allocatedRamGb: number;
+  storageQuotaGb?: number;
   port: number;
   motd: string;
   hardcore?: boolean;
   acceptEula: boolean;
+}
+
+export interface AppSettings {
+  customJavaPath: string;
+  useAikarFlags: boolean;
+  serversFolder: string;
+  backupsFolder: string;
+  defaultPort: number;
+  autoRestartOnCrash: boolean;
+  autoStartLastServer: boolean;
+  autoUpdate: boolean;
+  minimizeToTray: boolean;
+  hasSeenTrayNotice?: boolean;
+  theme: 'dark' | 'light';
+  language: 'bg' | 'en';
+}
+
+export interface GlobalDiagnostics {
+  network: {
+    localIps: Array<{ interfaceName: string; ip: string }>;
+    publicIp: string;
+  };
+  disk: {
+    totalGb: number;
+    freeGb: number;
+    usedGb: number;
+    serversSizeMb: number;
+  };
+  java: {
+    version: number;
+    raw: string;
+  };
 }

@@ -10,6 +10,7 @@ export interface ServerProfile {
   version: string;
   buildNumber?: string;
   allocatedRamGb: number;
+  storageQuotaGb?: number;
   port: number;
   path: string;
   status: 'stopped' | 'starting' | 'running' | 'stopping' | 'error';
@@ -18,9 +19,21 @@ export interface ServerProfile {
   playerCount: number;
   maxPlayers: number;
   motd: string;
+  hardcore?: boolean;
 }
 
-function getDataDirectory(): string {
+export interface ServerStorageStats {
+  serverId: string;
+  worldMb: number;
+  pluginsMb: number;
+  backupsMb: number;
+  logsMb: number;
+  otherMb: number;
+  totalMb: number;
+  quotaGb: number;
+}
+
+export function getDataDirectory(): string {
   try {
     if (app && app.getPath) {
       return path.join(app.getPath('userData'), 'minecraft_servers_data');
@@ -112,4 +125,93 @@ export function deleteServer(id: string, deleteFiles = false): boolean {
   const filtered = servers.filter(s => s.id !== id);
   saveServers(filtered);
   return true;
+}
+
+function getDirectorySizeBytes(dirPath: string): number {
+  let bytes = 0;
+  try {
+    if (!fs.existsSync(dirPath)) return 0;
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dirPath, entry.name);
+      try {
+        if (entry.isDirectory()) {
+          bytes += getDirectorySizeBytes(fullPath);
+        } else if (entry.isFile()) {
+          const st = fs.statSync(fullPath);
+          bytes += st.size;
+        }
+      } catch {
+        // ignore errors on locked files
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return bytes;
+}
+
+export function calculateServerStorage(serverPath: string, serverId: string, quotaGb = 0): ServerStorageStats {
+  if (!fs.existsSync(serverPath)) {
+    return {
+      serverId,
+      worldMb: 0,
+      pluginsMb: 0,
+      backupsMb: 0,
+      logsMb: 0,
+      otherMb: 0,
+      totalMb: 0,
+      quotaGb,
+    };
+  }
+
+  // World folders (world, world_nether, world_the_end)
+  let worldBytes = 0;
+  const worldFolders = ['world', 'world_nether', 'world_the_end'];
+  for (const wf of worldFolders) {
+    const p = path.join(serverPath, wf);
+    if (fs.existsSync(p)) {
+      worldBytes += getDirectorySizeBytes(p);
+    }
+  }
+
+  // Plugins & Mods
+  let pluginsBytes = 0;
+  const pluginsPath = path.join(serverPath, 'plugins');
+  const modsPath = path.join(serverPath, 'mods');
+  if (fs.existsSync(pluginsPath)) pluginsBytes += getDirectorySizeBytes(pluginsPath);
+  if (fs.existsSync(modsPath)) pluginsBytes += getDirectorySizeBytes(modsPath);
+
+  // Backups
+  let backupsBytes = 0;
+  const backupsPath = path.join(serverPath, 'backups');
+  if (fs.existsSync(backupsPath)) backupsBytes += getDirectorySizeBytes(backupsPath);
+
+  // Logs
+  let logsBytes = 0;
+  const logsPath = path.join(serverPath, 'logs');
+  if (fs.existsSync(logsPath)) logsBytes += getDirectorySizeBytes(logsPath);
+
+  // Total folder size
+  const totalBytes = getDirectorySizeBytes(serverPath);
+
+  const toMb = (b: number) => Math.round((b / (1024 * 1024)) * 10) / 10;
+  const worldMb = toMb(worldBytes);
+  const pluginsMb = toMb(pluginsBytes);
+  const backupsMb = toMb(backupsBytes);
+  const logsMb = toMb(logsBytes);
+  const totalMb = toMb(totalBytes);
+  const knownMb = worldMb + pluginsMb + backupsMb + logsMb;
+  const otherMb = Math.max(0, Math.round((totalMb - knownMb) * 10) / 10);
+
+  return {
+    serverId,
+    worldMb,
+    pluginsMb,
+    backupsMb,
+    logsMb,
+    otherMb,
+    totalMb,
+    quotaGb,
+  };
 }

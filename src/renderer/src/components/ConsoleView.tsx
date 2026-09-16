@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Trash2, Terminal as TerminalIcon, Sparkles } from 'lucide-react';
 import { LogEntry } from '../types';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface ConsoleViewProps {
   logs: LogEntry[];
@@ -17,6 +18,7 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
   serverStatus,
 }) => {
   const { t } = useLanguage();
+  const { theme } = useTheme();
   const [command, setCommand] = useState('');
   const logsContainerRef = useRef<HTMLDivElement>(null);
   const isRunning = serverStatus === 'running';
@@ -63,9 +65,17 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-950/40 backdrop-blur-2xl rounded-2xl border border-white/[0.08] overflow-hidden shadow-2xl relative">
+    <div className={`flex flex-col h-full rounded-2xl overflow-hidden shadow-xl relative ${
+      theme === 'light'
+        ? 'bg-slate-950 border border-slate-300'
+        : 'bg-slate-950/40 backdrop-blur-2xl border border-white/[0.08]'
+    }`}>
       {/* Console Header / Quick Commands */}
-      <div className="px-4 py-3 bg-white/[0.02] backdrop-blur-md border-b border-white/[0.06] flex items-center justify-between shrink-0">
+      <div className={`px-4 py-3 flex items-center justify-between shrink-0 ${
+        theme === 'light'
+          ? 'bg-slate-900 border-b border-slate-800'
+          : 'bg-white/[0.02] backdrop-blur-md border-b border-white/[0.06]'
+      }`}>
         <div className="flex items-center gap-2.5">
           <div className="p-1 rounded-lg bg-emerald-500/10 border border-emerald-400/20 text-emerald-400">
             <TerminalIcon className="w-3.5 h-3.5" />
@@ -119,7 +129,7 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
       {/* Logs Output Screen */}
       <div
         ref={logsContainerRef}
-        className="flex-1 p-4 overflow-y-auto font-mono-code text-xs space-y-1 select-text bg-black/30 backdrop-blur-sm"
+        className="flex-1 p-4 overflow-y-auto font-mono-code text-xs space-y-1 select-text bg-black/40 backdrop-blur-sm"
       >
         {logs.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-slate-500 text-xs gap-3">
@@ -139,7 +149,11 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
       </div>
 
       {/* Console Input Bar */}
-      <form onSubmit={handleSubmit} className="p-3 bg-slate-950/60 border-t border-white/[0.06] flex items-center gap-3">
+      <form onSubmit={handleSubmit} className={`p-3 border-t flex items-center gap-3 ${
+        theme === 'light'
+          ? 'bg-slate-900 border-slate-800'
+          : 'bg-slate-950/60 border-white/[0.06]'
+      }`}>
         <span className="text-emerald-400 font-mono pl-1 text-sm font-black select-none">❯</span>
         <input
           type="text"

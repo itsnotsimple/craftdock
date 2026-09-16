@@ -36,11 +36,34 @@ export interface IElectronApi {
   addToWhitelist: (id: string, name: string) => Promise<boolean>;
   removeFromWhitelist: (id: string, name: string) => Promise<boolean>;
 
+  // Storage & Quota
+  getServerStorage: (id: string) => Promise<any>;
+
+  // Modrinth Integration
+  searchModrinthModpacks: (query?: string, limit?: number) => Promise<any[]>;
+  searchModrinthResourcePacks: (query?: string, limit?: number) => Promise<any[]>;
+  searchModrinthPlugins: (query?: string, limit?: number, software?: string) => Promise<any[]>;
+  getModrinthPackFile: (projectIdOrSlug: string) => Promise<any>;
+  getModrinthProjectVersions: (projectIdOrSlug: string, loaders?: string[], gameVersion?: string) => Promise<any[]>;
+  installRemoteResourcePack: (id: string, downloadUrl: string, fileName: string) => Promise<boolean>;
+  installRemotePlugin: (id: string, downloadUrl: string, fileName: string) => Promise<boolean>;
+
   // Embedded Playit Tunnel
   startTunnel: (port?: number) => Promise<any>;
   stopTunnel: () => Promise<boolean>;
   getTunnelStatus: () => Promise<any>;
   openExternal: (url: string) => Promise<void>;
+  setTitleBarTheme: (theme: 'dark' | 'light') => Promise<boolean>;
+
+  // Global App Settings & Diagnostics
+  getAppSettings: () => Promise<any>;
+  saveAppSettings: (updates: any) => Promise<any>;
+  getGlobalDiagnostics: () => Promise<any>;
+  openServersFolder: () => Promise<void>;
+  openAppLogs: () => Promise<void>;
+  clearAppCache: () => Promise<any>;
+  uninstallApp: () => Promise<boolean>;
+  checkForUpdates: () => Promise<boolean>;
 
   // Subscriptions
   onServerLog: (callback: (data: any) => void) => () => void;
@@ -51,6 +74,7 @@ export interface IElectronApi {
   onSystemInfoUpdate: (callback: (data: any) => void) => () => void;
   onTunnelStatusChanged: (callback: (data: any) => void) => () => void;
   onServerProfileUpdated: (callback: (data: any) => void) => () => void;
+  onUpdateAvailable: (callback: (data: any) => void) => () => void;
 }
 
 const api: IElectronApi = {
@@ -87,10 +111,33 @@ const api: IElectronApi = {
   addToWhitelist: (id: string, name: string) => ipcRenderer.invoke('add-to-whitelist', id, name),
   removeFromWhitelist: (id: string, name: string) => ipcRenderer.invoke('remove-from-whitelist', id, name),
 
+  // Storage & Quota
+  getServerStorage: (id: string) => ipcRenderer.invoke('get-server-storage', id),
+
+  // Modrinth Integration
+  searchModrinthModpacks: (query?: string, limit?: number) => ipcRenderer.invoke('search-modrinth-modpacks', query, limit),
+  searchModrinthResourcePacks: (query?: string, limit?: number) => ipcRenderer.invoke('search-modrinth-resourcepacks', query, limit),
+  searchModrinthPlugins: (query?: string, limit?: number, software?: string) => ipcRenderer.invoke('search-modrinth-plugins', query, limit, software),
+  getModrinthPackFile: (projectIdOrSlug: string) => ipcRenderer.invoke('get-modrinth-pack-file', projectIdOrSlug),
+  getModrinthProjectVersions: (projectIdOrSlug: string, loaders?: string[], gameVersion?: string) => ipcRenderer.invoke('get-modrinth-versions', projectIdOrSlug, loaders, gameVersion),
+  installRemoteResourcePack: (id: string, downloadUrl: string, fileName: string) => ipcRenderer.invoke('install-remote-resourcepack', id, downloadUrl, fileName),
+  installRemotePlugin: (id: string, downloadUrl: string, fileName: string) => ipcRenderer.invoke('install-remote-plugin', id, downloadUrl, fileName),
+
   startTunnel: (port?: number) => ipcRenderer.invoke('start-tunnel', port),
   stopTunnel: () => ipcRenderer.invoke('stop-tunnel'),
   getTunnelStatus: () => ipcRenderer.invoke('get-tunnel-status'),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+  setTitleBarTheme: (theme: 'dark' | 'light') => ipcRenderer.invoke('set-titlebar-theme', theme),
+
+  // Global App Settings & Diagnostics
+  getAppSettings: () => ipcRenderer.invoke('get-app-settings'),
+  saveAppSettings: (updates: any) => ipcRenderer.invoke('save-app-settings', updates),
+  getGlobalDiagnostics: () => ipcRenderer.invoke('get-global-diagnostics'),
+  openServersFolder: () => ipcRenderer.invoke('open-servers-folder'),
+  openAppLogs: () => ipcRenderer.invoke('open-app-logs'),
+  clearAppCache: () => ipcRenderer.invoke('clear-app-cache'),
+  uninstallApp: () => ipcRenderer.invoke('uninstall-app'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
 
   onServerLog: (callback) => {
     const handler = (_event: any, data: any) => callback(data);
@@ -131,6 +178,11 @@ const api: IElectronApi = {
     const handler = (_event: any, data: any) => callback(data);
     ipcRenderer.on('server-profile-updated', handler);
     return () => ipcRenderer.removeListener('server-profile-updated', handler);
+  },
+  onUpdateAvailable: (callback) => {
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('update-available', handler);
+    return () => ipcRenderer.removeListener('update-available', handler);
   },
 };
 

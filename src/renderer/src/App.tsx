@@ -4,16 +4,19 @@ import { Sidebar } from './components/Sidebar';
 import { LibraryView } from './views/LibraryView';
 import { WizardView } from './views/WizardView';
 import { DashboardView } from './views/DashboardView';
+import { SettingsView } from './views/SettingsView';
 import { NetworkModal } from './components/NetworkModal';
 import { ServerConflictModal } from './components/ServerConflictModal';
 import { ServerProfile, SystemInfo, LogEntry, ServerSoftware, ServerStats } from './types';
 import { useDialog } from './context/DialogContext';
 import { useLanguage } from './context/LanguageContext';
+import { useTheme } from './context/ThemeContext';
 
 export const App: React.FC = () => {
   const { t } = useLanguage();
+  const { theme } = useTheme();
   const { showConfirm, showAlert } = useDialog();
-  const [currentTab, setCurrentTab] = useState<'library' | 'wizard' | 'dashboard'>('library');
+  const [currentTab, setCurrentTab] = useState<'library' | 'wizard' | 'dashboard' | 'settings'>('library');
   const [servers, setServers] = useState<ServerProfile[]>([]);
   const [activeServerId, setActiveServerId] = useState<string | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
@@ -39,6 +42,14 @@ export const App: React.FC = () => {
     downloadedMb: number;
     totalMb: number;
     message: string;
+  } | null>(null);
+
+  // Update banner state
+  const [updateInfo, setUpdateInfo] = useState<{
+    currentVersion: string;
+    latestVersion: string;
+    releaseName: string;
+    releaseUrl: string;
   } | null>(null);
 
   // Helper to re-fetch servers and sync slots/status/players in real time
@@ -167,6 +178,10 @@ export const App: React.FC = () => {
       refreshServers();
     });
 
+    const unsubUpdateAvailable = api.onUpdateAvailable?.((data: any) => {
+      setUpdateInfo(data);
+    });
+
     return () => {
       if (unsubLog) unsubLog();
       if (unsubStats) unsubStats();
@@ -175,6 +190,7 @@ export const App: React.FC = () => {
       if (unsubDownload) unsubDownload();
       if (unsubSystemInfo) unsubSystemInfo();
       if (unsubServerProfile) unsubServerProfile();
+      if (unsubUpdateAvailable) unsubUpdateAvailable();
     };
   }, [refreshServers]);
 
@@ -302,9 +318,13 @@ export const App: React.FC = () => {
     software: ServerSoftware;
     version: string;
     allocatedRamGb: number;
+    storageQuotaGb?: number;
     port: number;
     motd: string;
     hardcore?: boolean;
+    maxPlayers?: number;
+    difficulty?: 'peaceful' | 'easy' | 'normal' | 'hard';
+    onlineMode?: boolean;
   }) => {
     const api = (window as any).api;
     if (!api) return;
@@ -342,14 +362,60 @@ export const App: React.FC = () => {
   const activeServer = servers.find((s) => s.id === activeServerId) || servers[0];
 
   return (
-    <div className="flex flex-col h-full w-full fixed inset-0 bg-[#060913] text-slate-100 overflow-hidden font-sans select-none selection:bg-sky-500/30 selection:text-sky-200">
+    <div
+      className={`flex flex-col h-full w-full fixed inset-0 transition-colors duration-300 ${
+        theme === 'light'
+          ? 'bg-[#f4f6fb] text-slate-900 selection:bg-sky-500/20 selection:text-sky-800'
+          : 'bg-[#060913] text-slate-100 selection:bg-sky-500/30 selection:text-sky-200'
+      } overflow-hidden font-sans select-none`}
+    >
       {/* Ambient Background Glows for authentic Glassmorphic Refraction */}
-      <div className="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] rounded-full bg-sky-600/10 blur-[130px] pointer-events-none z-0" />
-      <div className="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] rounded-full bg-blue-700/10 blur-[150px] pointer-events-none z-0" />
-      <div className="absolute top-[35%] right-[25%] w-[400px] h-[400px] rounded-full bg-cyan-500/5 blur-[120px] pointer-events-none z-0" />
+      {theme === 'light' ? (
+        <>
+          <div className="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] rounded-full bg-sky-200/40 blur-[140px] pointer-events-none z-0" />
+          <div className="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] rounded-full bg-blue-200/30 blur-[160px] pointer-events-none z-0" />
+          <div className="absolute top-[35%] right-[25%] w-[400px] h-[400px] rounded-full bg-indigo-100/40 blur-[130px] pointer-events-none z-0" />
+        </>
+      ) : (
+        <>
+          <div className="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] rounded-full bg-sky-600/10 blur-[130px] pointer-events-none z-0" />
+          <div className="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] rounded-full bg-blue-700/10 blur-[150px] pointer-events-none z-0" />
+          <div className="absolute top-[35%] right-[25%] w-[400px] h-[400px] rounded-full bg-cyan-500/5 blur-[120px] pointer-events-none z-0" />
+        </>
+      )}
 
       {/* Full-width Draggable TitleBar Strip */}
       <TitleBar activeServer={activeServer} />
+
+      {/* Update Available Banner */}
+      {updateInfo && (
+        <div className="relative z-20 shrink-0 bg-emerald-600/90 backdrop-blur-sm text-white px-4 py-2 flex items-center justify-between gap-3 text-xs font-semibold border-b border-emerald-500/50">
+          <div className="flex items-center gap-2">
+            <span className="text-emerald-100 font-bold">
+              🎉 {t('updateBanner.title', { version: updateInfo.latestVersion })}
+            </span>
+            <span className="text-emerald-100/80 font-normal hidden sm:inline">
+              {t('updateBanner.desc', { current: updateInfo.currentVersion })}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => (window as any).api?.openExternal?.(updateInfo.releaseUrl)}
+              className="px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white font-bold transition-all cursor-pointer border border-white/30 btn-bounce text-xs"
+            >
+              {t('updateBanner.download')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setUpdateInfo(null)}
+              className="px-2 py-1 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all cursor-pointer text-xs"
+            >
+              {t('updateBanner.dismiss')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* App Workspace: Sidebar + Content */}
       <div className="flex flex-1 overflow-hidden relative z-10">
@@ -417,6 +483,8 @@ export const App: React.FC = () => {
               onBackToLibrary={() => setCurrentTab('library')}
             />
           )}
+
+          {currentTab === 'settings' && <SettingsView />}
         </div>
       </div>
 

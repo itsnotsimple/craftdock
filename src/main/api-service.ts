@@ -171,15 +171,47 @@ export async function getVanillaDownloadUrl(version: string): Promise<string> {
 }
 
 export async function getFabricDownloadUrl(version: string): Promise<string> {
-  const loaderRes = await fetch('https://meta.fabricmc.net/v2/versions/loader');
-  const loaderData = (await loaderRes.json()) as Array<{ loader: { version: string } }>;
-  const latestLoader = loaderData[0]?.loader?.version || '0.16.10';
+  // Query version-specific loader from Fabric Meta
+  let loaderVersion = '0.16.10';
+  try {
+    const loaderRes = await fetch(`https://meta.fabricmc.net/v2/versions/loader/${version}`);
+    if (!loaderRes.ok) {
+      if (loaderRes.status === 404) {
+        throw new Error(`Fabric does not support Minecraft ${version}. Please choose a different version or use Vanilla/Paper instead.`);
+      }
+      throw new Error(`Fabric Meta API returned ${loaderRes.status} for version ${version}`);
+    }
+    const loaderData = (await loaderRes.json()) as Array<{ loader?: { version: string } }>;
+    if (!Array.isArray(loaderData) || loaderData.length === 0) {
+      throw new Error(`Fabric does not have a loader available for Minecraft ${version}. Try 1.21.4, 1.21.1, or 1.20.4.`);
+    }
+    if (loaderData[0].loader?.version) {
+      loaderVersion = loaderData[0].loader.version;
+    }
+  } catch (e: any) {
+    if (e.message && e.message.includes('Fabric')) throw e; // re-throw our own errors
+    console.warn(`Could not fetch version-specific loader for Fabric ${version}, using fallback:`, e);
+  }
 
-  const installerRes = await fetch('https://meta.fabricmc.net/v2/versions/installer');
-  const installerData = (await installerRes.json()) as Array<{ version: string }>;
-  const latestInstaller = installerData[0]?.version || '1.0.1';
+  let installerVersion = '1.1.2';
+  try {
+    const installerRes = await fetch('https://meta.fabricmc.net/v2/versions/installer');
+    if (installerRes.ok) {
+      const installerData = (await installerRes.json()) as Array<{ version: string; stable?: boolean }>;
+      const stable = installerData.find((i) => i.stable);
+      if (stable?.version) {
+        installerVersion = stable.version;
+      } else if (installerData[0]?.version) {
+        installerVersion = installerData[0].version;
+      }
+    }
+  } catch (e) {
+    console.warn('Could not fetch Fabric installer version, using fallback:', e);
+  }
 
-  return `https://meta.fabricmc.net/v2/versions/loader/${version}/${latestLoader}/${latestInstaller}/server/jar`;
+  // Note: Fabric server JAR is a small launcher (~180KB) that downloads the actual
+  // Minecraft + Fabric files on first server start. This is expected behavior.
+  return `https://meta.fabricmc.net/v2/versions/loader/${version}/${loaderVersion}/${installerVersion}/server/jar`;
 }
 
 export async function downloadFileWithProgress(
@@ -190,56 +222,327 @@ export async function downloadFileWithProgress(
   return new Promise((resolve, reject) => {
     fs.mkdirSync(path.dirname(destPath), { recursive: true });
 
+    const maxRedirects = 10;
+    let redirectCount = 0;
+
     const handleRequest = (currentUrl: string) => {
-      const client = currentUrl.startsWith('https') ? https : http;
+      let parsedUrl: URL;
+      try {
+        parsedUrl = new URL(currentUrl);
+      } catch (err) {
+        return reject(new Error(`Invalid URL: ${currentUrl}`));
+      }
 
-      client
-        .get(currentUrl, (response) => {
-          if (response.statusCode && [301, 302, 303, 307, 308].includes(response.statusCode)) {
-            const redirectUrl = response.headers.location;
-            if (redirectUrl) {
-              handleRequest(redirectUrl);
-              return;
+      const client = parsedUrl.protocol === 'https:' ? https : http;
+      const requestOptions = {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) CraftDock/2.2.8 (Minecraft Server Manager)',
+          Accept: '*/*',
+        },
+      };
+
+      const req = client.get(currentUrl, requestOptions, (response) => {
+        if (response.statusCode && [301, 302, 303, 307, 308].includes(response.statusCode)) {
+          redirectCount++;
+          if (redirectCount > maxRedirects) {
+            return reject(new Error('Too many redirects while downloading server files'));
+          }
+          const redirectLocation = response.headers.location;
+          if (redirectLocation) {
+            const nextUrl = new URL(redirectLocation, currentUrl).href;
+            response.resume();
+            return handleRequest(nextUrl);
+          }
+        }
+
+        if (response.statusCode && response.statusCode >= 400) {
+          response.resume();
+          return reject(new Error(`Failed to download server files: HTTP ${response.statusCode}`));
+        }
+
+        const totalBytes = parseInt(response.headers['content-length'] || '0', 10);
+        let receivedBytes = 0;
+
+        const fileStream = fs.createWriteStream(destPath);
+
+        response.on('data', (chunk: Buffer) => {
+          receivedBytes += chunk.length;
+          const downloadedMb = Math.round((receivedBytes / (1024 * 1024)) * 10) / 10;
+          const totalMb = totalBytes > 0 ? Math.round((totalBytes / (1024 * 1024)) * 10) / 10 : downloadedMb;
+          let percent = 0;
+          if (totalBytes > 0) {
+            percent = Math.min(99, Math.round((receivedBytes / totalBytes) * 100));
+          } else {
+            percent = Math.min(95, Math.round(Math.log10(receivedBytes + 1) * 15));
+          }
+          onProgress(percent, downloadedMb, totalMb);
+        });
+
+        response.pipe(fileStream);
+
+        fileStream.on('finish', () => {
+          fileStream.close(() => {
+            const finalSize = fs.existsSync(destPath) ? fs.statSync(destPath).size : 0;
+            const finalMb = Math.round((finalSize / (1024 * 1024)) * 10) / 10;
+            // Minimum sanity check — a valid server JAR must be at least 10 KB
+            if (finalSize < 10 * 1024) {
+              fs.unlink(destPath, () => {});
+              return reject(new Error(`Downloaded file is too small (${finalSize} bytes) — the server JAR may be invalid or the download was incomplete.`));
             }
-          }
-
-          if (response.statusCode && response.statusCode >= 400) {
-            reject(new Error(`Failed to download: HTTP ${response.statusCode}`));
-            return;
-          }
-
-          const totalBytes = parseInt(response.headers['content-length'] || '0', 10);
-          let receivedBytes = 0;
-
-          const fileStream = fs.createWriteStream(destPath);
-
-          response.on('data', (chunk) => {
-            receivedBytes += chunk.length;
-            const downloadedMb = Math.round((receivedBytes / (1024 * 1024)) * 10) / 10;
-            const totalMb = Math.round((totalBytes / (1024 * 1024)) * 10) / 10;
-            const percent = totalBytes > 0 ? Math.round((receivedBytes / totalBytes) * 100) : 0;
-            onProgress(percent, downloadedMb, totalMb);
+            onProgress(100, finalMb, finalMb);
+            resolve();
           });
+        });
 
-          response.pipe(fileStream);
-
-          fileStream.on('finish', () => {
-            fileStream.close(() => {
-              resolve();
-            });
-          });
-
-          fileStream.on('error', (err) => {
-            fs.unlink(destPath, () => {});
-            reject(err);
-          });
-        })
-        .on('error', (err) => {
+        fileStream.on('error', (err) => {
           fs.unlink(destPath, () => {});
           reject(err);
         });
+      });
+
+      req.on('error', (err) => {
+        fs.unlink(destPath, () => {});
+        reject(err);
+      });
+
+      req.setTimeout(60000, () => {
+        req.destroy();
+        reject(new Error('Download timed out after 60 seconds'));
+      });
     };
 
     handleRequest(url);
   });
+}
+
+export interface ModrinthSearchResult {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  iconUrl: string | null;
+  downloads: number;
+  follows: number;
+  categories: string[];
+  versions: string[];
+  author: string;
+  projectType: string;
+}
+
+export async function searchModrinthModpacks(query = '', limit = 24): Promise<ModrinthSearchResult[]> {
+  try {
+    const encodedFacets = encodeURIComponent(JSON.stringify([['project_type:modpack']]));
+    const url = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(query)}&facets=${encodedFacets}&limit=${limit}&index=downloads`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'CraftDock/2.2.8 (contact: github.com/itsnotsimple/craftdock)',
+      },
+    });
+    if (!res.ok) throw new Error(`Modrinth modpacks error: ${res.status}`);
+    const data = (await res.json()) as { hits: any[] };
+    return (data.hits || []).map((h) => ({
+      id: h.project_id,
+      slug: h.slug,
+      title: h.title,
+      description: h.description,
+      iconUrl: h.icon_url || null,
+      downloads: h.downloads,
+      follows: h.follows,
+      categories: h.display_categories || h.categories || [],
+      versions: h.versions || [],
+      author: h.author,
+      projectType: h.project_type,
+    }));
+  } catch (err) {
+    console.error('Failed to search Modrinth modpacks:', err);
+    return [];
+  }
+}
+
+export async function searchModrinthResourcePacks(query = '', limit = 24): Promise<ModrinthSearchResult[]> {
+  try {
+    const encodedFacets = encodeURIComponent(JSON.stringify([['project_type:resourcepack']]));
+    const url = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(query)}&facets=${encodedFacets}&limit=${limit}&index=downloads`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'CraftDock/2.2.8 (contact: github.com/itsnotsimple/craftdock)',
+      },
+    });
+    if (!res.ok) throw new Error(`Modrinth resourcepacks error: ${res.status}`);
+    const data = (await res.json()) as { hits: any[] };
+    return (data.hits || []).map((h) => ({
+      id: h.project_id,
+      slug: h.slug,
+      title: h.title,
+      description: h.description,
+      iconUrl: h.icon_url || null,
+      downloads: h.downloads,
+      follows: h.follows,
+      categories: h.display_categories || h.categories || [],
+      versions: h.versions || [],
+      author: h.author,
+      projectType: h.project_type,
+    }));
+  } catch (err) {
+    console.error('Failed to search Modrinth resource packs:', err);
+    return [];
+  }
+}
+
+export interface ModrinthProjectVersion {
+  id: string;
+  name: string;
+  versionNumber: string;
+  gameVersions: string[];
+  loaders: string[];
+  datePublished: string;
+  downloads: number;
+  file: {
+    url: string;
+    filename: string;
+    sha1: string;
+    size: number;
+    primary: boolean;
+  };
+}
+
+export async function searchModrinthPlugins(
+  query = '',
+  limit = 24,
+  software: 'paper' | 'purpur' | 'fabric' | 'vanilla' = 'paper'
+): Promise<ModrinthSearchResult[]> {
+  try {
+    let loaderCategories: string[] = ['categories:paper', 'categories:spigot', 'categories:purpur', 'categories:bukkit'];
+    if (software === 'fabric') {
+      loaderCategories = ['categories:fabric'];
+    }
+    const facets = [loaderCategories];
+    const encodedFacets = encodeURIComponent(JSON.stringify(facets));
+    const url = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(query)}&facets=${encodedFacets}&limit=${limit}&index=downloads`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'CraftDock/2.2.8 (contact: github.com/itsnotsimple/craftdock)',
+      },
+    });
+    if (!res.ok) throw new Error(`Modrinth plugins error: ${res.status}`);
+    const data = (await res.json()) as { hits: any[] };
+    return (data.hits || []).map((h) => ({
+      id: h.project_id,
+      slug: h.slug,
+      title: h.title,
+      description: h.description,
+      iconUrl: h.icon_url || null,
+      downloads: h.downloads,
+      follows: h.follows,
+      categories: h.display_categories || h.categories || [],
+      versions: h.versions || [],
+      author: h.author,
+      projectType: h.project_type,
+    }));
+  } catch (err) {
+    console.error('Failed to search Modrinth plugins:', err);
+    return [];
+  }
+}
+
+function parseModrinthVersions(rawVersions: any[]): ModrinthProjectVersion[] {
+  if (!Array.isArray(rawVersions)) return [];
+  return rawVersions.map((v) => {
+    const primaryFile = (v.files || []).find((f: any) => f.primary) || (v.files || [])[0] || {};
+    return {
+      id: v.id,
+      name: v.name || v.version_number,
+      versionNumber: v.version_number,
+      gameVersions: v.game_versions || [],
+      loaders: v.loaders || [],
+      datePublished: v.date_published,
+      downloads: v.downloads || 0,
+      file: {
+        url: primaryFile.url || '',
+        filename: primaryFile.filename || '',
+        sha1: primaryFile.hashes?.sha1 || '',
+        size: primaryFile.size || 0,
+        primary: !!primaryFile.primary,
+      },
+    };
+  });
+}
+
+export async function getModrinthProjectVersions(
+  projectIdOrSlug: string,
+  loaders?: string[],
+  gameVersion?: string
+): Promise<ModrinthProjectVersion[]> {
+  try {
+    let url = `https://api.modrinth.com/v2/project/${projectIdOrSlug}/version`;
+    const params = new URLSearchParams();
+    if (loaders && loaders.length > 0) {
+      params.append('loaders', JSON.stringify(loaders));
+    }
+    if (gameVersion) {
+      params.append('game_versions', JSON.stringify([gameVersion]));
+    }
+    const queryString = params.toString();
+    if (queryString) {
+      url += `?${queryString}`;
+    }
+
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'CraftDock/2.2.8 (contact: github.com/itsnotsimple/craftdock)',
+      },
+    });
+    if (!res.ok) {
+      const fallbackRes = await fetch(`https://api.modrinth.com/v2/project/${projectIdOrSlug}/version`, {
+        headers: { 'User-Agent': 'CraftDock/2.2.8 (contact: github.com/itsnotsimple/craftdock)' },
+      });
+      if (!fallbackRes.ok) return [];
+      return parseModrinthVersions(await fallbackRes.json());
+    }
+    const raw = await res.json();
+    const parsed = parseModrinthVersions(raw);
+    if (parsed.length === 0) {
+      const allRes = await fetch(`https://api.modrinth.com/v2/project/${projectIdOrSlug}/version`, {
+        headers: { 'User-Agent': 'CraftDock/2.2.8 (contact: github.com/itsnotsimple/craftdock)' },
+      });
+      if (allRes.ok) {
+        return parseModrinthVersions(await allRes.json());
+      }
+    }
+    return parsed;
+  } catch (err) {
+    console.error('Failed to get Modrinth versions:', err);
+    return [];
+  }
+}
+
+export async function getModrinthVersionFile(projectIdOrSlug: string): Promise<{
+  url: string;
+  filename: string;
+  sha1: string;
+  size: number;
+} | null> {
+  try {
+    const res = await fetch(`https://api.modrinth.com/v2/project/${projectIdOrSlug}/version`, {
+      headers: {
+        'User-Agent': 'CraftDock/2.2.8 (contact: github.com/itsnotsimple/craftdock)',
+      },
+    });
+    if (!res.ok) return null;
+    const versions = (await res.json()) as Array<{
+      files: Array<{ url: string; filename: string; primary: boolean; hashes: { sha1: string }; size: number }>;
+    }>;
+    if (!versions || versions.length === 0) return null;
+    const primaryFile = versions[0].files.find((f) => f.primary) || versions[0].files[0];
+    if (!primaryFile) return null;
+    return {
+      url: primaryFile.url,
+      filename: primaryFile.filename,
+      sha1: primaryFile.hashes?.sha1 || '',
+      size: primaryFile.size || 0,
+    };
+  } catch (err) {
+    console.error('Failed to get Modrinth version file:', err);
+    return null;
+  }
 }

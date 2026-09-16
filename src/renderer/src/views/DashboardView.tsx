@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { ServerProfile, LogEntry, SystemInfo, ServerStats } from '../types';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import { ConsoleView } from '../components/ConsoleView';
 import { PluginManager } from '../components/PluginManager';
 import { ServerSettingsTab } from '../components/ServerSettingsTab';
@@ -63,6 +64,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onBackToLibrary,
 }) => {
   const { t } = useLanguage();
+  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState<'console' | 'plugins' | 'settings' | 'resources' | 'players' | 'backups'>('console');
   const [whitelist, setWhitelist] = useState<Array<{ name: string; uuid?: string }>>([]);
   const [isWhitelistEnabled, setIsWhitelistEnabled] = useState<boolean>(false);
@@ -151,13 +153,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-950/20 overflow-hidden">
+    <div className={`flex-1 flex flex-col h-full ${theme === 'light' ? 'bg-transparent' : 'bg-slate-950/20'} overflow-hidden`}>
       {/* Top Server Bar */}
-      <header className="px-6 py-4 border-b border-white/[0.08] flex items-center justify-between shrink-0 glass-panel">
+      <header className={`px-6 py-4 border-b flex items-center justify-between shrink-0 transition-colors duration-200 ${
+        theme === 'light'
+          ? 'bg-white/95 border-slate-200 shadow-xs'
+          : 'border-white/[0.08] glass-panel'
+      }`}>
         <div className="flex items-center gap-4">
           <button
             onClick={onBackToLibrary}
-            className="p-2.5 rounded-xl glass-card hover:bg-white/[0.08] text-slate-300 hover:text-white transition-all cursor-pointer shadow-sm"
+            className={`p-2.5 rounded-xl transition-all cursor-pointer shadow-xs ${
+              theme === 'light'
+                ? 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200'
+                : 'glass-card hover:bg-white/[0.08] text-slate-300 hover:text-white'
+            }`}
             title={t('dashboard.backTooltip')}
           >
             <ArrowLeft className="w-4 h-4" />
@@ -183,41 +193,59 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 border border-rose-300"></span>
                   </span>
                 ) : (
-                  <span className="w-3 h-3 rounded-full bg-slate-700" />
+                  <span className={`w-3 h-3 rounded-full ${theme === 'light' ? 'bg-slate-400' : 'bg-slate-700'}`} />
                 )}
               </div>
 
-              <h2 className="text-xl font-bold text-slate-100 tracking-tight">{server.name}</h2>
-              <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-400/20 uppercase font-mono tracking-wider">
+              <h2 className={`text-xl font-bold tracking-tight ${theme === 'light' ? 'text-slate-900' : 'text-slate-100'}`}>
+                {server.name}
+              </h2>
+              <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full uppercase font-mono tracking-wider border ${
+                theme === 'light'
+                  ? 'bg-sky-50 text-sky-700 border-sky-200'
+                  : 'bg-sky-500/10 text-sky-300 border-sky-400/20'
+              }`}>
                 v{server.version} • {server.software}
               </span>
 
               {isStarting && (
-                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-400/30 flex items-center gap-1.5 animate-pulse font-mono">
+                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 animate-pulse font-mono ${
+                  theme === 'light'
+                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                    : 'bg-amber-500/15 text-amber-300 border-amber-400/30'
+                }`}>
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                   {t('common.starting')}
                 </span>
               )}
               {isRunning && (
-                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-400/30 flex items-center gap-1.5 font-mono">
+                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 font-mono ${
+                  theme === 'light'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30'
+                }`}>
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                   {t('common.online')}
                 </span>
               )}
               {isStopping && (
-                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-400/30 flex items-center gap-1.5 font-mono">
+                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 font-mono ${
+                  theme === 'light'
+                    ? 'bg-rose-50 text-rose-800 border-rose-200'
+                    : 'bg-rose-500/15 text-rose-300 border-rose-400/30'
+                }`}>
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
                   {t('common.stopping')}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3 text-xs text-slate-400 font-mono mt-1">
-              <span className="flex items-center gap-1 text-slate-300">
-                <span className="text-slate-500">{t('dashboard.port')}:</span> :{server.port}
+            <div className="flex items-center gap-3 text-xs font-mono mt-1">
+              <span className={`flex items-center gap-1 ${theme === 'light' ? 'text-slate-700' : 'text-slate-300'}`}>
+                <span className={theme === 'light' ? 'text-slate-400' : 'text-slate-500'}>{t('dashboard.port')}:</span> :{server.port}
               </span>
-              <span className="text-slate-600">•</span>
-              <span className="flex items-center gap-1 text-slate-300">
-                <span className="text-slate-500">{t('dashboard.allocatedRam')}:</span> {server.allocatedRamGb} GB
+              <span className={theme === 'light' ? 'text-slate-300' : 'text-slate-600'}>•</span>
+              <span className={`flex items-center gap-1 ${theme === 'light' ? 'text-slate-700' : 'text-slate-300'}`}>
+                <span className={theme === 'light' ? 'text-slate-400' : 'text-slate-500'}>{t('dashboard.allocatedRam')}:</span> {server.allocatedRamGb} GB
               </span>
             </div>
           </div>
@@ -227,18 +255,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="flex items-center gap-2.5">
           <button
             onClick={onOpenNetworkModal}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-semibold transition-all border border-white/[0.1] hover:border-cyan-400/40 shadow-sm cursor-pointer group"
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border shadow-xs cursor-pointer group ${
+              theme === 'light'
+                ? 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-200 hover:border-cyan-500/40'
+                : 'bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 border-white/[0.1] hover:border-cyan-400/40'
+            }`}
           >
-            <Globe className="w-4 h-4 text-cyan-400 transition-transform group-hover:rotate-12" />
+            <Globe className="w-4 h-4 text-cyan-500 transition-transform group-hover:rotate-12" />
             <span>{t('dashboard.ipForFriends')}</span>
           </button>
 
           <button
             onClick={() => onOpenFolder(server.id)}
-            className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-slate-100 transition-all border border-white/[0.1] hover:border-amber-400/40 cursor-pointer"
+            className={`p-2.5 rounded-xl transition-all border cursor-pointer shadow-xs ${
+              theme === 'light'
+                ? 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-200 hover:border-amber-500/40'
+                : 'bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-slate-100 border-white/[0.1] hover:border-amber-400/40'
+            }`}
             title={t('dashboard.openFolderTooltip')}
           >
-            <FolderOpen className="w-4 h-4 text-amber-400" />
+            <FolderOpen className="w-4 h-4 text-amber-500" />
           </button>
 
           {isRunning ? (
@@ -288,17 +324,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </header>
 
       {/* Navigation Tabs */}
-      <div className="px-6 py-2 bg-slate-950/30 border-b border-white/[0.06] flex items-center justify-between shrink-0 backdrop-blur-xl">
+      <div className={`px-6 py-2 border-b flex items-center justify-between shrink-0 backdrop-blur-xl transition-colors duration-200 ${
+        theme === 'light'
+          ? 'bg-white/90 border-slate-200 shadow-xs'
+          : 'bg-slate-950/30 border-white/[0.06]'
+      }`}>
         <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
           <button
             onClick={() => setActiveTab('console')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'console'
-                ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                ? theme === 'light'
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs font-bold'
+                  : 'bg-emerald-500/15 text-emerald-200 border border-emerald-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                : theme === 'light'
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
             }`}
           >
-            <TerminalIcon className={`w-3.5 h-3.5 ${activeTab === 'console' ? 'text-emerald-400' : 'text-emerald-400/70'}`} />
+            <TerminalIcon className={`w-3.5 h-3.5 ${activeTab === 'console' ? (theme === 'light' ? 'text-emerald-600' : 'text-emerald-400') : (theme === 'light' ? 'text-emerald-700/70' : 'text-emerald-400/70')}`} />
             <span>{t('dashboard.tabConsole')}</span>
           </button>
 
@@ -306,11 +350,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => setActiveTab('plugins')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'plugins'
-                ? 'bg-purple-500/15 text-purple-200 border border-purple-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                ? theme === 'light'
+                  ? 'bg-purple-50 text-purple-800 border border-purple-300 shadow-xs font-bold'
+                  : 'bg-purple-500/15 text-purple-200 border border-purple-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                : theme === 'light'
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
             }`}
           >
-            <Package className={`w-3.5 h-3.5 ${activeTab === 'plugins' ? 'text-purple-400' : 'text-purple-400/70'}`} />
+            <Package className={`w-3.5 h-3.5 ${activeTab === 'plugins' ? (theme === 'light' ? 'text-purple-600' : 'text-purple-400') : (theme === 'light' ? 'text-purple-700/70' : 'text-purple-400/70')}`} />
             <span>{t('dashboard.tabPlugins')}</span>
           </button>
 
@@ -318,11 +366,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => setActiveTab('settings')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'settings'
-                ? 'bg-amber-500/15 text-amber-200 border border-amber-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                ? theme === 'light'
+                  ? 'bg-amber-50 text-amber-800 border border-amber-300 shadow-xs font-bold'
+                  : 'bg-amber-500/15 text-amber-200 border border-amber-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                : theme === 'light'
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
             }`}
           >
-            <Settings className={`w-3.5 h-3.5 ${activeTab === 'settings' ? 'text-amber-400' : 'text-amber-400/70'}`} />
+            <Settings className={`w-3.5 h-3.5 ${activeTab === 'settings' ? (theme === 'light' ? 'text-amber-600' : 'text-amber-400') : (theme === 'light' ? 'text-amber-700/70' : 'text-amber-400/70')}`} />
             <span>{t('dashboard.tabSettings')}</span>
           </button>
 
@@ -330,11 +382,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => setActiveTab('players')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'players'
-                ? 'bg-cyan-500/15 text-cyan-200 border border-cyan-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                ? theme === 'light'
+                  ? 'bg-cyan-50 text-cyan-800 border border-cyan-300 shadow-xs font-bold'
+                  : 'bg-cyan-500/15 text-cyan-200 border border-cyan-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                : theme === 'light'
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
             }`}
           >
-            <Users className={`w-3.5 h-3.5 ${activeTab === 'players' ? 'text-cyan-400' : 'text-cyan-400/70'}`} />
+            <Users className={`w-3.5 h-3.5 ${activeTab === 'players' ? (theme === 'light' ? 'text-cyan-600' : 'text-cyan-400') : (theme === 'light' ? 'text-cyan-700/70' : 'text-cyan-400/70')}`} />
             <span>{t('dashboard.tabPlayers')} ({players.length})</span>
           </button>
 
@@ -342,11 +398,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => setActiveTab('resources')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'resources'
-                ? 'bg-pink-500/15 text-pink-200 border border-pink-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                ? theme === 'light'
+                  ? 'bg-rose-50 text-rose-800 border border-rose-300 shadow-xs font-bold'
+                  : 'bg-pink-500/15 text-pink-200 border border-pink-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                : theme === 'light'
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
             }`}
           >
-            <Activity className={`w-3.5 h-3.5 ${activeTab === 'resources' ? 'text-pink-400' : 'text-pink-400/70'}`} />
+            <Activity className={`w-3.5 h-3.5 ${activeTab === 'resources' ? (theme === 'light' ? 'text-rose-600' : 'text-pink-400') : (theme === 'light' ? 'text-rose-700/70' : 'text-pink-400/70')}`} />
             <span>{t('dashboard.tabResources')}</span>
           </button>
 
@@ -354,11 +414,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => setActiveTab('backups')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'backups'
-                ? 'bg-orange-500/15 text-orange-200 border border-orange-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                ? theme === 'light'
+                  ? 'bg-orange-50 text-orange-800 border border-orange-300 shadow-xs font-bold'
+                  : 'bg-orange-500/15 text-orange-200 border border-orange-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                : theme === 'light'
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
             }`}
           >
-            <Archive className={`w-3.5 h-3.5 ${activeTab === 'backups' ? 'text-orange-400' : 'text-orange-400/70'}`} />
+            <Archive className={`w-3.5 h-3.5 ${activeTab === 'backups' ? (theme === 'light' ? 'text-orange-600' : 'text-orange-400') : (theme === 'light' ? 'text-orange-700/70' : 'text-orange-400/70')}`} />
             <span>{t('dashboard.tabBackups')}</span>
           </button>
         </div>
@@ -371,10 +435,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 ? 'bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]'
                 : isStarting
                 ? 'bg-amber-400 animate-ping'
+                : theme === 'light'
+                ? 'bg-slate-400'
                 : 'bg-slate-600'
             }`}
           />
-          <span className="font-semibold text-slate-300 font-mono">
+          <span className={`font-semibold font-mono ${theme === 'light' ? 'text-slate-700' : 'text-slate-300'}`}>
             {isRunning ? t('common.online') : isStarting ? t('common.starting') : t('common.offline')}
           </span>
         </div>
@@ -409,23 +475,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {activeTab === 'backups' && <BackupManager server={server} />}
 
         {activeTab === 'players' && (
-          <div className="h-full glass-panel rounded-2xl p-6 overflow-y-auto space-y-8">
+          <div className={`h-full rounded-2xl p-6 overflow-y-auto space-y-8 ${
+            theme === 'light'
+              ? 'bg-white border border-slate-200 shadow-sm'
+              : 'glass-panel'
+          }`}>
             {/* Section 1: Online Players */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
-                    <Users className="w-5 h-5 text-sky-400" />
+                  <h3 className={`text-base font-extrabold flex items-center gap-2 ${
+                    theme === 'light' ? 'text-slate-900' : 'text-slate-100'
+                  }`}>
+                    <Users className="w-5 h-5 text-sky-500" />
                     {t('dashboard.onlinePlayersNow')} ({players.length})
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className={`text-xs ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
                     {t('dashboard.onlinePlayersSubtitle')}
                   </p>
                 </div>
               </div>
 
               {players.length === 0 ? (
-                <div className="py-8 text-center glass-card rounded-xl text-slate-400 text-xs">
+                <div className={`py-8 text-center rounded-xl text-xs border border-dashed ${
+                  theme === 'light'
+                    ? 'bg-slate-50/70 text-slate-500 border-slate-200'
+                    : 'glass-card text-slate-400 border-white/[0.08]'
+                }`}>
                   {t('dashboard.noConnectedPlayers')}
                 </div>
               ) : (
@@ -433,7 +509,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   {players.map((player) => (
                     <div
                       key={player}
-                      className="p-3 rounded-xl glass-card flex items-center justify-between shadow-sm"
+                      className={`p-3 rounded-xl flex items-center justify-between shadow-xs border ${
+                        theme === 'light'
+                          ? 'bg-slate-50/80 border-slate-200'
+                          : 'glass-card'
+                      }`}
                     >
                       <div className="flex items-center gap-3">
                         <img
@@ -441,21 +521,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           alt={player}
                           className="w-8 h-8 rounded-md bg-slate-800"
                         />
-                        <span className="font-mono text-sm font-bold text-slate-200">{player}</span>
+                        <span className={`font-mono text-sm font-bold ${
+                          theme === 'light' ? 'text-slate-800' : 'text-slate-200'
+                        }`}>{player}</span>
                       </div>
 
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => handleOpPlayer(player)}
                           title={t('dashboard.opTooltip')}
-                          className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all text-xs flex items-center gap-1 font-semibold cursor-pointer"
+                          className={`p-1.5 rounded-lg transition-all text-xs flex items-center gap-1 font-semibold cursor-pointer ${
+                            theme === 'light'
+                              ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                              : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
+                          }`}
                         >
                           <Crown className="w-3.5 h-3.5" /> OP
                         </button>
                         <button
                           onClick={() => handleKickPlayer(player)}
                           title={t('dashboard.kickTooltip')}
-                          className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all text-xs flex items-center gap-1 font-semibold cursor-pointer"
+                          className={`p-1.5 rounded-lg transition-all text-xs flex items-center gap-1 font-semibold cursor-pointer ${
+                            theme === 'light'
+                              ? 'bg-rose-100 text-rose-800 hover:bg-rose-200'
+                              : 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20'
+                          }`}
                         >
                           <UserX className="w-3.5 h-3.5" /> Kick
                         </button>
@@ -467,14 +557,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
 
             {/* Section 2: Whitelist Management */}
-            <div className="pt-6 border-t border-white/[0.08] space-y-4">
+            <div className={`pt-6 border-t space-y-4 ${
+              theme === 'light' ? 'border-slate-200' : 'border-white/[0.08]'
+            }`}>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
-                    <Shield className="w-5 h-5 text-sky-400" />
+                  <h3 className={`text-base font-extrabold flex items-center gap-2 ${
+                    theme === 'light' ? 'text-slate-900' : 'text-slate-100'
+                  }`}>
+                    <Shield className="w-5 h-5 text-sky-500" />
                     {t('dashboard.whitelistTitle')}
                   </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className={`text-xs mt-0.5 ${
+                    theme === 'light' ? 'text-slate-500' : 'text-slate-400'
+                  }`}>
                     {t('dashboard.whitelistSubtitle')}
                   </p>
                 </div>
@@ -483,13 +579,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span
                     className={`text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1.5 border ${
                       isWhitelistEnabled
-                        ? 'bg-sky-500/15 text-sky-300 border-sky-400/30'
+                        ? theme === 'light'
+                          ? 'bg-sky-50 text-sky-800 border-sky-300'
+                          : 'bg-sky-500/15 text-sky-300 border-sky-400/30'
+                        : theme === 'light'
+                        ? 'bg-slate-100 text-slate-600 border-slate-200'
                         : 'bg-white/[0.04] text-slate-400 border-white/[0.08]'
                     }`}
                   >
                     {isWhitelistEnabled ? (
                       <>
-                        <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> {t('dashboard.whitelistActive')}
+                        <ShieldCheck className="w-3.5 h-3.5 text-sky-500" /> {t('dashboard.whitelistActive')}
                       </>
                     ) : (
                       <>
@@ -502,7 +602,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     onClick={handleToggleWhitelist}
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
                       isWhitelistEnabled
-                        ? 'bg-rose-950/40 text-rose-300 border-rose-500/30 hover:bg-rose-900/50'
+                        ? theme === 'light'
+                          ? 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100 shadow-xs'
+                          : 'bg-rose-950/40 text-rose-300 border-rose-500/30 hover:bg-rose-900/50'
                         : 'bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white border-sky-400/40 glow-ice shadow-sm'
                     }`}
                   >
@@ -515,14 +617,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div
                 className={`p-3.5 rounded-xl border text-xs flex items-start gap-3 backdrop-blur-xl ${
                   isWhitelistEnabled
-                    ? 'bg-sky-950/30 border-sky-400/30 text-sky-200'
+                    ? theme === 'light'
+                      ? 'bg-sky-50/90 border-sky-200 text-sky-900 shadow-xs'
+                      : 'bg-sky-950/30 border-sky-400/30 text-sky-200'
+                    : theme === 'light'
+                    ? 'bg-amber-50/90 border-amber-200 text-amber-900 shadow-xs'
                     : 'bg-amber-950/30 border-amber-500/30 text-amber-300'
                 }`}
               >
                 {isWhitelistEnabled ? (
-                  <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-sky-400" />
+                  <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-sky-500" />
                 ) : (
-                  <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                  <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
                 )}
                 <div>
                   <div className="font-bold">
@@ -530,7 +636,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       ? t('dashboard.serverSecured')
                       : t('dashboard.serverUnsecured')}
                   </div>
-                  <div className="text-[11px] opacity-90 mt-0.5">
+                  <div className={`text-[11px] mt-0.5 ${theme === 'light' ? 'text-slate-600' : 'opacity-90'}`}>
                     {isWhitelistEnabled
                       ? t('dashboard.serverSecuredDesc')
                       : t('dashboard.serverUnsecuredDesc')}
@@ -545,7 +651,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   placeholder={t('dashboard.addPlayerPlaceholder')}
                   value={newPlayerName}
                   onChange={(e) => setNewPlayerName(e.target.value)}
-                  className="flex-1 px-4 py-2 rounded-xl glass-input text-slate-200 text-xs focus:outline-none focus:border-sky-400 font-mono"
+                  className={`flex-1 px-4 py-2 rounded-xl text-xs font-mono focus:outline-none focus:border-sky-500 border ${
+                    theme === 'light'
+                      ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 shadow-xs'
+                      : 'glass-input text-slate-200 focus:border-sky-400'
+                  }`}
                 />
                 <button
                   type="submit"
@@ -559,7 +669,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
               {/* Whitelisted Players List */}
               {whitelist.length === 0 ? (
-                <div className="py-8 text-center glass-card rounded-xl text-slate-400 text-xs">
+                <div className={`py-8 text-center rounded-xl text-xs border border-dashed ${
+                  theme === 'light'
+                    ? 'bg-slate-50/70 text-slate-500 border-slate-200'
+                    : 'glass-card text-slate-400 border-white/[0.08]'
+                }`}>
                   {t('dashboard.noPlayers')}
                 </div>
               ) : (
@@ -567,7 +681,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   {whitelist.map((entry) => (
                     <div
                       key={entry.name}
-                      className="p-3 rounded-xl glass-card flex items-center justify-between shadow-sm"
+                      className={`p-3 rounded-xl flex items-center justify-between shadow-xs border ${
+                        theme === 'light'
+                          ? 'bg-slate-50/80 border-slate-200'
+                          : 'glass-card'
+                      }`}
                     >
                       <div className="flex items-center gap-3">
                         <img
@@ -576,10 +694,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           className="w-8 h-8 rounded-md bg-slate-800"
                         />
                         <div>
-                          <span className="font-mono text-xs font-bold text-slate-200 block">
+                          <span className={`font-mono text-xs font-bold block ${
+                            theme === 'light' ? 'text-slate-800' : 'text-slate-200'
+                          }`}>
                             {entry.name}
                           </span>
-                          <span className="text-[10px] text-sky-400 font-medium">{t('dashboard.allowedBadge')}</span>
+                          <span className={`text-[10px] font-medium ${
+                            theme === 'light' ? 'text-sky-700 font-semibold' : 'text-sky-400'
+                          }`}>{t('dashboard.allowedBadge')}</span>
                         </div>
                       </div>
 
@@ -587,7 +709,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         onClick={() => handleRemoveWhitelist(entry.name)}
                         disabled={whitelistLoading}
                         title={t('dashboard.removeWhitelistTooltip')}
-                        className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all text-xs flex items-center gap-1 font-semibold cursor-pointer"
+                        className={`p-1.5 rounded-lg transition-all text-xs flex items-center gap-1 font-semibold cursor-pointer ${
+                          theme === 'light'
+                            ? 'bg-rose-100 text-rose-700 hover:bg-rose-200'
+                            : 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20'
+                        }`}
                       >
                         <Trash2 className="w-3.5 h-3.5" /> {t('common.delete')}
                       </button>
