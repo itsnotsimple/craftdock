@@ -36,7 +36,15 @@ Download the official compiled release for your operating system:
 | 🍏 **macOS** | Apple Silicon (**M1 / M2 / M3 / M4**) | [**`CraftDock-2.2.8-macOS-AppleSilicon-M-Chips.dmg`**](https://github.com/itsnotsimple/craftdock/releases/latest) |
 | 🍏 **macOS** | Intel Processor (x64) | [**`CraftDock-2.2.8-macOS-Intel.dmg`**](https://github.com/itsnotsimple/craftdock/releases/latest) |
 
-*Single-click installations. No bloatware, no telemetry, no background ads.*
+> [!TIP]
+> **🍏 First-Time Launch on macOS (Apple Gatekeeper):**  
+> Because CraftDock is a free community project, macOS may show a security notice on first launch (*"CraftDock is damaged and can't be opened"*).  
+>
+> To allow normal double-clicking, drag CraftDock to your **Applications** folder, open **Terminal**, and run:
+> ```bash
+> xattr -cr /Applications/CraftDock.app
+> ```
+> *(Or navigate to **System Settings ➔ Privacy & Security ➔ Security** and click **Open Anyway**).*
 
 ---
 
@@ -192,6 +200,14 @@ The official Fabric server JAR is a lightweight <b>bootstrap installer shim (~18
 <summary><b>How does Minimize to Tray work?</b></summary>
 <br>
 When <code>Minimize to Tray</code> is enabled in Settings, clicking the window close button <b>(X)</b> hides CraftDock into the Windows notification tray (next to the clock) or macOS menu bar. Your Minecraft servers will stay online uninterrupted until you explicitly choose <b>Quit CraftDock</b> from the tray menu.
+</details>
+
+<details>
+<summary><b>Why does macOS say "CraftDock is damaged and can't be opened"?</b></summary>
+<br>
+This is standard macOS Gatekeeper behavior for free open-source software downloaded outside the Mac App Store. The app is completely safe and undamaged. Simply drag CraftDock to <b>/Applications</b>, open <b>Terminal</b>, and execute:
+<pre><code>xattr -cr /Applications/CraftDock.app</code></pre>
+Once run, CraftDock will launch with a normal double-click forever.
 </details>
 
 ---
