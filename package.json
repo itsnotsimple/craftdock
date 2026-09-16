@@ -43,7 +43,7 @@
         }
       ],
       "category": "public.app-category.games",
-      "icon": "resources/icon.png",
+      "icon": "resources/icon-mac.png",
       "artifactName": "CraftDock-${version}-macOS-${arch}.${ext}"
     },
     "dmg": {
