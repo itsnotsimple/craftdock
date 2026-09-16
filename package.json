@@ -1,6 +1,6 @@
 {
   "name": "minecraft-server-manager",
-  "version": "2.0.9",
+  "version": "2.1.0",
   "description": "Personal Minecraft Server Host & Manager for Windows and Mac",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -36,8 +36,20 @@
     },
     "mac": {
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
       ],
       "category": "public.app-category.games",
       "icon": "resources/icon.png"

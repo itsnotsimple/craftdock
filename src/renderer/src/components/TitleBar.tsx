@@ -10,10 +10,13 @@ interface TitleBarProps {
 
 export const TitleBar: React.FC<TitleBarProps> = ({ activeServer }) => {
   const { language, toggleLanguage } = useLanguage();
+  const isMac = (window as any).api?.platform === 'darwin' || (typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac'));
 
   return (
     <header
-      className="h-[38px] min-h-[38px] max-h-[38px] w-full bg-[#070a14] border-b border-white/[0.08] flex items-center justify-between px-3.5 select-none shrink-0 z-50 relative"
+      className={`h-[38px] min-h-[38px] max-h-[38px] w-full bg-[#070a14] border-b border-white/[0.08] flex items-center justify-between ${
+        isMac ? 'pl-[76px] pr-3.5' : 'px-3.5'
+      } select-none shrink-0 z-50 relative`}
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
       {/* Left: App Logo, Name & Version */}
@@ -30,7 +33,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ activeServer }) => {
           CraftDock
         </span>
         <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-300 border border-sky-400/20 font-bold">
-          v2.0.9
+          v2.1.0
         </span>
         <span className="text-slate-600 text-xs hidden sm:inline">•</span>
         <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
@@ -81,7 +84,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ activeServer }) => {
             <span className="text-[10px] text-slate-400">{language === 'en' ? 'BG' : 'EN'}</span>
           </button>
         </div>
-        <div className="w-[140px] shrink-0 pointer-events-none" />
+        {!isMac && <div className="w-[140px] shrink-0 pointer-events-none" />}
       </div>
     </header>
   );

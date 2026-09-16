@@ -37,25 +37,50 @@ export async function fetchPublicIp(): Promise<string> {
 }
 
 export function getPlayitExePath(): string {
+  if (process.platform === 'win32') {
+    const dir = path.join(getAppDirectory(), 'runtimes', 'playit');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    return path.join(dir, 'playit.exe');
+  }
+
+  // Check common macOS/Linux Homebrew or system paths
+  const commonPaths = ['/opt/homebrew/bin/playit', '/usr/local/bin/playit', '/usr/bin/playit'];
+  for (const p of commonPaths) {
+    if (fs.existsSync(p)) return p;
+  }
+
   const dir = path.join(getAppDirectory(), 'runtimes', 'playit');
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  return path.join(dir, 'playit.exe');
+  return path.join(dir, 'playit');
 }
 
 export async function ensurePlayitBinary(onProgress?: (percent: number, msg: string) => void): Promise<string> {
   const exePath = getPlayitExePath();
   if (fs.existsSync(exePath)) {
+    if (process.platform !== 'win32') {
+      try {
+        fs.chmodSync(exePath, 0o755);
+      } catch (e) {}
+    }
     return exePath;
   }
 
-  if (onProgress) onProgress(10, 'Връзка с GitHub за изтегляне на Playit Agent...');
-  const downloadUrl = 'https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe';
+  if (process.platform === 'win32') {
+    if (onProgress) onProgress(10, 'Връзка с GitHub за изтегляне на Playit Agent...');
+    const downloadUrl =
+      'https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe';
 
-  await downloadFileWithProgress(downloadUrl, exePath, (p) => {
-    if (onProgress) onProgress(p, `Изтегляне на Playit агент (${p}%)...`);
-  });
+    await downloadFileWithProgress(downloadUrl, exePath, (p) => {
+      if (onProgress) onProgress(p, `Изтегляне на Playit агент (${p}%)...`);
+    });
 
-  return exePath;
+    return exePath;
+  }
+
+  // On macOS / Linux: playit is distributed via package managers like Homebrew or cargo
+  throw new Error(
+    'За macOS Playit агентът изисква инсталация чрез Homebrew: отворете Terminal и изпълнете: brew install playit. Или ползвайте директния си локален/публичен IP.'
+  );
 }
 
 export async function startTunnelProcess(

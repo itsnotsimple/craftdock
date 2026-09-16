@@ -355,7 +355,7 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
           </div>
           <div className="flex items-center justify-between text-xs font-mono">
             <span className="text-slate-400">{language === 'bg' ? 'Платформа:' : 'Platform:'}</span>
-            <span className="text-slate-200 uppercase">{systemInfo?.platform || 'Windows'}</span>
+            <span className="text-slate-200 font-medium">{systemInfo?.osName || (systemInfo?.platform === 'darwin' ? 'macOS' : systemInfo?.platform || 'Windows')}</span>
           </div>
           <div className="flex items-center justify-between text-xs font-mono">
             <span className="text-slate-400">{t('common.software')}:</span>

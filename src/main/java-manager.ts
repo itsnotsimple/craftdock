@@ -125,31 +125,45 @@ export async function downloadPortableJava(
   version: number,
   onProgress: (percent: number, downloadedMb: number, totalMb: number, msg: string) => void
 ): Promise<string> {
+  const isWin = process.platform === 'win32';
+  const isMac = process.platform === 'darwin';
   const targetDir = path.join(getAppDirectory(), 'runtimes', `java${version}`);
   fs.mkdirSync(targetDir, { recursive: true });
 
-  const tempZip = path.join(getAppDirectory(), `temurin_java${version}.zip`);
+  const ext = isWin ? 'zip' : 'tar.gz';
+  const tempArchive = path.join(getAppDirectory(), `temurin_java${version}.${ext}`);
 
   onProgress(5, 0, 0, `Връзка с Adoptium OpenJDK за сваляне на преносима Java ${version}...`);
 
-  const adoptiumUrl = `https://api.adoptium.net/v3/binary/latest/${version}/ga/windows/x64/jdk/hotspot/normal/eclipse`;
+  const platform = isWin ? 'windows' : isMac ? 'mac' : 'linux';
+  const arch = process.arch === 'arm64' || process.arch === 'aarch64' ? 'aarch64' : 'x64';
+  const adoptiumUrl = `https://api.adoptium.net/v3/binary/latest/${version}/ga/${platform}/${arch}/jdk/hotspot/normal/eclipse`;
 
-  await downloadFileWithProgress(adoptiumUrl, tempZip, (percent, downloadedMb, totalMb) => {
+  await downloadFileWithProgress(adoptiumUrl, tempArchive, (percent, downloadedMb, totalMb) => {
     onProgress(percent, downloadedMb, totalMb, `Изтегляне на Java ${version} (${percent}% - ${downloadedMb}MB / ${totalMb}MB)...`);
   });
 
   onProgress(92, 0, 0, `Разархивиране на преносимата Java ${version}...`);
 
   try {
-    execSync(`tar -xf "${tempZip}" -C "${targetDir}"`, { stdio: 'ignore' });
-    fs.unlinkSync(tempZip);
+    execSync(`tar -xf "${tempArchive}" -C "${targetDir}"`, { stdio: 'ignore' });
+    fs.unlinkSync(tempArchive);
   } catch (err) {
     console.error(`Failed to extract java ${version} with tar:`, err);
   }
 
   const javaExe = findPortableJavaExe(version);
   if (!javaExe) {
-    throw new Error(`Java ${version} бе изтеглена, но java.exe не бе открита.`);
+    throw new Error(`Java ${version} бе изтеглена, но изпълнимият файл на java не бе открит.`);
+  }
+
+  // On macOS and Linux, make sure the java binary has execute permissions
+  if (!isWin) {
+    try {
+      fs.chmodSync(javaExe, 0o755);
+    } catch (permErr) {
+      console.warn('Could not set chmod on java executable:', permErr);
+    }
   }
 
   onProgress(100, 0, 0, `Java ${version} е готова за стартиране!`);

@@ -25,6 +25,8 @@ export interface SystemInfo {
   cpuModel: string;
   cpuPercent?: number;
   platform: string;
+  arch?: string;
+  osName?: string;
   localIp: string;
 }
 

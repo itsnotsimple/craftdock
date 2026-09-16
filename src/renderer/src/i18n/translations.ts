@@ -1,5 +1,8 @@
 export type Language = 'en' | 'bg';
 
+const isMac = typeof window !== 'undefined' && (((window as any).api?.platform === 'darwin') || (typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac')));
+const fileManager = isMac ? 'Finder' : 'Explorer';
+
 export const translations = {
   en: {
     // Common
@@ -62,7 +65,7 @@ export const translations = {
 
     // Server Card
     'serverCard.console': 'Console & Manage',
-    'serverCard.openFolder': 'Open server folder in Explorer',
+    'serverCard.openFolder': `Open server folder in ${fileManager}`,
     'serverCard.deleteServer': 'Delete Server',
     'serverCard.switchToThis': 'Switch to this',
     'serverCard.runningAnother': '«{name}» is currently active. Click to switch.',
@@ -70,7 +73,7 @@ export const translations = {
     // Dashboard View
     'dashboard.backTooltip': 'Back to server library',
     'dashboard.ipForFriends': 'IP for Friends',
-    'dashboard.openFolderTooltip': 'Open server folder in Explorer',
+    'dashboard.openFolderTooltip': `Open server folder in ${fileManager}`,
     'dashboard.port': 'Port',
     'dashboard.allocatedRam': 'Allocated RAM',
     'dashboard.tabConsole': 'Console',
@@ -238,8 +241,8 @@ export const translations = {
     'plugins.install': 'Install',
     'plugins.installed': 'Installed',
     'plugins.installing': 'Installing...',
-    'plugins.openPluginsFolder': 'Open plugins folder in Explorer',
-    'plugins.openPacksFolder': 'Open resourcepacks folder in Explorer',
+    'plugins.openPluginsFolder': `Open plugins folder in ${fileManager}`,
+    'plugins.openPacksFolder': `Open resourcepacks folder in ${fileManager}`,
     'plugins.activePackTitle': 'Active Server Resource Pack',
     'plugins.activePackDesc': 'Automatically prompted or downloaded when players join the server',
     'plugins.deactivate': 'Deactivate Pack',
@@ -279,7 +282,7 @@ export const translations = {
     'backups.successNotice': 'Backup successfully created! Saved in backups/ folder.',
     'backups.whyTitle': 'Why create world backups?',
     'backups.whyText': 'Before adding new mods, running large TNT experiments, or updating Minecraft versions, having a snapshot guarantees your world is always safe. With one click CraftDock archives the entire world into a ZIP file.',
-    'backups.openFolder': 'Open server folder in Explorer',
+    'backups.openFolder': `Open server folder in ${fileManager}`,
 
     // Performance Monitor
     'monitor.title': 'Real-Time Performance Monitor',
@@ -404,7 +407,7 @@ export const translations = {
 
     // Server Card
     'serverCard.console': 'Конзола и управление',
-    'serverCard.openFolder': 'Отвори папката на сървъра в Explorer',
+    'serverCard.openFolder': `Отвори папката на сървъра във ${fileManager}`,
     'serverCard.deleteServer': 'Изтрий Сървъра',
     'serverCard.switchToThis': 'Смени на този',
     'serverCard.runningAnother': 'В момента работи «{name}». Кликни за смяна.',
@@ -412,7 +415,7 @@ export const translations = {
     // Dashboard View
     'dashboard.backTooltip': 'Назад към списъка със сървъри',
     'dashboard.ipForFriends': 'IP за Приятели',
-    'dashboard.openFolderTooltip': 'Отвори папката на сървъра в Explorer',
+    'dashboard.openFolderTooltip': `Отвори папката на сървъра във ${fileManager}`,
     'dashboard.port': 'Порт',
     'dashboard.allocatedRam': 'Заделен RAM',
     'dashboard.tabConsole': 'Конзола',
@@ -580,8 +583,8 @@ export const translations = {
     'plugins.install': 'Инсталирай',
     'plugins.installed': 'Инсталиран',
     'plugins.installing': 'Инсталиране...',
-    'plugins.openPluginsFolder': 'Отвори папката с плъгини в Explorer',
-    'plugins.openPacksFolder': 'Отвори папката с ресурс пакети в Explorer',
+    'plugins.openPluginsFolder': `Отвори папката с плъгини във ${fileManager}`,
+    'plugins.openPacksFolder': `Отвори папката с ресурс пакети във ${fileManager}`,
     'plugins.activePackTitle': 'Активен Ресурс Пакет на Сървъра',
     'plugins.activePackDesc': 'Изпраща се автоматично на играчите при влизане в сървъра',
     'plugins.deactivate': 'Изключи Пакета',
@@ -621,7 +624,7 @@ export const translations = {
     'backups.successNotice': 'Успешно създаден архив! Запазен в backups/ папката.',
     'backups.whyTitle': 'Защо да правиш бекъпи?',
     'backups.whyText': 'Когато добавяш нови модове, правиш големи TNT експлозии или обновяваш версията на Minecraft, винаги е препоръчително да имаш копие на картата. С един клик CraftDock компресира целия свят в бърз ZIP архив.',
-    'backups.openFolder': 'Отвори папката на сървъра в Explorer',
+    'backups.openFolder': `Отвори папката на сървъра във ${fileManager}`,
 
     // Performance Monitor
     'monitor.title': 'Монитор на Производителността',

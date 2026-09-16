@@ -6,6 +6,8 @@ export interface SystemInfoData {
   cpuModel: string;
   cpuPercent: number;
   platform: string;
+  arch: string;
+  osName: string;
   localIp: string;
 }
 
@@ -56,12 +58,25 @@ export function getSystemInfo(): SystemInfoData {
     }
   }
 
+  const platform = os.platform();
+  const arch = os.arch();
+  let osName = 'Windows';
+  if (platform === 'darwin') {
+    osName = arch === 'arm64' ? 'macOS (Apple Silicon)' : 'macOS (Intel)';
+  } else if (platform === 'win32') {
+    osName = 'Windows (x64)';
+  } else if (platform === 'linux') {
+    osName = `Linux (${arch})`;
+  }
+
   return {
     totalRamGb,
     freeRamGb,
     cpuModel,
     cpuPercent,
-    platform: os.platform(),
+    platform,
+    arch,
+    osName,
     localIp,
   };
 }

@@ -55,9 +55,20 @@ import {
   removeFromWhitelist,
 } from './server-config';
 
+// Ensure standard macOS / Linux binary paths are present in process.env.PATH
+if (process.platform === 'darwin') {
+  const defaultPaths = ['/opt/homebrew/bin', '/opt/homebrew/sbin', '/usr/local/bin', '/usr/bin', '/bin'];
+  const currentPath = process.env.PATH || '';
+  const missingPaths = defaultPaths.filter((p) => !currentPath.includes(p));
+  if (missingPaths.length > 0) {
+    process.env.PATH = `${missingPaths.join(':')}:${currentPath}`;
+  }
+}
+
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow() {
+  const isMac = process.platform === 'darwin';
   const iconPath = path.join(__dirname, '../resources/icon.png');
   mainWindow = new BrowserWindow({
     width: 1380,
@@ -72,11 +83,17 @@ function createWindow() {
       nodeIntegration: false,
     },
     titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#070a14',
-      symbolColor: '#cbd5e1',
-      height: 38,
-    },
+    ...(isMac
+      ? {
+          trafficLightPosition: { x: 16, y: 12 },
+        }
+      : {
+          titleBarOverlay: {
+            color: '#070a14',
+            symbolColor: '#cbd5e1',
+            height: 38,
+          },
+        }),
     show: false,
   });
 

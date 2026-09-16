@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 export interface IElectronApi {
+  platform: string;
   getSystemInfo: () => Promise<any>;
   fetchVersions: (software: string) => Promise<any>;
   getServers: () => Promise<any>;
@@ -53,6 +54,7 @@ export interface IElectronApi {
 }
 
 const api: IElectronApi = {
+  platform: process.platform,
   getSystemInfo: () => ipcRenderer.invoke('get-system-info'),
   fetchVersions: (software: string) => ipcRenderer.invoke('fetch-versions', software),
   getServers: () => ipcRenderer.invoke('get-servers'),

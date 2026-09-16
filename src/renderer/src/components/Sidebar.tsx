@@ -46,7 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   CraftDock
                 </h1>
                 <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-md bg-sky-500/10 text-sky-400 border border-sky-400/20 font-mono">
-                  v2.0.9
+                  v2.1.0
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 font-medium">{t('sidebar.title')}</p>
@@ -179,7 +179,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span className="flex items-center gap-1 text-slate-400">
             <Sparkles className="w-3 h-3 text-sky-400" /> {language === 'en' ? 'Local Hardware' : '100% Твой Хардуер'}
           </span>
-          <span className="text-sky-400 font-medium">v2.0.9</span>
+          <span className="text-sky-400 font-medium">v2.1.0</span>
         </div>
       </div>
     </aside>
