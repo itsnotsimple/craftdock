@@ -201,15 +201,15 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
                           onClick={() => {
                             const api = (window as any).api;
                             if (api?.openExternal) {
-                              api.openExternal('https://playit.gg/manage');
+                              api.openExternal('https://playit.gg/account/tunnels?view=tunnel-type&sort=age');
                             } else {
-                              window.open('https://playit.gg/manage', '_blank');
+                              window.open('https://playit.gg/account/tunnels?view=tunnel-type&sort=age', '_blank');
                             }
                           }}
                           className="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
-                          <span>🌐 Отвори Playit Таблото (playit.gg/manage)</span>
+                          <span>🌐 Отвори Playit Тунели (playit.gg/account/tunnels)</span>
                         </button>
                       </div>
                     )}
