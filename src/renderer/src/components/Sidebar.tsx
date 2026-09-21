@@ -1,15 +1,16 @@
 import React from 'react';
-import { Server, PlusCircle, Terminal, HardDrive, Sparkles, Settings } from 'lucide-react';
+import { Server, PlusCircle, Terminal, HardDrive, Sparkles, Settings, CalendarClock, Smartphone } from 'lucide-react';
 import { ServerProfile, SystemInfo } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 
 interface SidebarProps {
-  currentTab: 'library' | 'wizard' | 'dashboard' | 'settings';
-  onTabChange: (tab: 'library' | 'wizard' | 'dashboard' | 'settings') => void;
+  currentTab: 'library' | 'wizard' | 'dashboard' | 'scheduler' | 'settings';
+  onTabChange: (tab: 'library' | 'wizard' | 'dashboard' | 'scheduler' | 'settings') => void;
   servers: ServerProfile[];
   activeServerId: string | null;
   systemInfo: SystemInfo | null;
+  onOpenMobileRemote?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -18,6 +19,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   servers,
   activeServerId,
   systemInfo,
+  onOpenMobileRemote,
 }) => {
   const { t, language } = useLanguage();
   const { theme } = useTheme();
@@ -136,6 +138,52 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
 
           <button
+            onClick={() => onTabChange('scheduler')}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all relative overflow-hidden group cursor-pointer ${
+              currentTab === 'scheduler'
+                ? theme === 'light'
+                  ? 'bg-indigo-50 text-indigo-800 border border-indigo-300 font-bold shadow-xs'
+                  : 'bg-indigo-500/15 text-indigo-200 border border-indigo-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                : theme === 'light'
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
+            }`}
+          >
+            {currentTab === 'scheduler' && (
+              <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full ${
+                theme === 'light' ? 'bg-indigo-600' : 'bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.8)]'
+              }`} />
+            )}
+            <CalendarClock className={`w-4 h-4 transition-transform group-hover:scale-110 ${
+              theme === 'light' ? 'text-indigo-600' : 'text-indigo-400'
+            }`} />
+            <span>{t('sidebar.scheduler')}</span>
+          </button>
+
+          {onOpenMobileRemote && (
+            <button
+              onClick={onOpenMobileRemote}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all relative overflow-hidden group cursor-pointer ${
+                theme === 'light'
+                  ? 'text-sky-700 hover:bg-sky-50 border border-sky-200/60 bg-sky-50/40'
+                  : 'text-sky-300 hover:bg-sky-500/10 border border-sky-500/20 bg-sky-500/5'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Smartphone className="w-4 h-4 text-sky-400 transition-transform group-hover:scale-110" />
+                <span>{t('sidebar.mobileRemote')}</span>
+              </div>
+              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold border ${
+                theme === 'light'
+                  ? 'bg-sky-100 text-sky-800 border-sky-300'
+                  : 'bg-sky-500/20 text-sky-300 border-sky-400/30'
+              }`}>
+                Wi-Fi
+              </span>
+            </button>
+          )}
+
+          <button
             onClick={() => onTabChange('settings')}
             className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all relative overflow-hidden group cursor-pointer ${
               currentTab === 'settings'
@@ -217,7 +265,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span className={`flex items-center gap-1 ${theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>
             <Sparkles className="w-3 h-3 text-sky-500" /> {language === 'en' ? 'Local Hardware' : '100% Твой Хардуер'}
           </span>
-          <span className={`font-medium ${theme === 'light' ? 'text-sky-700' : 'text-sky-400'}`}>v2.3.2</span>
+          <span className={`font-medium ${theme === 'light' ? 'text-sky-700' : 'text-sky-400'}`}>v3.4.0</span>
         </div>
       </div>
     </aside>

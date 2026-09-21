@@ -29,9 +29,31 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setLanguageState(lang);
     try {
       localStorage.setItem(STORAGE_KEY, lang);
+      (window as any).api?.saveAppSettings?.({ language: lang });
     } catch (e) {
       // ignore
     }
+  }, []);
+
+  useEffect(() => {
+    const syncWithBackend = async () => {
+      try {
+        const appSettings = await (window as any).api?.getAppSettings?.();
+        if (appSettings && (appSettings.language === 'bg' || appSettings.language === 'en')) {
+          const local = localStorage.getItem(STORAGE_KEY);
+          if (local !== appSettings.language) {
+            // Priority: if local has a saved value, sync backend to local; else sync local to backend
+            if (local === 'bg' || local === 'en') {
+              (window as any).api?.saveAppSettings?.({ language: local });
+            } else {
+              setLanguageState(appSettings.language);
+              localStorage.setItem(STORAGE_KEY, appSettings.language);
+            }
+          }
+        }
+      } catch (err) {}
+    };
+    syncWithBackend();
   }, []);
 
   const toggleLanguage = useCallback(() => {

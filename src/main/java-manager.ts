@@ -136,7 +136,7 @@ export async function downloadPortableJava(
   onProgress(5, 0, 0, `Връзка с Adoptium OpenJDK за сваляне на преносима Java ${version}...`);
 
   const platform = isWin ? 'windows' : isMac ? 'mac' : 'linux';
-  const arch = process.arch === 'arm64' || process.arch === 'aarch64' ? 'aarch64' : 'x64';
+  const arch = (process.arch as string) === 'arm64' || (process.arch as string) === 'aarch64' ? 'aarch64' : 'x64';
   const adoptiumUrl = `https://api.adoptium.net/v3/binary/latest/${version}/ga/${platform}/${arch}/jdk/hotspot/normal/eclipse`;
 
   await downloadFileWithProgress(adoptiumUrl, tempArchive, (percent, downloadedMb, totalMb) => {

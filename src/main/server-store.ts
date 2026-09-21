@@ -13,13 +13,19 @@ export interface ServerProfile {
   storageQuotaGb?: number;
   port: number;
   path: string;
-  status: 'stopped' | 'starting' | 'running' | 'stopping' | 'error';
+  status: 'stopped' | 'starting' | 'running' | 'stopping' | 'error' | 'sleeping';
   createdAt: string;
   lastPlayedAt?: string;
   playerCount: number;
   maxPlayers: number;
   motd: string;
   hardcore?: boolean;
+  autoBackupEnabled?: boolean;
+  autoBackupIntervalHours?: number;
+  autoBackupRetentionCount?: number;
+  lastAutoBackupAt?: string;
+  cardTheme?: string;
+  cardIcon?: string;
 }
 
 export interface ServerStorageStats {
@@ -82,6 +88,10 @@ export function loadServers(): ServerProfile[] {
     console.error('Error loading servers:', err);
     return [];
   }
+}
+
+export function getServerById(id: string): ServerProfile | undefined {
+  return loadServers().find((s) => s.id === id);
 }
 
 export function saveServers(servers: ServerProfile[]): void {

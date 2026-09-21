@@ -1,6 +1,6 @@
 {
-  "name": "minecraft-server-manager",
-  "version": "2.3.2",
+  "name": "craftdock",
+  "version": "3.4.0",
   "description": "Personal Minecraft Server Host & Manager for Windows and Mac",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -14,7 +14,8 @@
     "dev:main": "esbuild src/main/main.ts --bundle --platform=node --target=node20 --outfile=dist-electron/main.js --external:electron --watch",
     "dev:preload": "esbuild src/main/preload.ts --bundle --platform=node --target=node20 --outfile=dist-electron/preload.js --external:electron --watch",
     "dev:renderer": "vite",
-    "dev": "concurrently -k \"npm run dev:main\" \"npm run dev:preload\" \"npm run dev:renderer\" \"wait-on tcp:5173 && electron .\""
+    "predev": "node scripts/brand-electron.cjs",
+    "dev": "concurrently -k \"npm run dev:main\" \"npm run dev:preload\" \"npm run dev:renderer\" \"wait-on tcp:5173 && node scripts/launch-electron.cjs\""
   },
   "build": {
     "appId": "com.craftdock.minecraftservermanager",
@@ -29,7 +30,7 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "resources/icon.png",
+      "icon": "resources/icon.ico",
       "artifactName": "CraftDock-${version}-Windows-Setup.${ext}"
     },
     "mac": {
@@ -89,8 +90,10 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@types/qrcode": "^1.5.6",
     "clsx": "^2.1.1",
     "lucide-react": "^1.46.0",
+    "qrcode": "^1.5.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "tailwind-merge": "^3.7.0"

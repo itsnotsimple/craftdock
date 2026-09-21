@@ -17,10 +17,12 @@ import {
   Check,
   ExternalLink,
   AlertTriangle,
+  Upload,
 } from 'lucide-react';
 import { ServerSoftware, SystemInfo, VersionInfo } from '../types';
 import { RamSlider } from '../components/RamSlider';
 import { StorageSlider } from '../components/StorageSlider';
+import { VersionCombobox } from '../components/VersionCombobox';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { useDialog } from '../context/DialogContext';
@@ -28,6 +30,7 @@ import { useDialog } from '../context/DialogContext';
 interface WizardViewProps {
   systemInfo: SystemInfo | null;
   onCancel: () => void;
+  onImportServer?: () => void;
   onCreateServer: (data: {
     name: string;
     software: ServerSoftware;
@@ -48,6 +51,7 @@ interface WizardViewProps {
 export const WizardView: React.FC<WizardViewProps> = ({
   systemInfo,
   onCancel,
+  onImportServer,
   onCreateServer,
   downloadProgress,
   isCreating,
@@ -98,8 +102,11 @@ export const WizardView: React.FC<WizardViewProps> = ({
   };
 
   useEffect(() => {
-    loadModpacks();
-  }, []);
+    const timer = setTimeout(() => {
+      loadModpacks(modpackSearch);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [modpackSearch]);
 
   const handleSelectModpack = (pack: any) => {
     setSelectedModpack(pack);
@@ -300,6 +307,38 @@ export const WizardView: React.FC<WizardViewProps> = ({
         </div>
       </div>
 
+      {onImportServer && (
+        <div className={`mb-6 p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+          theme === 'light'
+            ? 'bg-gradient-to-r from-sky-50 to-indigo-50 border-sky-200 shadow-xs'
+            : 'bg-gradient-to-r from-sky-950/30 to-indigo-950/30 border-white/[0.08]'
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center shrink-0">
+              <Upload className="w-5 h-5" />
+            </div>
+            <div>
+              <span className={`text-xs font-bold block ${theme === 'light' ? 'text-slate-900' : 'text-slate-100'}`}>
+                {language === 'bg' ? 'Имате готов сървърен архив (.zip)?' : 'Already have a server .zip archive?'}
+              </span>
+              <p className={`text-[11px] ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
+                {language === 'bg'
+                  ? 'Можете да прескочите съветника и директно да импортирате световете, плъгините и конфигурациите си.'
+                  : 'Skip the wizard and import your worlds, plugins, and settings in seconds.'}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onImportServer}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition-all shadow-md shadow-cyan-950/40 cursor-pointer btn-bounce shrink-0"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>{language === 'bg' ? 'Импортирай .zip архив' : 'Import .zip archive'}</span>
+          </button>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Step 1: Server Name & Software */}
         <section className="space-y-4">
@@ -419,10 +458,7 @@ export const WizardView: React.FC<WizardViewProps> = ({
                 <input
                   type="text"
                   value={modpackSearch}
-                  onChange={(e) => {
-                    setModpackSearch(e.target.value);
-                    loadModpacks(e.target.value);
-                  }}
+                  onChange={(e) => setModpackSearch(e.target.value)}
                   placeholder={t('modrinth.searchModpacks')}
                   className={`w-full pl-10 pr-4 py-2 rounded-xl text-xs transition-colors border focus:outline-none ${
                     theme === 'light'
@@ -539,22 +575,17 @@ export const WizardView: React.FC<WizardViewProps> = ({
               <span className={`text-[11px] ${theme === 'light' ? 'text-slate-400' : 'text-slate-500'}`}>{t('wizard.apiSourceNotice')}</span>
             </div>
 
-            <select
+            <VersionCombobox
               value={version}
-              onChange={(e) => setVersion(e.target.value)}
+              onChange={(v) => setVersion(v)}
+              versions={versionsList}
               disabled={loadingVersions}
-              className={`w-full px-4 py-2.5 rounded-xl text-sm font-mono transition-colors cursor-pointer border focus:outline-none ${
-                theme === 'light'
-                  ? 'bg-white border-slate-300 text-slate-900 focus:border-cyan-500 shadow-xs'
-                  : 'glass-input text-slate-100 focus:border-cyan-400'
-              }`}
-            >
-              {versionsList.map((v) => (
-                <option key={v.version} value={v.version}>
-                  Minecraft v{v.version} {v.isLatest ? `(${t('wizard.latestOfficial')})` : ''}
-                </option>
-              ))}
-            </select>
+              placeholder={
+                language === 'bg'
+                  ? `Избери или напиши версия за ${software.toUpperCase()} (напр. 1.21.4, 1.8.8)...`
+                  : `Choose or type version for ${software.toUpperCase()} (e.g. 1.21.4, 1.8.8)...`
+              }
+            />
           </div>
         </section>
 

@@ -267,9 +267,23 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
 
   useEffect(() => {
     loadData();
-    loadModrinthPacks();
-    loadModrinthPlugins();
   }, [server.id, server.software]);
+
+  // Debounced search for Modrinth plugins & mods
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadModrinthPlugins(modrinthPluginSearch);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [modrinthPluginSearch, server.software]);
+
+  // Debounced search for Modrinth resource packs
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadModrinthPacks(modrinthSearch);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [modrinthSearch]);
 
   const handleApplyModrinthPack = async (pack: any) => {
     const api = (window as any).api;
@@ -900,10 +914,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                   <input
                     type="text"
                     value={modrinthPluginSearch}
-                    onChange={(e) => {
-                      setModrinthPluginSearch(e.target.value);
-                      loadModrinthPlugins(e.target.value);
-                    }}
+                    onChange={(e) => setModrinthPluginSearch(e.target.value)}
                     placeholder={t('plugins.searchPluginsPlaceholder')}
                     className={`w-full pl-8 pr-3 py-1.5 rounded-xl text-xs focus:outline-none border ${
                       theme === 'light'
@@ -1601,10 +1612,7 @@ export const PluginManager: React.FC<PluginManagerProps> = ({ server }) => {
                 <input
                   type="text"
                   value={modrinthSearch}
-                  onChange={(e) => {
-                    setModrinthSearch(e.target.value);
-                    loadModrinthPacks(e.target.value);
-                  }}
+                  onChange={(e) => setModrinthSearch(e.target.value)}
                   placeholder={t('modrinth.searchResourcePacks')}
                   className={`w-full pl-8 pr-3 py-1.5 rounded-xl text-xs focus:outline-none border ${
                     theme === 'light'

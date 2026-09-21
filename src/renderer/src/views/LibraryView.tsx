@@ -8,6 +8,7 @@ import {
   Cpu,
   Layers,
   X,
+  Upload,
 } from 'lucide-react';
 import { ServerProfile } from '../types';
 import { ServerCard } from '../components/ServerCard';
@@ -22,6 +23,8 @@ interface LibraryViewProps {
   onOpenNetwork: (server: ServerProfile) => void;
   onOpenFolder: (id: string) => void;
   onDeleteServer: (id: string) => void;
+  onExportServer?: (id: string) => void;
+  onImportServer?: () => void;
   onNavigateToWizard: () => void;
 }
 
@@ -33,6 +36,8 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   onOpenNetwork,
   onOpenFolder,
   onDeleteServer,
+  onExportServer,
+  onImportServer,
   onNavigateToWizard,
 }) => {
   const { t, language } = useLanguage();
@@ -99,13 +104,30 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={onNavigateToWizard}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold text-sm transition-all shadow-xl shadow-indigo-950/50 glow-purple cursor-pointer btn-bounce shrink-0"
-        >
-          <PlusCircle className="w-4 h-4 text-emerald-300" />
-          <span>{t('library.createNew')}</span>
-        </button>
+        <div className="flex items-center gap-2.5 shrink-0">
+          {onImportServer && (
+            <button
+              onClick={onImportServer}
+              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-xs transition-all cursor-pointer shadow-xs btn-bounce ${
+                theme === 'light'
+                  ? 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-200 hover:border-cyan-400'
+                  : 'bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 hover:text-white border-white/[0.08] hover:border-cyan-400/50'
+              }`}
+              title={language === 'bg' ? 'Импортиране на цял сървър от .zip архив' : 'Import full server from .zip archive'}
+            >
+              <Upload className="w-4 h-4 text-cyan-500" />
+              <span>{language === 'bg' ? 'Импортирай (.zip)' : 'Import (.zip)'}</span>
+            </button>
+          )}
+
+          <button
+            onClick={onNavigateToWizard}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold text-sm transition-all shadow-xl shadow-indigo-950/50 glow-purple cursor-pointer btn-bounce shrink-0"
+          >
+            <PlusCircle className="w-4 h-4 text-emerald-300" />
+            <span>{t('library.createNew')}</span>
+          </button>
+        </div>
       </div>
 
       {servers.length > 0 && (
@@ -338,6 +360,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
               onOpenNetwork={onOpenNetwork}
               onOpenFolder={onOpenFolder}
               onDelete={onDeleteServer}
+              onExportServer={onExportServer}
               activeRunningServer={servers.find((s) => s.status === 'running' || s.status === 'starting')}
             />
           ))}

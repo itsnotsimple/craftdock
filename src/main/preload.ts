@@ -18,6 +18,8 @@ export interface IElectronApi {
   // Properties, Plugins & Backups
   getServerProperties: (id: string) => Promise<any>;
   saveServerProperties: (id: string, props: any) => Promise<any>;
+  getRawServerProperties: (id: string) => Promise<string>;
+  saveRawServerProperties: (id: string, rawContent: string) => Promise<boolean>;
   getInstalledPlugins: (id: string) => Promise<any>;
   getCuratedPlugins: () => Promise<any>;
   installCuratedPlugin: (id: string, pluginId: string) => Promise<boolean>;
@@ -35,6 +37,43 @@ export interface IElectronApi {
   getWhitelist: (id: string) => Promise<any>;
   addToWhitelist: (id: string, name: string) => Promise<boolean>;
   removeFromWhitelist: (id: string, name: string) => Promise<boolean>;
+
+  // Operators & Bans
+  getServerOps: (id: string) => Promise<any[]>;
+  addOp: (id: string, name: string, level?: number) => Promise<boolean>;
+  removeOp: (id: string, name: string) => Promise<boolean>;
+  getServerBans: (id: string) => Promise<any[]>;
+  banPlayer: (id: string, name: string, reason?: string) => Promise<boolean>;
+  pardonPlayer: (id: string, name: string) => Promise<boolean>;
+  getServerBannedIps: (id: string) => Promise<any[]>;
+  banIp: (id: string, ip: string, reason?: string) => Promise<boolean>;
+  pardonIp: (id: string, ip: string) => Promise<boolean>;
+
+  // Player Directory & Inventory
+  getServerPlayersArchive: (id: string, onlinePlayerNames?: string[]) => Promise<any[]>;
+  getPlayerInventory: (id: string, uuid: string, playerName?: string) => Promise<any>;
+
+  // World Manager
+  getServerWorlds: (id: string) => Promise<any[]>;
+  resetWorld: (id: string, worldName: string) => Promise<boolean>;
+  importWorld: (id: string, zipPath: string, targetWorldName: string) => Promise<boolean>;
+  getWorldBackups: (id: string) => Promise<any[]>;
+  deleteWorldBackup: (id: string, fileName: string) => Promise<boolean>;
+  restoreWorldBackup: (id: string, fileName: string) => Promise<boolean>;
+  updateServerProfile: (id: string, updates: any) => Promise<any>;
+  pickWorldZip: () => Promise<string | null>;
+  exportServerZip: (id: string) => Promise<any>;
+  exportWorldZip: (id: string, worldName?: string) => Promise<any>;
+  importServerZip: (customZipPath?: string) => Promise<any>;
+  upgradeServerVersion: (id: string, targetVersion: string) => Promise<any>;
+  onUpgradeProgress: (callback: (data: { percent: number; message: string }) => void) => () => void;
+
+  // Analytics & Statistics
+  getUptimeHistory: (id: string) => Promise<any>;
+  getPlayerAnalytics: (id: string) => Promise<any>;
+  getChatHistory: (id: string, limit?: number) => Promise<any[]>;
+  clearChatHistory: (id: string) => Promise<boolean>;
+  getPerformanceHistory: (id: string, range?: string) => Promise<any[]>;
 
   // Storage & Quota
   getServerStorage: (id: string) => Promise<any>;
@@ -59,6 +98,7 @@ export interface IElectronApi {
   getAppSettings: () => Promise<any>;
   saveAppSettings: (updates: any) => Promise<any>;
   getGlobalDiagnostics: () => Promise<any>;
+  checkJavaStatus: (mcVersion: string) => Promise<any>;
   openServersFolder: () => Promise<void>;
   openAppLogs: () => Promise<void>;
   clearAppCache: () => Promise<any>;
@@ -67,7 +107,58 @@ export interface IElectronApi {
   startAppUpdate: () => Promise<any>;
   cancelAppUpdate: () => Promise<boolean>;
 
+  // Crash Analyzer & Diagnostics
+  getCrashReports: (id: string) => Promise<any[]>;
+  analyzeCrash: (id: string, fileName?: string) => Promise<any>;
+  testStartupSound: () => Promise<boolean>;
+  sendTestNotification: (lang?: 'bg' | 'en') => Promise<boolean>;
+
+  // Lag Buster
+  cleanDroppedItems: (serverId: string) => Promise<{ success: boolean; message: string }>;
+  cleanHostileMonsters: (serverId: string) => Promise<{ success: boolean; message: string }>;
+  cleanMinecartsBoats: (serverId: string) => Promise<{ success: boolean; message: string }>;
+  checkLagSettings: (serverId: string) => Promise<any>;
+  applyOptimalLagSettings: (serverId: string) => Promise<boolean>;
+  runChunkyCommand: (serverId: string, action: 'radius' | 'start' | 'pause' | 'cancel', radius?: number) => Promise<{ success: boolean; error?: string }>;
+  isChunkyInstalled: (serverId: string) => Promise<boolean>;
+
+  // Smart Sleep Mode
+  putServerToSleep: (serverId: string) => Promise<boolean>;
+  wakeServer: (serverId: string) => Promise<boolean>;
+  isServerSleeping: (serverId: string) => Promise<boolean>;
+
+  // World Slimmer
+  analyzeWorldSlimmer: (serverId: string, radiusBlocks?: number) => Promise<any>;
+  trimDistantRegions: (serverId: string, radiusBlocks?: number) => Promise<any>;
+
+  // Mobile Remote Web
+  getRemoteStatus: () => Promise<any>;
+  toggleRemoteService: (enabled: boolean) => Promise<boolean>;
+  regenerateRemotePin: () => Promise<string>;
+  setRemotePort: (port: number) => Promise<boolean>;
+  getRemoteQrSvg: (mode?: 'local' | 'public') => Promise<string>;
+  startRemoteTunnel: () => Promise<{ success: boolean; url?: string; error?: string }>;
+  stopRemoteTunnel: () => Promise<boolean>;
+
+  // Task Scheduler
+  getScheduledTasks: () => Promise<any[]>;
+  saveScheduledTask: (task: any) => Promise<any>;
+  deleteScheduledTask: (taskId: string) => Promise<boolean>;
+  toggleTaskEnabled: (taskId: string, enabled: boolean) => Promise<boolean>;
+  runTaskNow: (taskId: string) => Promise<{ success: boolean; message: string }>;
+
+  // Seed Map & Structure Locator
+  getWorldSeed: (serverId: string) => Promise<{ seed: string; source: string; chunkbaseVersion: string; chunkbaseLink: string } | null>;
+  locateStructures: (
+    seed: string,
+    dimension?: 'overworld' | 'nether' | 'the_end',
+    originX?: number,
+    originZ?: number,
+    maxRadius?: number
+  ) => Promise<any[]>;
+
   // Subscriptions
+  onScheduledTasksUpdated: (callback: (tasks: any[]) => void) => () => void;
   onServerLog: (callback: (data: any) => void) => () => void;
   onServerStatusChanged: (callback: (data: any) => void) => () => void;
   onServerPlayersChanged: (callback: (data: any) => void) => () => void;
@@ -78,6 +169,11 @@ export interface IElectronApi {
   onServerProfileUpdated: (callback: (data: any) => void) => () => void;
   onUpdateAvailable: (callback: (data: any) => void) => () => void;
   onAppUpdateProgress: (callback: (data: any) => void) => () => void;
+  onAutoBackupCompleted: (callback: (data: any) => void) => () => void;
+  onServerChatMessage: (callback: (data: any) => void) => () => void;
+  onPlaySound: (callback: (soundType: string) => void) => () => void;
+  onServerCrashed: (callback: (data: { serverId: string; serverName?: string; code?: number }) => void) => () => void;
+  onServerWokenUp: (callback: (data: any) => void) => () => void;
 }
 
 const api: IElectronApi = {
@@ -97,6 +193,8 @@ const api: IElectronApi = {
 
   getServerProperties: (id: string) => ipcRenderer.invoke('get-server-properties', id),
   saveServerProperties: (id: string, props: any) => ipcRenderer.invoke('save-server-properties', id, props),
+  getRawServerProperties: (id: string) => ipcRenderer.invoke('get-raw-server-properties', id),
+  saveRawServerProperties: (id: string, rawContent: string) => ipcRenderer.invoke('save-raw-server-properties', id, rawContent),
   getInstalledPlugins: (id: string) => ipcRenderer.invoke('get-installed-plugins', id),
   getCuratedPlugins: () => ipcRenderer.invoke('get-curated-plugins'),
   installCuratedPlugin: (id: string, pluginId: string) => ipcRenderer.invoke('install-curated-plugin', id, pluginId),
@@ -111,8 +209,49 @@ const api: IElectronApi = {
   createWorldBackup: (id: string) => ipcRenderer.invoke('create-world-backup', id),
 
   getWhitelist: (id: string) => ipcRenderer.invoke('get-whitelist', id),
-  addToWhitelist: (id: string, name: string) => ipcRenderer.invoke('add-to-whitelist', id, name),
-  removeFromWhitelist: (id: string, name: string) => ipcRenderer.invoke('remove-from-whitelist', id, name),
+  addToWhitelist: (id: string, name: string, uuid?: string) => ipcRenderer.invoke('add-to-whitelist', id, name, uuid),
+  removeFromWhitelist: (id: string, name: string, uuid?: string) => ipcRenderer.invoke('remove-from-whitelist', id, name, uuid),
+
+  // Operators & Bans
+  getServerOps: (id: string) => ipcRenderer.invoke('get-server-ops', id),
+  addOp: (id: string, name: string, level?: number, uuid?: string) => ipcRenderer.invoke('add-op', id, name, level, uuid),
+  removeOp: (id: string, name: string, uuid?: string) => ipcRenderer.invoke('remove-op', id, name, uuid),
+  getServerBans: (id: string) => ipcRenderer.invoke('get-server-bans', id),
+  banPlayer: (id: string, name: string, reason?: string, uuid?: string) => ipcRenderer.invoke('ban-player', id, name, reason, uuid),
+  pardonPlayer: (id: string, name: string, uuid?: string) => ipcRenderer.invoke('pardon-player', id, name, uuid),
+  getServerBannedIps: (id: string) => ipcRenderer.invoke('get-server-banned-ips', id),
+  banIp: (id: string, ip: string, reason?: string) => ipcRenderer.invoke('ban-ip', id, ip, reason),
+  pardonIp: (id: string, ip: string) => ipcRenderer.invoke('pardon-ip', id, ip),
+
+  // Player Directory & Inventory
+  getServerPlayersArchive: (id: string, onlinePlayerNames?: string[]) => ipcRenderer.invoke('get-server-players-archive', id, onlinePlayerNames),
+  getPlayerInventory: (id: string, uuid: string, playerName?: string) => ipcRenderer.invoke('get-player-inventory', id, uuid, playerName),
+
+  // World Manager
+  getServerWorlds: (id: string) => ipcRenderer.invoke('get-server-worlds', id),
+  resetWorld: (id: string, worldName: string) => ipcRenderer.invoke('reset-world', id, worldName),
+  importWorld: (id: string, zipPath: string, targetWorldName: string) => ipcRenderer.invoke('import-world', id, zipPath, targetWorldName),
+  getWorldBackups: (id: string) => ipcRenderer.invoke('get-world-backups', id),
+  deleteWorldBackup: (id: string, fileName: string) => ipcRenderer.invoke('delete-world-backup', id, fileName),
+  restoreWorldBackup: (id: string, fileName: string) => ipcRenderer.invoke('restore-world-backup', id, fileName),
+  updateServerProfile: (id: string, updates: any) => ipcRenderer.invoke('update-server-profile', id, updates),
+  pickWorldZip: () => ipcRenderer.invoke('pick-world-zip'),
+  exportServerZip: (id: string) => ipcRenderer.invoke('export-server-zip', id),
+  exportWorldZip: (id: string, worldName?: string) => ipcRenderer.invoke('export-world-zip', id, worldName),
+  importServerZip: (customZipPath?: string) => ipcRenderer.invoke('import-server-zip', customZipPath),
+  upgradeServerVersion: (id: string, targetVersion: string) => ipcRenderer.invoke('upgrade-server-version', id, targetVersion),
+
+  // Analytics & Statistics
+  getUptimeHistory: (id: string) => ipcRenderer.invoke('get-uptime-history', id),
+  getPlayerAnalytics: (id: string) => ipcRenderer.invoke('get-player-analytics', id),
+  getChatHistory: (id: string, limit?: number) => ipcRenderer.invoke('get-chat-history', id, limit),
+  clearChatHistory: (id: string) => ipcRenderer.invoke('clear-chat-history', id),
+  getPerformanceHistory: (id: string, range?: string) => ipcRenderer.invoke('get-performance-history', id, range),
+
+  // Crash Analyzer & Diagnostics
+  getCrashReports: (id: string) => ipcRenderer.invoke('get-crash-reports', id),
+  analyzeCrash: (id: string, fileName?: string, sessionInfo?: any, lang?: string) => ipcRenderer.invoke('analyze-crash', id, fileName, sessionInfo, lang),
+  testStartupSound: () => ipcRenderer.invoke('test-startup-sound'),
 
   // Storage & Quota
   getServerStorage: (id: string) => ipcRenderer.invoke('get-server-storage', id),
@@ -136,6 +275,7 @@ const api: IElectronApi = {
   getAppSettings: () => ipcRenderer.invoke('get-app-settings'),
   saveAppSettings: (updates: any) => ipcRenderer.invoke('save-app-settings', updates),
   getGlobalDiagnostics: () => ipcRenderer.invoke('get-global-diagnostics'),
+  checkJavaStatus: (mcVersion: string) => ipcRenderer.invoke('check-java-status', mcVersion),
   openServersFolder: () => ipcRenderer.invoke('open-servers-folder'),
   openAppLogs: () => ipcRenderer.invoke('open-app-logs'),
   clearAppCache: () => ipcRenderer.invoke('clear-app-cache'),
@@ -143,6 +283,60 @@ const api: IElectronApi = {
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   startAppUpdate: () => ipcRenderer.invoke('start-app-update'),
   cancelAppUpdate: () => ipcRenderer.invoke('cancel-app-update'),
+  sendTestNotification: (lang?: 'bg' | 'en') => ipcRenderer.invoke('send-test-notification', lang),
+
+  // Lag Buster
+  cleanDroppedItems: (serverId: string) => ipcRenderer.invoke('clean-dropped-items', serverId),
+  cleanHostileMonsters: (serverId: string) => ipcRenderer.invoke('clean-hostile-monsters', serverId),
+  cleanMinecartsBoats: (serverId: string) => ipcRenderer.invoke('clean-minecarts-boats', serverId),
+  checkLagSettings: (serverId: string) => ipcRenderer.invoke('check-lag-settings', serverId),
+  applyOptimalLagSettings: (serverId: string) => ipcRenderer.invoke('apply-optimal-lag-settings', serverId),
+  runChunkyCommand: (serverId: string, action: 'radius' | 'start' | 'pause' | 'cancel', radius?: number) =>
+    ipcRenderer.invoke('run-chunky-command', serverId, action, radius),
+  isChunkyInstalled: (serverId: string) => ipcRenderer.invoke('is-chunky-installed', serverId),
+
+  // Smart Sleep Mode
+  putServerToSleep: (serverId: string) => ipcRenderer.invoke('put-server-to-sleep', serverId),
+  wakeServer: (serverId: string) => ipcRenderer.invoke('wake-server', serverId),
+  isServerSleeping: (serverId: string) => ipcRenderer.invoke('is-server-sleeping', serverId),
+
+  // World Slimmer
+  analyzeWorldSlimmer: (serverId: string, radiusBlocks?: number) =>
+    ipcRenderer.invoke('analyze-world-slimmer', serverId, radiusBlocks),
+  trimDistantRegions: (serverId: string, radiusBlocks?: number) =>
+    ipcRenderer.invoke('trim-distant-regions', serverId, radiusBlocks),
+
+  // Mobile Remote Web
+  getRemoteStatus: () => ipcRenderer.invoke('get-remote-status'),
+  toggleRemoteService: (enabled: boolean) => ipcRenderer.invoke('toggle-remote-service', enabled),
+  regenerateRemotePin: () => ipcRenderer.invoke('regenerate-remote-pin'),
+  setRemotePort: (port: number) => ipcRenderer.invoke('set-remote-port', port),
+  getRemoteQrSvg: (mode?: 'local' | 'public') => ipcRenderer.invoke('get-remote-qr-svg', mode),
+  startRemoteTunnel: () => ipcRenderer.invoke('start-remote-tunnel'),
+  stopRemoteTunnel: () => ipcRenderer.invoke('stop-remote-tunnel'),
+
+  // Task Scheduler
+  getScheduledTasks: () => ipcRenderer.invoke('get-scheduled-tasks'),
+  saveScheduledTask: (task: any) => ipcRenderer.invoke('save-scheduled-task', task),
+  deleteScheduledTask: (taskId: string) => ipcRenderer.invoke('delete-scheduled-task', taskId),
+  toggleTaskEnabled: (taskId: string, enabled: boolean) => ipcRenderer.invoke('toggle-task-enabled', taskId, enabled),
+  runTaskNow: (taskId: string) => ipcRenderer.invoke('run-task-now', taskId),
+
+  // Seed Map & Structure Locator
+  getWorldSeed: (serverId: string) => ipcRenderer.invoke('get-world-seed', serverId),
+  locateStructures: (
+    seed: string,
+    dimension: 'overworld' | 'nether' | 'the_end' = 'overworld',
+    originX = 0,
+    originZ = 0,
+    maxRadius = 6000
+  ) => ipcRenderer.invoke('locate-structures', seed, dimension, originX, originZ, maxRadius),
+
+  onScheduledTasksUpdated: (callback) => {
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('scheduled-tasks-updated', handler);
+    return () => ipcRenderer.removeListener('scheduled-tasks-updated', handler);
+  },
 
   onServerLog: (callback) => {
     const handler = (_event: any, data: any) => callback(data);
@@ -193,6 +387,36 @@ const api: IElectronApi = {
     const handler = (_event: any, data: any) => callback(data);
     ipcRenderer.on('app-update-progress', handler);
     return () => ipcRenderer.removeListener('app-update-progress', handler);
+  },
+  onAutoBackupCompleted: (callback) => {
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('auto-backup-completed', handler);
+    return () => ipcRenderer.removeListener('auto-backup-completed', handler);
+  },
+  onServerChatMessage: (callback) => {
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('server-chat-message', handler);
+    return () => ipcRenderer.removeListener('server-chat-message', handler);
+  },
+  onPlaySound: (callback) => {
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('play-sound', handler);
+    return () => ipcRenderer.removeListener('play-sound', handler);
+  },
+  onServerCrashed: (callback) => {
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('server-crashed', handler);
+    return () => ipcRenderer.removeListener('server-crashed', handler);
+  },
+  onUpgradeProgress: (callback) => {
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('upgrade-progress', handler);
+    return () => ipcRenderer.removeListener('upgrade-progress', handler);
+  },
+  onServerWokenUp: (callback) => {
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('server-woken-up', handler);
+    return () => ipcRenderer.removeListener('server-woken-up', handler);
   },
 };
 

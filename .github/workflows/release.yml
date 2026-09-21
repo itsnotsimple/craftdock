@@ -80,9 +80,14 @@ jobs:
             ---
 
             ### ✨ What's New in ${{ github.ref_name }}
-            * 🚀 **1-Click In-App Auto-Updater**: Directly updates CraftDock with live progress bar and automatic restart.
-            * 🍏 **Native macOS Experience**: High-resolution crisp icon and automated Gatekeeper bypass.
-            * 🧹 **Complete App & Data Eraser**: Clean uninstallation and total removal of server files, worlds, and runtimes.
-            * 🪟 **Clean Window Title**: Alt-Tab and title bar display pure "CraftDock".
+            * 📱 **Mobile Web Remote (Wi-Fi & Cloudflare Quick Tunnel)**: Control servers from any smartphone with QR code, 4-digit hardware PIN, live console, and worldwide 4G/5G zero-config access.
+            * ⏰ **Task Scheduler & Cron Engine**: Automated daily restarts with 10s in-game broadcast countdown, scheduled world backups, rule reminders, and lag sweeps.
+            * 🧭 **Interactive Seed Map & Structure Radar**: 64-bit NBT seed extraction from `level.dat`, Java Edition structure locator (Strongholds, Villages, Ancient Cities, Trial Chambers 1.21+, Nether Fortresses, Bastions, End Cities), and 1-click `/tp` teleport.
+            * ⚡ **Lag Buster & Smart Sleep**: Real-time entity density audit, 1-click floor item sweeper, Chunky terrain pre-generator, and 5-min auto-hibernate wake-on-connect.
+            * 🧹 **World Slimmer**: Prune untouched exploration chunks outside player bases to save gigabytes of SSD space.
+            * 👥 **Player & Inventory Inspector**: Live 3D player skin heads, bans, ops, and real-time inventory and Ender Chest viewer.
+            * 📈 **Live Performance Analytics & Crash Analyzer**: Real-time CPU/RAM/player SVG graphs, playtime leaderboard, and automated crash log resolution.
+            * 🔄 **Server Version Upgrader & World Manager**: Safe in-place engine upgrades with automatic pre-upgrade world backup, per-dimension reset, and ZIP import/export.
+            * 🚀 **1-Click In-App Auto-Updater**: Directly updates CraftDock across Windows and macOS with live progress bar.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

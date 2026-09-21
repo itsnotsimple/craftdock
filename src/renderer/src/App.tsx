@@ -6,18 +6,23 @@ import { LibraryView } from './views/LibraryView';
 import { WizardView } from './views/WizardView';
 import { DashboardView } from './views/DashboardView';
 import { SettingsView } from './views/SettingsView';
+import { SchedulerView } from './views/SchedulerView';
 import { NetworkModal } from './components/NetworkModal';
 import { ServerConflictModal } from './components/ServerConflictModal';
+import { MobileRemoteModal } from './components/MobileRemoteModal';
 import { ServerProfile, SystemInfo, LogEntry, ServerSoftware, ServerStats } from './types';
 import { useDialog } from './context/DialogContext';
 import { useLanguage } from './context/LanguageContext';
 import { useTheme } from './context/ThemeContext';
+import { playMinecraftStartupSound } from './utils/sound-effects';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export const App: React.FC = () => {
   const { t, language } = useLanguage();
   const { theme } = useTheme();
   const { showConfirm, showAlert } = useDialog();
-  const [currentTab, setCurrentTab] = useState<'library' | 'wizard' | 'dashboard' | 'settings'>('library');
+  const [currentTab, setCurrentTab] = useState<'library' | 'wizard' | 'dashboard' | 'scheduler' | 'settings'>('library');
+  const [isMobileRemoteOpen, setIsMobileRemoteOpen] = useState<boolean>(false);
   const [servers, setServers] = useState<ServerProfile[]>([]);
   const [activeServerId, setActiveServerId] = useState<string | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
@@ -195,6 +200,12 @@ export const App: React.FC = () => {
       setUpdateProgress(data);
     });
 
+    const unsubPlaySound = api.onPlaySound?.((soundType: string) => {
+      if (soundType === 'server-ready') {
+        playMinecraftStartupSound();
+      }
+    });
+
     return () => {
       if (unsubLog) unsubLog();
       if (unsubStats) unsubStats();
@@ -205,6 +216,7 @@ export const App: React.FC = () => {
       if (unsubServerProfile) unsubServerProfile();
       if (unsubUpdateAvailable) unsubUpdateAvailable();
       if (unsubUpdateProgress) unsubUpdateProgress();
+      if (unsubPlaySound) unsubPlaySound();
     };
   }, [refreshServers]);
 
@@ -334,7 +346,7 @@ export const App: React.FC = () => {
 
   const handleDeleteServer = async (id: string) => {
     const target = servers.find((s) => s.id === id);
-    const serverName = target ? target.name : (target ? target.name : 'server');
+    const serverName = target?.name || 'server';
     const confirmed = await showConfirm({
       title: t('dialogs.deleteServerTitle'),
       message: t('dialogs.deleteServerMsg', { name: serverName }),
@@ -400,6 +412,65 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleExportServer = async (id: string) => {
+    const api = (window as any).api;
+    if (!api?.exportServerZip) return;
+    try {
+      const result = await api.exportServerZip(id);
+      if (result && result.success) {
+        await showAlert({
+          title: language === 'bg' ? 'Сървърът е експортиран! 📦' : 'Server Exported! 📦',
+          message:
+            language === 'bg'
+              ? `Архивът беше запазен успешно (${result.sizeMb} MB) на:\n${result.filePath}`
+              : `The archive was saved successfully (${result.sizeMb} MB) at:\n${result.filePath}`,
+          buttonText: t('common.understand'),
+          type: 'success',
+        });
+      } else if (result && result.error) {
+        await showAlert({
+          title: language === 'bg' ? 'Грешка при експорт' : 'Export Failed',
+          message: result.error,
+          buttonText: t('common.understand'),
+          type: 'error',
+        });
+      }
+    } catch (err: any) {
+      console.error('Export error:', err);
+    }
+  };
+
+  const handleImportServer = async () => {
+    const api = (window as any).api;
+    if (!api?.importServerZip) return;
+    try {
+      const result = await api.importServerZip();
+      if (result && result.success && result.profile) {
+        await refreshServers();
+        setActiveServerId(result.profile.id);
+        setCurrentTab('dashboard');
+        await showAlert({
+          title: language === 'bg' ? 'Сървърът е импортиран! 📥' : 'Server Imported! 📥',
+          message:
+            language === 'bg'
+              ? `Сървърът «${result.profile.name}» е добавен успешно към CraftDock.`
+              : `Server «${result.profile.name}» was imported successfully.`,
+          buttonText: t('common.understand'),
+          type: 'success',
+        });
+      } else if (result && result.error) {
+        await showAlert({
+          title: language === 'bg' ? 'Грешка при импорт' : 'Import Failed',
+          message: result.error,
+          buttonText: t('common.understand'),
+          type: 'error',
+        });
+      }
+    } catch (err: any) {
+      console.error('Import error:', err);
+    }
+  };
+
   const handleStartUpdate = async () => {
     const api = (window as any).api;
     if (!api) return;
@@ -452,7 +523,7 @@ export const App: React.FC = () => {
       )}
 
       {/* Full-width Draggable TitleBar Strip */}
-      <TitleBar activeServer={activeServer} />
+      <TitleBar activeServer={activeServer} onOpenMobileRemote={() => setIsMobileRemoteOpen(true)} />
 
       {/* Update Available Banner */}
       {updateInfo && (
@@ -523,7 +594,7 @@ export const App: React.FC = () => {
                   type="button"
                   onClick={() => (window as any).api?.openExternal?.(updateInfo.releaseUrl)}
                   className="px-2.5 py-1.5 rounded-lg bg-emerald-700/60 hover:bg-emerald-700 text-emerald-100 hover:text-white transition-all cursor-pointer border border-emerald-500/50 text-xs flex items-center gap-1"
-                  title="View GitHub Release"
+                  title={language === 'bg' ? 'Преглед в GitHub' : 'View GitHub Release'}
                 >
                   <ExternalLink className="w-3 h-3" />
                   <span className="hidden sm:inline">{t('updateBanner.releaseNotes')}</span>
@@ -594,6 +665,7 @@ export const App: React.FC = () => {
           servers={servers}
           activeServerId={activeServerId}
           systemInfo={systemInfo}
+          onOpenMobileRemote={() => setIsMobileRemoteOpen(true)}
         />
 
         {/* Main Content Area */}
@@ -607,6 +679,8 @@ export const App: React.FC = () => {
               onOpenNetwork={(srv) => setNetworkModalServer(srv)}
               onOpenFolder={handleOpenFolder}
               onDeleteServer={handleDeleteServer}
+              onExportServer={handleExportServer}
+              onImportServer={handleImportServer}
               onNavigateToWizard={() => setCurrentTab('wizard')}
             />
           )}
@@ -615,6 +689,7 @@ export const App: React.FC = () => {
             <WizardView
               systemInfo={systemInfo}
               onCancel={() => setCurrentTab('library')}
+              onImportServer={handleImportServer}
               onCreateServer={handleCreateServer}
               downloadProgress={downloadProgress}
               isCreating={isCreating}
@@ -622,35 +697,39 @@ export const App: React.FC = () => {
           )}
 
           {currentTab === 'dashboard' && activeServer && (
-            <DashboardView
-              server={activeServer}
-              activeRunningServer={servers.find((s) => s.status === 'running' || s.status === 'starting')}
-              logs={serverLogs[activeServer.id] || []}
-              players={serverPlayers[activeServer.id] || []}
-              serverStats={serverStats[activeServer.id] || null}
-              systemInfo={systemInfo}
-              onUpdateServer={(updated) => {
-                if (!updated) return;
-                const targetId = updated.id || activeServerId || activeServer.id;
-                setServers((prev) =>
-                  prev.map((s) => (s.id === targetId ? { ...s, ...updated, id: targetId } : s))
-                );
-                refreshServers();
-              }}
-              onStartServer={handleStartServer}
-              onStopServer={handleStopServer}
-              onSendCommand={handleSendCommand}
-              onClearLogs={() => {
-                setServerLogs((prev) => ({
-                  ...prev,
-                  [activeServer.id]: [],
-                }));
-              }}
-              onOpenNetworkModal={() => setNetworkModalServer(activeServer)}
-              onOpenFolder={handleOpenFolder}
-              onBackToLibrary={() => setCurrentTab('library')}
-            />
+            <ErrorBoundary fallbackTitle={language === 'bg' ? 'Грешка в контролния панел на сървъра' : 'Dashboard Render Error'}>
+              <DashboardView
+                server={activeServer}
+                activeRunningServer={servers.find((s) => s.status === 'running' || s.status === 'starting')}
+                logs={serverLogs[activeServer.id] || []}
+                players={serverPlayers[activeServer.id] || []}
+                serverStats={serverStats[activeServer.id] || null}
+                systemInfo={systemInfo}
+                onUpdateServer={(updated) => {
+                  if (!updated) return;
+                  const targetId = updated.id || activeServerId || activeServer.id;
+                  setServers((prev) =>
+                    prev.map((s) => (s.id === targetId ? { ...s, ...updated, id: targetId } : s))
+                  );
+                  refreshServers();
+                }}
+                onStartServer={handleStartServer}
+                onStopServer={handleStopServer}
+                onSendCommand={handleSendCommand}
+                onClearLogs={() => {
+                  setServerLogs((prev) => ({
+                    ...prev,
+                    [activeServer.id]: [],
+                  }));
+                }}
+                onOpenNetworkModal={() => setNetworkModalServer(activeServer)}
+                onOpenFolder={handleOpenFolder}
+                onBackToLibrary={() => setCurrentTab('library')}
+              />
+            </ErrorBoundary>
           )}
+
+          {currentTab === 'scheduler' && <SchedulerView servers={servers} />}
 
           {currentTab === 'settings' && <SettingsView />}
         </div>
@@ -676,6 +755,12 @@ export const App: React.FC = () => {
           onGoToRunning={handleGoToRunning}
         />
       )}
+
+      {/* Mobile Web Remote Modal */}
+      <MobileRemoteModal
+        isOpen={isMobileRemoteOpen}
+        onClose={() => setIsMobileRemoteOpen(false)}
+      />
     </div>
   );
 };

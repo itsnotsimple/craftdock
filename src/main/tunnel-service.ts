@@ -24,6 +24,7 @@ export interface TunnelStatus {
 
 let activeTunnelProcess: ChildProcessWithoutNullStreams | null = null;
 let currentTunnelStatus: TunnelStatus = { isRunning: false };
+let statusChangeCallback: ((status: TunnelStatus) => void) | null = null;
 
 export async function fetchPublicIp(): Promise<string> {
   try {
@@ -87,6 +88,7 @@ export async function startTunnelProcess(
   port = 25565,
   onStatusChange: (status: TunnelStatus) => void
 ): Promise<TunnelStatus> {
+  statusChangeCallback = onStatusChange;
   if (activeTunnelProcess) {
     return currentTunnelStatus;
   }
@@ -136,18 +138,22 @@ export async function startTunnelProcess(
     // Look for public address: *.ply.gg:port or *.playit.gg:port or *.joinmc.link
     const addrMatch = text.match(/([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.(?:ply\.gg|playit\.gg|joinmc\.link)(?::\d+)?)/i);
     if (addrMatch) {
-      currentTunnelStatus.address = addrMatch[1].replace(/\.$/, '');
+      const newAddress = addrMatch[1].replace(/\.$/, '');
+      const isNewAddress = currentTunnelStatus.address !== newAddress;
+      currentTunnelStatus.address = newAddress;
       currentTunnelStatus.hasZeroTunnels = false;
       currentTunnelStatus.claimUrl = undefined;
       currentTunnelStatus.log = 'Тунелът е активен и готов за игра!';
-      onStatusChange({ ...currentTunnelStatus });
+      if (isNewAddress) {
+        onStatusChange({ ...currentTunnelStatus });
+      }
     }
 
     if (text.toLowerCase().includes('tunnel running') || text.toLowerCase().includes('registered tunnel')) {
       if (!currentTunnelStatus.address) {
         currentTunnelStatus.log = 'Свързан към Playit мрежата...';
+        onStatusChange({ ...currentTunnelStatus });
       }
-      onStatusChange({ ...currentTunnelStatus });
     }
   };
 
@@ -175,7 +181,10 @@ export function stopTunnelProcess(): void {
       activeTunnelProcess.kill();
     } catch (e) {}
     activeTunnelProcess = null;
-    currentTunnelStatus = { isRunning: false };
+  }
+  currentTunnelStatus = { isRunning: false, log: 'Тунелът е спрян' };
+  if (statusChangeCallback) {
+    statusChangeCallback({ ...currentTunnelStatus });
   }
 }
 

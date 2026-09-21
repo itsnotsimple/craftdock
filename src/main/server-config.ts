@@ -5,6 +5,7 @@ import { execSync } from 'child_process';
 import { downloadFileWithProgress } from './api-service';
 
 export interface ServerProperties {
+  // Core
   port?: number;
   onlineMode: boolean;
   whiteList: boolean;
@@ -21,6 +22,71 @@ export interface ServerProperties {
   resourcePackSha1?: string;
   requireResourcePack?: boolean;
   resourcePackPrompt?: string;
+
+  // World Generation
+  levelSeed?: string;
+  levelType?: string;
+  generateStructures?: boolean;
+  generatorSettings?: string;
+  maxWorldSize?: number;
+
+  // Gameplay
+  allowFlight?: boolean;
+  allowNether?: boolean;
+  enableCommandBlock?: boolean;
+  forceGamemode?: boolean;
+  spawnNpcs?: boolean;
+  spawnAnimals?: boolean;
+  spawnMonsters?: boolean;
+  playerIdleTimeout?: number;
+  maxBuildHeight?: number;
+
+  // Network
+  networkCompressionThreshold?: number;
+  rateLimitPacketsPerSecond?: number;
+  enableStatus?: boolean;
+  enableQuery?: boolean;
+  queryPort?: number;
+  enableRcon?: boolean;
+  rconPort?: number;
+  rconPassword?: string;
+
+  // Advanced
+  entityBroadcastRangePercentage?: number;
+  functionPermissionLevel?: number;
+  opPermissionLevel?: number;
+  syncChunkWrites?: boolean;
+  textFilteringConfig?: string;
+  logIps?: boolean;
+  hideOnlinePlayers?: boolean;
+  enforceSecureProfile?: boolean;
+  preventProxyConnections?: boolean;
+  maxTickTime?: number;
+}
+
+// Ops / Bans types
+export interface OpEntry {
+  uuid: string;
+  name: string;
+  level: number;
+  bypassesPlayerLimit: boolean;
+}
+
+export interface BanEntry {
+  uuid?: string;
+  name: string;
+  created: string;
+  source: string;
+  expires: string;
+  reason: string;
+}
+
+export interface BanIpEntry {
+  ip: string;
+  created: string;
+  source: string;
+  expires: string;
+  reason: string;
 }
 
 export interface InstalledPlugin {
@@ -145,6 +211,46 @@ export function readServerProperties(serverDir: string): ServerProperties {
     resourcePackSha1: map['resource-pack-sha1'] || '',
     requireResourcePack: map['require-resource-pack'] === 'true',
     resourcePackPrompt: map['resource-pack-prompt'] || '',
+
+    // World Generation
+    levelSeed: map['level-seed'] || '',
+    levelType: map['level-type'] || 'minecraft\\:normal',
+    generateStructures: map['generate-structures'] !== 'false',
+    generatorSettings: map['generator-settings'] || '',
+    maxWorldSize: parseInt(map['max-world-size'] || '29999984', 10),
+
+    // Gameplay
+    allowFlight: map['allow-flight'] === 'true',
+    allowNether: map['allow-nether'] !== 'false',
+    enableCommandBlock: map['enable-command-block'] === 'true',
+    forceGamemode: map['force-gamemode'] === 'true',
+    spawnNpcs: map['spawn-npcs'] !== 'false',
+    spawnAnimals: map['spawn-animals'] !== 'false',
+    spawnMonsters: map['spawn-monsters'] !== 'false',
+    playerIdleTimeout: parseInt(map['player-idle-timeout'] || '0', 10),
+    maxBuildHeight: parseInt(map['max-build-height'] || '256', 10),
+
+    // Network
+    networkCompressionThreshold: parseInt(map['network-compression-threshold'] || '256', 10),
+    rateLimitPacketsPerSecond: parseInt(map['rate-limit'] || '0', 10),
+    enableStatus: map['enable-status'] !== 'false',
+    enableQuery: map['enable-query'] === 'true',
+    queryPort: parseInt(map['query.port'] || map['server-port'] || '25565', 10),
+    enableRcon: map['enable-rcon'] === 'true',
+    rconPort: parseInt(map['rcon.port'] || '25575', 10),
+    rconPassword: map['rcon.password'] || '',
+
+    // Advanced
+    entityBroadcastRangePercentage: parseInt(map['entity-broadcast-range-percentage'] || '100', 10),
+    functionPermissionLevel: parseInt(map['function-permission-level'] || '2', 10),
+    opPermissionLevel: parseInt(map['op-permission-level'] || '4', 10),
+    syncChunkWrites: map['sync-chunk-writes'] !== 'false',
+    textFilteringConfig: map['text-filtering-config'] || '',
+    logIps: map['log-ips'] !== 'false',
+    hideOnlinePlayers: map['hide-online-players'] === 'true',
+    enforceSecureProfile: map['enforce-secure-profile'] !== 'false',
+    preventProxyConnections: map['prevent-proxy-connections'] === 'true',
+    maxTickTime: parseInt(map['max-tick-time'] || '60000', 10),
   };
 }
 
@@ -193,6 +299,46 @@ export function writeServerProperties(serverDir: string, props: Partial<ServerPr
   if (props.requireResourcePack !== undefined) map['require-resource-pack'] = String(props.requireResourcePack);
   if (props.resourcePackPrompt !== undefined) map['resource-pack-prompt'] = props.resourcePackPrompt;
 
+  // World Generation
+  if (props.levelSeed !== undefined) map['level-seed'] = props.levelSeed;
+  if (props.levelType !== undefined) map['level-type'] = props.levelType;
+  if (props.generateStructures !== undefined) map['generate-structures'] = String(props.generateStructures);
+  if (props.generatorSettings !== undefined) map['generator-settings'] = props.generatorSettings;
+  if (props.maxWorldSize !== undefined) map['max-world-size'] = String(props.maxWorldSize);
+
+  // Gameplay
+  if (props.allowFlight !== undefined) map['allow-flight'] = String(props.allowFlight);
+  if (props.allowNether !== undefined) map['allow-nether'] = String(props.allowNether);
+  if (props.enableCommandBlock !== undefined) map['enable-command-block'] = String(props.enableCommandBlock);
+  if (props.forceGamemode !== undefined) map['force-gamemode'] = String(props.forceGamemode);
+  if (props.spawnNpcs !== undefined) map['spawn-npcs'] = String(props.spawnNpcs);
+  if (props.spawnAnimals !== undefined) map['spawn-animals'] = String(props.spawnAnimals);
+  if (props.spawnMonsters !== undefined) map['spawn-monsters'] = String(props.spawnMonsters);
+  if (props.playerIdleTimeout !== undefined) map['player-idle-timeout'] = String(props.playerIdleTimeout);
+  if (props.maxBuildHeight !== undefined) map['max-build-height'] = String(props.maxBuildHeight);
+
+  // Network
+  if (props.networkCompressionThreshold !== undefined) map['network-compression-threshold'] = String(props.networkCompressionThreshold);
+  if (props.rateLimitPacketsPerSecond !== undefined) map['rate-limit'] = String(props.rateLimitPacketsPerSecond);
+  if (props.enableStatus !== undefined) map['enable-status'] = String(props.enableStatus);
+  if (props.enableQuery !== undefined) map['enable-query'] = String(props.enableQuery);
+  if (props.queryPort !== undefined) map['query.port'] = String(props.queryPort);
+  if (props.enableRcon !== undefined) map['enable-rcon'] = String(props.enableRcon);
+  if (props.rconPort !== undefined) map['rcon.port'] = String(props.rconPort);
+  if (props.rconPassword !== undefined) map['rcon.password'] = props.rconPassword;
+
+  // Advanced
+  if (props.entityBroadcastRangePercentage !== undefined) map['entity-broadcast-range-percentage'] = String(props.entityBroadcastRangePercentage);
+  if (props.functionPermissionLevel !== undefined) map['function-permission-level'] = String(props.functionPermissionLevel);
+  if (props.opPermissionLevel !== undefined) map['op-permission-level'] = String(props.opPermissionLevel);
+  if (props.syncChunkWrites !== undefined) map['sync-chunk-writes'] = String(props.syncChunkWrites);
+  if (props.textFilteringConfig !== undefined) map['text-filtering-config'] = props.textFilteringConfig;
+  if (props.logIps !== undefined) map['log-ips'] = String(props.logIps);
+  if (props.hideOnlinePlayers !== undefined) map['hide-online-players'] = String(props.hideOnlinePlayers);
+  if (props.enforceSecureProfile !== undefined) map['enforce-secure-profile'] = String(props.enforceSecureProfile);
+  if (props.preventProxyConnections !== undefined) map['prevent-proxy-connections'] = String(props.preventProxyConnections);
+  if (props.maxTickTime !== undefined) map['max-tick-time'] = String(props.maxTickTime);
+
   const output = [
     '# Minecraft server properties',
     `# Modified by CraftDock on ${new Date().toISOString()}`,
@@ -200,6 +346,23 @@ export function writeServerProperties(serverDir: string, props: Partial<ServerPr
   ].join('\n');
 
   fs.writeFileSync(filePath, output + '\n', 'utf-8');
+}
+
+export function getRawServerProperties(serverDir: string): string {
+  const filePath = path.join(serverDir, 'server.properties');
+  if (!fs.existsSync(filePath)) return '';
+  return fs.readFileSync(filePath, 'utf-8');
+}
+
+export function saveRawServerProperties(serverDir: string, rawContent: string): boolean {
+  try {
+    const filePath = path.join(serverDir, 'server.properties');
+    fs.writeFileSync(filePath, rawContent, 'utf-8');
+    return true;
+  } catch (e) {
+    console.error('Failed to save raw server.properties:', e);
+    return false;
+  }
 }
 
 export function getPluginsDir(serverDir: string): string {
@@ -274,13 +437,53 @@ export function createWorldBackup(serverDir: string): string {
   const backupFileName = `backup_${timestamp}.zip`;
   const backupPath = path.join(backupsDir, backupFileName);
 
-  const worldDir = path.join(serverDir, 'world');
-  if (fs.existsSync(worldDir)) {
-    try {
-      execSync(`tar -a -cf "${backupPath}" -C "${serverDir}" world`, { stdio: 'ignore' });
+  // Detect all world dimensions (Overworld 'world', Nether 'world_nether', End 'world_the_end', or any dir with level.dat)
+  const targetFolders: string[] = [];
+  try {
+    const entries = fs.readdirSync(serverDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        if (
+          entry.name === 'world' ||
+          entry.name === 'world_nether' ||
+          entry.name === 'world_the_end' ||
+          fs.existsSync(path.join(serverDir, entry.name, 'level.dat'))
+        ) {
+          targetFolders.push(entry.name);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error scanning world directories for backup:', err);
+  }
+
+  if (targetFolders.length === 0) {
+    const worldDir = path.join(serverDir, 'world');
+    if (fs.existsSync(worldDir)) {
+      targetFolders.push('world');
+    } else {
+      return '';
+    }
+  }
+
+  try {
+    const foldersArg = targetFolders.map((f) => `"${f}"`).join(' ');
+    execSync(`tar -a -cf "${backupPath}" --exclude "session.lock" -C "${serverDir}" ${foldersArg}`, { stdio: 'ignore' });
+    if (fs.existsSync(backupPath) && fs.statSync(backupPath).size > 0) {
       return backupFileName;
-    } catch (e) {
-      console.error('Failed to create backup:', e);
+    }
+  } catch (e: any) {
+    console.error('tar backup encountered an issue, trying fallback:', e?.message);
+    if (process.platform === 'win32') {
+      try {
+        const fullPaths = targetFolders.map((f) => `'${path.join(serverDir, f)}'`).join(',');
+        execSync(`powershell.exe -NoProfile -Command "Compress-Archive -Path ${fullPaths} -DestinationPath '${backupPath}' -Force"`, { stdio: 'ignore' });
+        if (fs.existsSync(backupPath) && fs.statSync(backupPath).size > 0) {
+          return backupFileName;
+        }
+      } catch (psErr) {
+        console.error('Failed fallback Compress-Archive backup:', psErr);
+      }
     }
   }
   return '';
@@ -389,12 +592,16 @@ export async function syncWhitelistUuids(serverDir: string): Promise<WhitelistEn
   return current;
 }
 
-export async function addToWhitelist(serverDir: string, name: string): Promise<WhitelistEntry[]> {
+export async function addToWhitelist(serverDir: string, name: string, specificUuid?: string): Promise<WhitelistEntry[]> {
   const filePath = path.join(serverDir, 'whitelist.json');
   const current = getWhitelist(serverDir);
-  const uuid = await resolvePlayerUuid(serverDir, name);
+  const uuid = specificUuid || (await resolvePlayerUuid(serverDir, name));
 
-  const existingIndex = current.findIndex((c) => c.name.toLowerCase() === name.toLowerCase());
+  const existingIndex = current.findIndex((c) =>
+    specificUuid && c.uuid
+      ? c.uuid.toLowerCase() === specificUuid.toLowerCase()
+      : c.name.toLowerCase() === name.toLowerCase()
+  );
   if (existingIndex >= 0) {
     current[existingIndex].uuid = uuid;
   } else {
@@ -405,10 +612,15 @@ export async function addToWhitelist(serverDir: string, name: string): Promise<W
   return current;
 }
 
-export function removeFromWhitelist(serverDir: string, name: string): WhitelistEntry[] {
+export function removeFromWhitelist(serverDir: string, name: string, specificUuid?: string): WhitelistEntry[] {
   const filePath = path.join(serverDir, 'whitelist.json');
   const current = getWhitelist(serverDir);
-  const filtered = current.filter((c) => c.name.toLowerCase() !== name.toLowerCase());
+  const filtered = current.filter((c) => {
+    if (specificUuid && c.uuid) {
+      return c.uuid.toLowerCase() !== specificUuid.toLowerCase();
+    }
+    return c.name.toLowerCase() !== name.toLowerCase();
+  });
   fs.writeFileSync(filePath, JSON.stringify(filtered, null, 2), 'utf-8');
   return filtered;
 }
@@ -474,6 +686,192 @@ export function removeServerIcon(serverDir: string): boolean {
     return false;
   }
 }
+
+// Operators (ops.json) Management
+export function getServerOps(serverDir: string): OpEntry[] {
+  const filePath = path.join(serverDir, 'ops.json');
+  if (!fs.existsSync(filePath)) return [];
+  try {
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item: any) => ({
+        uuid: item.uuid || '',
+        name: item.name || '',
+        level: typeof item.level === 'number' ? item.level : 4,
+        bypassesPlayerLimit: !!item.bypassesPlayerLimit,
+      }));
+    }
+  } catch (e) {}
+  return [];
+}
+
+export async function addOp(serverDir: string, name: string, level = 4, specificUuid?: string): Promise<OpEntry[]> {
+  const filePath = path.join(serverDir, 'ops.json');
+  const current = getServerOps(serverDir);
+  const uuid = specificUuid || (await resolvePlayerUuid(serverDir, name));
+
+  const existingIdx = current.findIndex((o) =>
+    specificUuid && o.uuid
+      ? o.uuid.toLowerCase() === specificUuid.toLowerCase()
+      : o.name.toLowerCase() === name.toLowerCase()
+  );
+  if (existingIdx >= 0) {
+    current[existingIdx].level = level;
+    current[existingIdx].uuid = uuid;
+  } else {
+    current.push({
+      uuid,
+      name,
+      level,
+      bypassesPlayerLimit: false,
+    });
+  }
+
+  fs.writeFileSync(filePath, JSON.stringify(current, null, 2), 'utf-8');
+  return current;
+}
+
+export function removeOp(serverDir: string, name: string, specificUuid?: string): OpEntry[] {
+  const filePath = path.join(serverDir, 'ops.json');
+  const current = getServerOps(serverDir);
+  const filtered = current.filter((o) => {
+    if (specificUuid && o.uuid) {
+      return o.uuid.toLowerCase() !== specificUuid.toLowerCase();
+    }
+    return o.name.toLowerCase() !== name.toLowerCase();
+  });
+  fs.writeFileSync(filePath, JSON.stringify(filtered, null, 2), 'utf-8');
+  return filtered;
+}
+
+// Banned Players (banned-players.json) Management
+export function getServerBans(serverDir: string): BanEntry[] {
+  const filePath = path.join(serverDir, 'banned-players.json');
+  if (!fs.existsSync(filePath)) return [];
+  try {
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item: any) => ({
+        uuid: item.uuid || '',
+        name: item.name || '',
+        created: item.created || new Date().toISOString(),
+        source: item.source || 'CraftDock',
+        expires: item.expires || 'forever',
+        reason: item.reason || 'Banned by operator',
+      }));
+    }
+  } catch (e) {}
+  return [];
+}
+
+export async function banPlayer(
+  serverDir: string,
+  name: string,
+  reason = 'Banned by operator',
+  source = 'CraftDock',
+  specificUuid?: string
+): Promise<BanEntry[]> {
+  const filePath = path.join(serverDir, 'banned-players.json');
+  const current = getServerBans(serverDir);
+  const uuid = specificUuid || (await resolvePlayerUuid(serverDir, name));
+
+  const existingIdx = current.findIndex((b) =>
+    specificUuid && b.uuid
+      ? b.uuid.toLowerCase() === specificUuid.toLowerCase()
+      : b.name.toLowerCase() === name.toLowerCase()
+  );
+  const entry: BanEntry = {
+    uuid,
+    name,
+    created: new Date().toLocaleString(),
+    source,
+    expires: 'forever',
+    reason: reason.trim() || 'Banned by operator',
+  };
+
+  if (existingIdx >= 0) {
+    current[existingIdx] = entry;
+  } else {
+    current.push(entry);
+  }
+
+  fs.writeFileSync(filePath, JSON.stringify(current, null, 2), 'utf-8');
+  return current;
+}
+
+export function pardonPlayer(serverDir: string, name: string, specificUuid?: string): BanEntry[] {
+  const filePath = path.join(serverDir, 'banned-players.json');
+  const current = getServerBans(serverDir);
+  const filtered = current.filter((b) => {
+    if (specificUuid && b.uuid) {
+      return b.uuid.toLowerCase() !== specificUuid.toLowerCase();
+    }
+    return b.name.toLowerCase() !== name.toLowerCase();
+  });
+  fs.writeFileSync(filePath, JSON.stringify(filtered, null, 2), 'utf-8');
+  return filtered;
+}
+
+// Banned IPs (banned-ips.json) Management
+export function getServerBannedIps(serverDir: string): BanIpEntry[] {
+  const filePath = path.join(serverDir, 'banned-ips.json');
+  if (!fs.existsSync(filePath)) return [];
+  try {
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item: any) => ({
+        ip: item.ip || '',
+        created: item.created || new Date().toISOString(),
+        source: item.source || 'CraftDock',
+        expires: item.expires || 'forever',
+        reason: item.reason || 'Banned by operator',
+      }));
+    }
+  } catch (e) {}
+  return [];
+}
+
+export function banIp(
+  serverDir: string,
+  ip: string,
+  reason = 'Banned by operator',
+  source = 'CraftDock'
+): BanIpEntry[] {
+  const filePath = path.join(serverDir, 'banned-ips.json');
+  const current = getServerBannedIps(serverDir);
+  const cleanIp = ip.trim();
+
+  const existingIdx = current.findIndex((b) => b.ip === cleanIp);
+  const entry: BanIpEntry = {
+    ip: cleanIp,
+    created: new Date().toLocaleString(),
+    source,
+    expires: 'forever',
+    reason: reason.trim() || 'Banned by operator',
+  };
+
+  if (existingIdx >= 0) {
+    current[existingIdx] = entry;
+  } else {
+    current.push(entry);
+  }
+
+  fs.writeFileSync(filePath, JSON.stringify(current, null, 2), 'utf-8');
+  return current;
+}
+
+export function pardonIp(serverDir: string, ip: string): BanIpEntry[] {
+  const filePath = path.join(serverDir, 'banned-ips.json');
+  const current = getServerBannedIps(serverDir);
+  const cleanIp = ip.trim();
+  const filtered = current.filter((b) => b.ip !== cleanIp);
+  fs.writeFileSync(filePath, JSON.stringify(filtered, null, 2), 'utf-8');
+  return filtered;
+}
+
 
 
 

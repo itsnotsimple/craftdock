@@ -24,12 +24,19 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
     log?: string;
   }>({ isRunning: false });
   const [tunnelActionLoading, setTunnelActionLoading] = useState(false);
+  const [autoStartPlayit, setAutoStartPlayit] = useState(true);
 
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
       const api = (window as any).api;
       if (api) {
+        api.getAppSettings?.().then((settings: any) => {
+          if (settings && typeof settings.autoStartPlayitTunnel === 'boolean') {
+            setAutoStartPlayit(settings.autoStartPlayitTunnel);
+          }
+        }).catch(console.error);
+
         api.getNetworkStatus(server.port).then((data: any) => {
           setNetworkInfo({
             localIp: data.localIp || '127.0.0.1',
@@ -332,6 +339,33 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ server, isOpen, onCl
                 </button>
               </div>
             )}
+
+            {/* Auto-start with server toggle */}
+            <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${
+              theme === 'light' ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-950/40 border-white/[0.06]'
+            }`}>
+              <div className="flex-1">
+                <span className={`text-xs font-bold block ${theme === 'light' ? 'text-slate-800' : 'text-slate-200'}`}>
+                  {t('network.autoStartPlayitTitle')}
+                </span>
+                <p className={`text-[11px] ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
+                  {t('network.autoStartPlayitDesc')}
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={autoStartPlayit}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setAutoStartPlayit(checked);
+                    (window as any).api?.saveAppSettings?.({ autoStartPlayitTunnel: checked });
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-10 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-sky-500"></div>
+              </label>
+            </div>
           </div>
 
           {/* Method 2: Public Internet IP */}

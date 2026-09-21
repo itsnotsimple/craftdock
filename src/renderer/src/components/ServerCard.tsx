@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Play,
   Square,
@@ -13,10 +13,15 @@ import {
   HardDrive,
   Flame,
   ArrowRightLeft,
+  Archive,
+  Zap,
+  Moon,
 } from 'lucide-react';
 import { ServerProfile } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
+import { MinecraftCardIcon } from './MinecraftIcons';
+import { getCardThemeConfig } from '../utils/theme-styles';
 
 interface ServerCardProps {
   server: ServerProfile;
@@ -26,6 +31,7 @@ interface ServerCardProps {
   onOpenNetwork: (server: ServerProfile) => void;
   onOpenFolder: (id: string) => void;
   onDelete: (id: string) => void;
+  onExportServer?: (id: string) => void;
   activeRunningServer?: ServerProfile | null;
 }
 
@@ -37,6 +43,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
   onOpenNetwork,
   onOpenFolder,
   onDelete,
+  onExportServer,
   activeRunningServer,
 }) => {
   const { t, language } = useLanguage();
@@ -44,6 +51,19 @@ export const ServerCard: React.FC<ServerCardProps> = ({
   const isRunning = server.status === 'running';
   const isStarting = server.status === 'starting';
   const isStopping = server.status === 'stopping';
+  const isSleeping = server.status === 'sleeping';
+
+  const [serverCustomIcon, setServerCustomIcon] = useState<string | null>(null);
+  useEffect(() => {
+    const api = (window as any).api;
+    if (api?.getServerIcon) {
+      api.getServerIcon(server.id).then((icon: string | null) => {
+        if (icon) setServerCustomIcon(icon);
+      });
+    }
+  }, [server.id]);
+
+  const themeConfig = getCardThemeConfig(server.cardTheme);
 
   const getSoftwareBadge = () => {
     const isLight = theme === 'light';
@@ -90,52 +110,94 @@ export const ServerCard: React.FC<ServerCardProps> = ({
       className={`p-5 rounded-2xl transition-all duration-300 flex flex-col justify-between relative group cursor-pointer overflow-hidden border ${
         theme === 'light'
           ? isRunning
-            ? 'bg-white border-emerald-300 shadow-md shadow-emerald-500/10 hover:shadow-lg hover:border-emerald-400'
+            ? `${themeConfig.bgLight} border-emerald-300 shadow-md shadow-emerald-500/10 hover:shadow-lg hover:border-emerald-400`
             : isStarting
-              ? 'bg-white border-amber-300 shadow-md shadow-amber-500/10'
-              : 'bg-white border-slate-200 hover:border-indigo-400/70 shadow-xs hover:shadow-md'
+              ? `${themeConfig.bgLight} border-amber-300 shadow-md shadow-amber-500/10`
+              : `${themeConfig.bgLight} ${themeConfig.borderLight} shadow-xs hover:shadow-md`
           : isRunning
-            ? 'bg-slate-900/60 border-emerald-500/30 shadow-xl shadow-emerald-950/20 hover:border-emerald-400/50 backdrop-blur-2xl'
+            ? `${themeConfig.bgDark} border-emerald-500/30 shadow-xl shadow-emerald-950/20 hover:border-emerald-400/50`
             : isStarting
-              ? 'bg-slate-900/60 border-amber-500/30 shadow-xl shadow-amber-950/20 backdrop-blur-2xl'
-              : 'bg-slate-900/40 border-white/[0.08] hover:border-indigo-400/40 hover:bg-slate-900/60 shadow-xl backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]'
+              ? `${themeConfig.bgDark} border-amber-500/30 shadow-xl shadow-amber-950/20`
+              : `${themeConfig.bgDark} ${themeConfig.borderDark} shadow-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]`
       }`}
     >
+      {/* Authentic Minecraft Block Texture Background Pattern */}
+      {themeConfig.textureUrl && (
+        <div
+          className="absolute inset-0 pointer-events-none transition-transform duration-700 ease-out group-hover:scale-[1.03] z-0"
+          style={{
+            backgroundImage: `url(${themeConfig.textureUrl})`,
+            backgroundRepeat: 'repeat',
+            backgroundSize: themeConfig.patternSize || '48px 48px',
+            imageRendering: 'pixelated',
+            opacity:
+              theme === 'light'
+                ? themeConfig.textureOpacityLight ?? 0.28
+                : themeConfig.textureOpacityDark ?? 0.44,
+          }}
+        />
+      )}
+
+      {/* Subtle Readability Scrim / Vignette */}
+      {themeConfig.textureUrl && (
+        <div
+          className={`absolute inset-0 pointer-events-none z-0 transition-opacity duration-300 ${
+            theme === 'light'
+              ? 'bg-gradient-to-b from-white/80 via-white/65 to-white/85'
+              : 'bg-gradient-to-b from-black/55 via-black/35 to-black/70'
+          }`}
+        />
+      )}
+
       {/* Top Status Ambient Glow Strip */}
       {isRunning && (
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 z-10" />
       )}
       {isStarting && (
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 animate-pulse" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 animate-pulse z-10" />
       )}
       {isStopping && (
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 via-pink-400 to-rose-500 animate-pulse" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 via-pink-400 to-rose-500 animate-pulse z-10" />
       )}
-      {!isRunning && !isStarting && !isStopping && (
-        <div className={`absolute top-0 left-0 right-0 h-0.5 ${theme === 'light' ? 'bg-slate-200' : 'bg-white/[0.06]'}`} />
+      {isSleeping && (
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-400 to-indigo-500 animate-pulse z-10" />
+      )}
+      {!isRunning && !isStarting && !isStopping && !isSleeping && (
+        <div className={`absolute top-0 left-0 right-0 h-1 z-10 ${server.cardTheme && server.cardTheme !== 'default' ? themeConfig.glowStrip : (theme === 'light' ? 'bg-slate-200' : 'bg-white/[0.06]')}`} />
       )}
 
       {/* Top row */}
-      <div>
+      <div className="relative z-10">
         <div className="flex items-start justify-between gap-3 mb-2">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <h3 className={`text-base font-bold transition-colors tracking-tight truncate ${
-                theme === 'light' ? 'text-slate-900 group-hover:text-indigo-600' : 'text-slate-100 group-hover:text-indigo-300'
-              }`}>
-                {server.name}
-              </h3>
-              {getSoftwareBadge()}
-              {server.hardcore && (
-                <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold border bg-rose-500/15 text-rose-500 border-rose-500/30 flex items-center gap-0.5">
-                  <Flame className="w-2.5 h-2.5 text-rose-500" />
-                  Hardcore
-                </span>
-              )}
+          <div className="min-w-0 flex-1 flex items-start gap-3">
+            {/* Pixel Art Icon Container */}
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border overflow-hidden p-1 shadow-sm transition-transform group-hover:scale-105 ${
+              theme === 'light'
+                ? 'bg-white/80 border-slate-200 shadow-xs'
+                : 'bg-black/40 border-white/[0.1]'
+            }`}>
+              <MinecraftCardIcon icon={server.cardIcon || 'default'} customIconUrl={serverCustomIcon} size={28} />
             </div>
-            <p className={`text-xs font-mono ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
-              Minecraft v{server.version} • {language === 'en' ? 'Port:' : 'Порт:'} :{server.port}
-            </p>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <h3 className={`text-base font-bold transition-colors tracking-tight truncate ${
+                  theme === 'light' ? 'text-slate-900 group-hover:text-indigo-600' : 'text-slate-100 group-hover:text-indigo-300'
+                }`}>
+                  {server.name}
+                </h3>
+                {getSoftwareBadge()}
+                {server.hardcore && (
+                  <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold border bg-rose-500/15 text-rose-500 border-rose-500/30 flex items-center gap-0.5">
+                    <Flame className="w-2.5 h-2.5 text-rose-500" />
+                    Hardcore
+                  </span>
+                )}
+              </div>
+              <p className={`text-xs font-mono ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
+                Minecraft v{server.version} • {language === 'en' ? 'Port:' : 'Порт:'} :{server.port}
+              </p>
+            </div>
           </div>
 
           {/* Status Badge */}
@@ -175,7 +237,17 @@ export const ServerCard: React.FC<ServerCardProps> = ({
                 {t('common.stopping')}
               </span>
             )}
-            {!isRunning && !isStarting && !isStopping && (
+            {isSleeping && (
+              <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
+                theme === 'light'
+                  ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                  : 'bg-indigo-500/15 text-indigo-300 border-indigo-400/30'
+              }`}>
+                <Moon className="w-3.5 h-3.5 text-indigo-400" />
+                <span>{language === 'bg' ? 'В готовност (Спи)' : 'Sleeping'}</span>
+              </span>
+            )}
+            {!isRunning && !isStarting && !isStopping && !isSleeping && (
               <span className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border ${
                 theme === 'light'
                   ? 'bg-slate-100 text-slate-600 border-slate-200'
@@ -227,7 +299,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
 
       {/* Action Buttons */}
       <div
-        className={`space-y-2 pt-2.5 border-t ${theme === 'light' ? 'border-slate-200' : 'border-white/[0.06]'}`}
+        className={`relative z-10 space-y-2 pt-2.5 border-t ${theme === 'light' ? 'border-slate-200' : 'border-white/[0.06]'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2">
@@ -257,6 +329,17 @@ export const ServerCard: React.FC<ServerCardProps> = ({
             >
               <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
               <span>{t('common.stopping')}</span>
+            </button>
+          ) : isSleeping ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                (window as any).api?.wakeServer?.(server.id);
+              }}
+              className="flex-1 py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-950/50 cursor-pointer btn-bounce"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-300 fill-current" />
+              <span>{language === 'bg' ? 'Събуди Сървъра' : 'Wake Up Server'}</span>
             </button>
           ) : activeRunningServer && activeRunningServer.id !== server.id ? (
             <button
@@ -330,6 +413,24 @@ export const ServerCard: React.FC<ServerCardProps> = ({
           >
             <FolderOpen className="w-3.5 h-3.5 text-amber-500" /> {language === 'en' ? 'Open Folder' : 'Отвори папка'}
           </button>
+
+          {onExportServer && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onExportServer(server.id);
+              }}
+              className={`flex items-center gap-1.5 transition-colors cursor-pointer ${
+                theme === 'light'
+                  ? 'text-slate-600 hover:text-cyan-600 font-medium'
+                  : 'text-slate-400 hover:text-cyan-300'
+              }`}
+              title={language === 'bg' ? 'Експортирай целия сървър в .zip архив' : 'Export full server into .zip archive'}
+            >
+              <Archive className="w-3.5 h-3.5 text-cyan-500" /> {language === 'en' ? 'Export' : 'Експорт'}
+            </button>
+          )}
+
           <button
             onClick={(e) => {
               e.stopPropagation();

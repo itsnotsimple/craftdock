@@ -24,6 +24,7 @@ import {
 import { ServerProfile, SystemInfo, ServerStats, ServerStorageStats } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
+import { LagBusterTab } from './LagBusterTab';
 
 interface ResourceMonitorProps {
   server: ServerProfile;
@@ -45,6 +46,7 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
   const [liveMaxPlayers, setLiveMaxPlayers] = useState<number>(server.maxPlayers || 20);
   const [storageStats, setStorageStats] = useState<ServerStorageStats | null>(null);
   const [isRefreshingStorage, setIsRefreshingStorage] = useState<boolean>(false);
+  const [activeSubTab, setActiveSubTab] = useState<'metrics' | 'lagbuster'>('metrics');
   const isRunning = server.status === 'running';
 
   useEffect(() => {
@@ -177,7 +179,46 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
         </div>
       </div>
 
-      {/* Primary Server Metrics */}
+      {/* Sub-tab Navigation (Metrics / Lag Buster) */}
+      <div
+        className={`p-1 rounded-xl border flex items-center gap-1.5 shrink-0 ${
+          theme === 'light' ? 'bg-slate-100 border-slate-200' : 'bg-slate-950/80 border-slate-800'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('metrics')}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            activeSubTab === 'metrics'
+              ? theme === 'light'
+                ? 'bg-white text-emerald-800 shadow-xs border border-emerald-200'
+                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Activity className="w-3.5 h-3.5 text-emerald-400" />
+          <span>{language === 'bg' ? 'Мониторинг & Хардуер' : 'System & Hardware'}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('lagbuster')}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            activeSubTab === 'lagbuster'
+              ? theme === 'light'
+                ? 'bg-white text-amber-800 shadow-xs border border-amber-200'
+                : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Zap className="w-3.5 h-3.5 text-amber-500" />
+          <span>{language === 'bg' ? 'Lag Buster & Оптимизация' : 'Lag Buster & Optimizer'}</span>
+        </button>
+      </div>
+
+      {activeSubTab === 'metrics' && (
+        <div className="space-y-6">
+          {/* Primary Server Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Card 1: Server Real CPU % */}
         <div className={`p-5 rounded-2xl border space-y-3 transition-colors ${
@@ -620,7 +661,7 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
             <span className="text-emerald-500 font-bold">:{server.port}</span>
           </div>
           <div className="flex items-center justify-between text-xs font-mono">
-            <span className="text-slate-400">Local LAN IP:</span>
+            <span className="text-slate-400">{language === 'bg' ? 'Локален LAN IP:' : 'Local LAN IP:'}</span>
             <span className={theme === 'light' ? 'text-slate-800 font-semibold' : 'text-slate-200'}>{systemInfo?.localIp || '127.0.0.1'}</span>
           </div>
         </div>
@@ -642,6 +683,12 @@ export const ResourceMonitorTab: React.FC<ResourceMonitorProps> = ({
           </div>
         </div>
       </div>
+      </div>
+      )}
+
+      {activeSubTab === 'lagbuster' && (
+        <LagBusterTab server={server} isRunning={isRunning} onRefresh={fetchStorage} />
+      )}
     </div>
   );
 };

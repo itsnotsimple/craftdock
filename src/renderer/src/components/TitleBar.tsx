@@ -1,5 +1,5 @@
 import React from 'react';
-import { Languages, Sun, Moon } from 'lucide-react';
+import { Languages, Sun, Moon, Smartphone } from 'lucide-react';
 import craftDockLogo from '../assets/icon.png';
 import { ServerProfile } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -7,11 +7,12 @@ import { useTheme } from '../context/ThemeContext';
 
 interface TitleBarProps {
   activeServer?: ServerProfile | null;
+  onOpenMobileRemote?: () => void;
 }
 
-export const TitleBar: React.FC<TitleBarProps> = ({ activeServer }) => {
+export const TitleBar: React.FC<TitleBarProps> = ({ activeServer, onOpenMobileRemote }) => {
   const { language, toggleLanguage } = useLanguage();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, activeTheme, toggleTheme } = useTheme();
   const isMac = (window as any).api?.platform === 'darwin' || (typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac'));
 
   return (
@@ -39,7 +40,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ activeServer }) => {
           CraftDock
         </span>
         <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-500 dark:text-sky-300 border border-sky-400/20 font-bold">
-          v2.3.2
+          v3.4.0
         </span>
         <span className="text-slate-400 dark:text-slate-600 text-xs hidden sm:inline">•</span>
         <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden sm:inline">
@@ -80,26 +81,35 @@ export const TitleBar: React.FC<TitleBarProps> = ({ activeServer }) => {
           className="flex items-center gap-2 mr-2"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
+          {/* Mobile Remote Quick Button */}
+          {onOpenMobileRemote && (
+            <button
+              type="button"
+              onClick={onOpenMobileRemote}
+              className="btn-bounce flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-mono transition-all cursor-pointer shadow-sm bg-sky-500/10 hover:bg-sky-500/20 border-sky-400/30 text-sky-300 hover:text-white"
+              title={language === 'en' ? 'Open Mobile Web Remote (Wi-Fi)' : 'Отвори управление от телефон (Wi-Fi)'}
+            >
+              <Smartphone className="w-3.5 h-3.5 text-sky-400" />
+              <span className="font-bold text-[10px]">REMOTE</span>
+            </button>
+          )}
+
           {/* Theme Switcher */}
           <button
             type="button"
             onClick={toggleTheme}
-            className={`btn-bounce flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-mono transition-all cursor-pointer shadow-sm ${
-              theme === 'light'
-                ? 'bg-slate-200/80 hover:bg-slate-300/80 border-slate-300 text-slate-800'
-                : 'bg-white/[0.05] hover:bg-white/[0.1] border-white/[0.1] text-slate-200 hover:text-white'
-            }`}
-            title={theme === 'dark' ? (language === 'en' ? 'Switch to Light Theme' : 'Смени на Светла тема') : (language === 'en' ? 'Switch to Dark Theme' : 'Смени на Тъмна тема')}
+            className="btn-bounce flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-mono transition-all cursor-pointer shadow-sm bg-white/[0.05] hover:bg-white/[0.1] border-white/[0.1] text-slate-200 hover:text-white"
+            title={activeTheme === 'dark' ? (language === 'en' ? 'Switch to Light Theme' : 'Смени на Светла тема') : (language === 'en' ? 'Switch to Dark Theme' : 'Смени на Тъмна тема')}
           >
-            {theme === 'dark' ? (
+            {activeTheme === 'dark' ? (
               <>
                 <Sun className="w-3.5 h-3.5 text-amber-400 icon-rotate" />
                 <span className="font-bold text-amber-300 text-[10px]">{language === 'en' ? 'LIGHT' : 'СВЕТЛА'}</span>
               </>
             ) : (
               <>
-                <Moon className="w-3.5 h-3.5 text-indigo-600 icon-rotate" />
-                <span className="font-bold text-indigo-600 text-[10px]">{language === 'en' ? 'DARK' : 'ТЪМНА'}</span>
+                <Moon className="w-3.5 h-3.5 text-indigo-400 icon-rotate" />
+                <span className="font-bold text-indigo-400 text-[10px]">{language === 'en' ? 'DARK' : 'ТЪМНА'}</span>
               </>
             )}
           </button>

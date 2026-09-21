@@ -20,15 +20,53 @@ import {
   Plus,
   Trash2,
   Loader2,
+  BarChart3,
+  ArrowUpCircle,
+  Coffee,
+  Zap,
+  Moon,
 } from 'lucide-react';
 import { ServerProfile, LogEntry, SystemInfo, ServerStats } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { ConsoleView } from '../components/ConsoleView';
-import { PluginManager } from '../components/PluginManager';
-import { ServerSettingsTab } from '../components/ServerSettingsTab';
-import { BackupManager } from '../components/BackupManager';
-import { ResourceMonitorTab } from '../components/ResourceMonitorTab';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+
+// Code splitting: Heavy tabs and modals loaded on demand
+const PluginManager = React.lazy(() =>
+  import('../components/PluginManager').then((m) => ({ default: m.PluginManager }))
+);
+const ServerSettingsTab = React.lazy(() =>
+  import('../components/ServerSettingsTab').then((m) => ({ default: m.ServerSettingsTab }))
+);
+const VersionUpgraderTab = React.lazy(() =>
+  import('../components/VersionUpgraderTab').then((m) => ({ default: m.VersionUpgraderTab }))
+);
+const ResourceMonitorTab = React.lazy(() =>
+  import('../components/ResourceMonitorTab').then((m) => ({ default: m.ResourceMonitorTab }))
+);
+const WorldManager = React.lazy(() =>
+  import('../components/WorldManager').then((m) => ({ default: m.WorldManager }))
+);
+const PlayerManagement = React.lazy(() =>
+  import('../components/PlayerManagement').then((m) => ({ default: m.PlayerManagement }))
+);
+const AnalyticsTab = React.lazy(() =>
+  import('../components/analytics').then((m) => ({ default: m.AnalyticsTab }))
+);
+const CrashAnalyzerModal = React.lazy(() =>
+  import('../components/CrashAnalyzerModal').then((m) => ({ default: m.CrashAnalyzerModal }))
+);
+
+const TabLoader: React.FC = () => {
+  const { t } = useLanguage();
+  return (
+    <div className="flex flex-col items-center justify-center h-72 gap-3 animate-in fade-in duration-150">
+      <Loader2 className="w-7 h-7 animate-spin text-emerald-400" />
+      <span className="text-xs font-mono text-slate-400">{t('common.loading')}</span>
+    </div>
+  );
+};
 
 interface DashboardViewProps {
   server: ServerProfile;
@@ -63,94 +101,61 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenFolder,
   onBackToLibrary,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { theme } = useTheme();
-  const [activeTab, setActiveTab] = useState<'console' | 'plugins' | 'settings' | 'resources' | 'players' | 'backups'>('console');
-  const [whitelist, setWhitelist] = useState<Array<{ name: string; uuid?: string }>>([]);
-  const [isWhitelistEnabled, setIsWhitelistEnabled] = useState<boolean>(false);
-  const [newPlayerName, setNewPlayerName] = useState<string>('');
-  const [whitelistLoading, setWhitelistLoading] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'console' | 'plugins' | 'settings' | 'version' | 'resources' | 'players' | 'worlds' | 'analytics'>('console');
+  const [showCrashModal, setShowCrashModal] = useState(false);
+  const [selectedCrashSession, setSelectedCrashSession] = useState<any | null>(null);
+  const [crashDetected, setCrashDetected] = useState(false);
+  const [javaStatus, setJavaStatus] = useState<{
+    systemJavaVersion: number;
+    portableJavaAvailable: boolean;
+    isCompatible: boolean;
+    requiredVersion: number;
+  } | null>(null);
+
   const isRunning = server.status === 'running';
   const isStarting = server.status === 'starting';
   const isStopping = server.status === 'stopping';
-
-  const loadWhitelistData = async () => {
-    const api = (window as any).api;
-    if (!api) return;
-    try {
-      const [wl, props] = await Promise.all([
-        api.getWhitelist(server.id),
-        api.getServerProperties(server.id),
-      ]);
-      setWhitelist(wl || []);
-      setIsWhitelistEnabled(props?.whiteList ?? false);
-    } catch (e) {
-      console.error('Failed to load whitelist:', e);
-    }
-  };
+  const isSleeping = server.status === 'sleeping';
 
   useEffect(() => {
-    loadWhitelistData();
-  }, [server.id, activeTab]);
-
-  const handleAddWhitelist = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const name = newPlayerName.trim();
-    if (!name) return;
-
-    setWhitelistLoading(true);
-    const api = (window as any).api;
-    if (api) {
+    let isMounted = true;
+    const fetchJava = async () => {
       try {
-        await api.addToWhitelist(server.id, name);
-        setNewPlayerName('');
-        await loadWhitelistData();
-      } catch (err) {
-        console.error('Failed to add to whitelist:', err);
-      } finally {
-        setWhitelistLoading(false);
+        const api = (window as any).api;
+        if (api?.checkJavaStatus) {
+          const res = await api.checkJavaStatus(server.version);
+          if (isMounted) setJavaStatus(res);
+        }
+      } catch (e) {
+        console.warn('Could not check java status:', e);
       }
-    }
-  };
+    };
+    fetchJava();
+    return () => {
+      isMounted = false;
+    };
+  }, [server.version]);
 
-  const handleRemoveWhitelist = async (name: string) => {
-    setWhitelistLoading(true);
+  useEffect(() => {
     const api = (window as any).api;
-    if (api) {
-      try {
-        await api.removeFromWhitelist(server.id, name);
-        await loadWhitelistData();
-      } catch (err) {
-        console.error('Failed to remove from whitelist:', err);
-      } finally {
-        setWhitelistLoading(false);
+    if (!api?.onServerCrashed) return;
+    const unsub = api.onServerCrashed((data: any) => {
+      if (data?.serverId === server.id) {
+        setCrashDetected(true);
       }
+    });
+    return () => {
+      if (unsub) unsub();
+    };
+  }, [server.id]);
+
+  useEffect(() => {
+    if (isRunning) {
+      setCrashDetected(false);
     }
-  };
-
-  const handleToggleWhitelist = async () => {
-    const api = (window as any).api;
-    if (!api) return;
-    const newState = !isWhitelistEnabled;
-    try {
-      await api.saveServerProperties(server.id, { whiteList: newState });
-      setIsWhitelistEnabled(newState);
-      if (isRunning) {
-        onSendCommand(`whitelist ${newState ? 'on' : 'off'}`);
-        onSendCommand('whitelist reload');
-      }
-    } catch (e) {
-      console.error('Failed to toggle whitelist:', e);
-    }
-  };
-
-  const handleOpPlayer = (playerName: string) => {
-    onSendCommand(`op ${playerName}`);
-  };
-
-  const handleKickPlayer = (playerName: string) => {
-    onSendCommand(`kick ${playerName}`);
-  };
+  }, [isRunning]);
 
   return (
     <div className={`flex-1 flex flex-col h-full ${theme === 'light' ? 'bg-transparent' : 'bg-slate-950/20'} overflow-hidden`}>
@@ -192,6 +197,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 border border-rose-300"></span>
                   </span>
+                ) : isSleeping ? (
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-500 border border-indigo-300"></span>
+                  </span>
                 ) : (
                   <span className={`w-3 h-3 rounded-full ${theme === 'light' ? 'bg-slate-400' : 'bg-slate-700'}`} />
                 )}
@@ -207,6 +217,53 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               }`}>
                 v{server.version} • {server.software}
               </span>
+
+              {isSleeping && (
+                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full font-mono bg-indigo-500/15 text-indigo-300 border border-indigo-400/30 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                  <span>💤 {language === 'bg' ? 'В готовност (Спи)' : 'Sleeping (Auto-Wake)'}</span>
+                </span>
+              )}
+
+              {/* Java Version Compatibility Badge */}
+              {javaStatus && (
+                <span
+                  className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full font-mono flex items-center gap-1.5 border transition-all ${
+                    javaStatus.isCompatible
+                      ? theme === 'light'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-emerald-500/10 text-emerald-300 border-emerald-400/20'
+                      : theme === 'light'
+                        ? 'bg-amber-50 text-amber-700 border-amber-300'
+                        : 'bg-amber-500/15 text-amber-300 border-amber-400/30'
+                  }`}
+                  title={
+                    language === 'bg'
+                      ? `Изисква Java ${javaStatus.requiredVersion}. ${
+                          javaStatus.isCompatible
+                            ? javaStatus.portableJavaAvailable
+                              ? 'CraftDock разполага с подготвена изолирана Java среда.'
+                              : `Инсталирана в системата: Java ${javaStatus.systemJavaVersion} (Съвместима).`
+                            : `Системната Java (${javaStatus.systemJavaVersion || 'няма'}) е по-стара. CraftDock ще подготви изолирана Java ${javaStatus.requiredVersion}.`
+                        }`
+                      : `Requires Java ${javaStatus.requiredVersion}. ${
+                          javaStatus.isCompatible
+                            ? javaStatus.portableJavaAvailable
+                              ? 'CraftDock has an isolated portable Java runtime ready.'
+                              : `Installed in system: Java ${javaStatus.systemJavaVersion} (Compatible).`
+                            : `System Java (${javaStatus.systemJavaVersion || 'none'}) is outdated. CraftDock will provision Java ${javaStatus.requiredVersion}.`
+                        }`
+                  }
+                >
+                  <Coffee className="w-3 h-3 text-amber-500" />
+                  <span>Java {javaStatus.requiredVersion}</span>
+                  {javaStatus.isCompatible ? (
+                    <span className="text-[10px] text-emerald-400 font-bold">✓</span>
+                  ) : (
+                    <Zap className="w-2.5 h-2.5 text-amber-400 fill-current" />
+                  )}
+                </span>
+              )}
 
               {isStarting && (
                 <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 animate-pulse font-mono ${
@@ -236,6 +293,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 }`}>
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
                   {t('common.stopping')}
+                </span>
+              )}
+              {isSleeping && (
+                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 font-mono ${
+                  theme === 'light'
+                    ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                    : 'bg-indigo-500/15 text-indigo-300 border-indigo-400/30'
+                }`}>
+                  <Moon className="w-3 h-3 text-indigo-400" />
+                  <span>{language === 'bg' ? 'В готовност (Спи)' : 'Sleeping'}</span>
                 </span>
               )}
             </div>
@@ -277,6 +344,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <FolderOpen className="w-4 h-4 text-amber-500" />
           </button>
 
+          <button
+            onClick={async () => {
+              const api = (window as any).api;
+              if (api?.exportServerZip) {
+                await api.exportServerZip(server.id);
+              }
+            }}
+            className={`p-2.5 rounded-xl transition-all border cursor-pointer shadow-xs ${
+              theme === 'light'
+                ? 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-200 hover:border-cyan-500/40'
+                : 'bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-slate-100 border-white/[0.1] hover:border-cyan-400/40'
+            }`}
+            title={language === 'bg' ? 'Експортирай целия сървър в .zip архив' : 'Export full server (.zip)'}
+          >
+            <Archive className="w-4 h-4 text-cyan-500" />
+          </button>
+
           {isRunning ? (
             <button
               onClick={() => onStopServer(server.id)}
@@ -302,6 +386,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
               <span>{t('common.stopping')}</span>
             </button>
+          ) : isSleeping ? (
+            <button
+              onClick={() => (window as any).api?.wakeServer?.(server.id)}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold text-xs transition-all shadow-lg shadow-indigo-950/50 cursor-pointer btn-bounce"
+            >
+              <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
+              <span>{language === 'bg' ? 'Събуди Сървъра' : 'Wake Up Server'}</span>
+            </button>
           ) : activeRunningServer && activeRunningServer.id !== server.id ? (
             <button
               onClick={() => onStartServer(server.id)}
@@ -324,12 +416,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </header>
 
       {/* Navigation Tabs */}
-      <div className={`px-6 py-2 border-b flex items-center justify-between shrink-0 backdrop-blur-xl transition-colors duration-200 ${
+      <div className={`px-6 py-2 border-b flex items-center justify-between gap-4 shrink-0 backdrop-blur-xl transition-colors duration-200 ${
         theme === 'light'
           ? 'bg-white/90 border-slate-200 shadow-xs'
           : 'bg-slate-950/30 border-white/[0.06]'
       }`}>
-        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 min-w-0 flex-1">
           <button
             onClick={() => setActiveTab('console')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
@@ -379,6 +471,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
 
           <button
+            onClick={() => setActiveTab('version')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'version'
+                ? theme === 'light'
+                  ? 'bg-indigo-50 text-indigo-800 border border-indigo-300 shadow-xs font-bold'
+                  : 'bg-indigo-500/15 text-indigo-200 border border-indigo-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                : theme === 'light'
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
+            }`}
+          >
+            <ArrowUpCircle className={`w-3.5 h-3.5 ${activeTab === 'version' ? (theme === 'light' ? 'text-indigo-600' : 'text-indigo-400') : (theme === 'light' ? 'text-indigo-700/70' : 'text-indigo-400/70')}`} />
+            <span>{language === 'bg' ? 'Версия & Ъпгрейд' : 'Version & Upgrade'}</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('players')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'players'
@@ -411,24 +519,40 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
 
           <button
-            onClick={() => setActiveTab('backups')}
+            onClick={() => setActiveTab('worlds')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'backups'
+              activeTab === 'worlds'
                 ? theme === 'light'
-                  ? 'bg-orange-50 text-orange-800 border border-orange-300 shadow-xs font-bold'
-                  : 'bg-orange-500/15 text-orange-200 border border-orange-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs font-bold'
+                  : 'bg-emerald-500/15 text-emerald-200 border border-emerald-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
                 : theme === 'light'
                 ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
             }`}
           >
-            <Archive className={`w-3.5 h-3.5 ${activeTab === 'backups' ? (theme === 'light' ? 'text-orange-600' : 'text-orange-400') : (theme === 'light' ? 'text-orange-700/70' : 'text-orange-400/70')}`} />
-            <span>{t('dashboard.tabBackups')}</span>
+            <Globe className={`w-3.5 h-3.5 ${activeTab === 'worlds' ? (theme === 'light' ? 'text-emerald-600' : 'text-emerald-400') : (theme === 'light' ? 'text-emerald-700/70' : 'text-emerald-400/70')}`} />
+            <span>{t('dashboard.tabWorlds')}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'analytics'
+                ? theme === 'light'
+                  ? 'bg-cyan-50 text-cyan-800 border border-cyan-300 shadow-xs font-bold'
+                  : 'bg-cyan-500/15 text-cyan-200 border border-cyan-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
+                : theme === 'light'
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
+            }`}
+          >
+            <BarChart3 className={`w-3.5 h-3.5 ${activeTab === 'analytics' ? (theme === 'light' ? 'text-cyan-600' : 'text-cyan-400') : (theme === 'light' ? 'text-cyan-700/70' : 'text-cyan-400/70')}`} />
+            <span>{t('dashboard.tabAnalytics')}</span>
           </button>
         </div>
 
-        {/* Status indicator */}
-        <div className="flex items-center gap-2 text-xs">
+        {/* Status indicator - shifted slightly to the right */}
+        <div className="flex items-center gap-2 text-xs shrink-0 pl-4 ml-auto translate-x-2 select-none">
           <span
             className={`w-2.5 h-2.5 rounded-full ${
               isRunning
@@ -449,282 +573,112 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Main Content Pane */}
       <main className="flex-1 p-6 overflow-hidden">
         {activeTab === 'console' && (
-          <ConsoleView
-            logs={logs}
-            onSendCommand={onSendCommand}
-            onClearLogs={onClearLogs}
-            serverStatus={server.status}
-          />
+          <ErrorBoundary fallbackTitle={language === 'bg' ? 'Грешка при зареждане на конзолата' : 'Error loading console'}>
+            <ConsoleView
+              logs={logs}
+              onSendCommand={onSendCommand}
+              onClearLogs={onClearLogs}
+              serverStatus={server.status}
+              onOpenCrashAnalyzer={() => setShowCrashModal(true)}
+              crashDetected={crashDetected || server.status === 'error'}
+            />
+          </ErrorBoundary>
         )}
 
-        {activeTab === 'plugins' && <PluginManager server={server} />}
+        {activeTab === 'plugins' && (
+          <ErrorBoundary fallbackTitle={language === 'bg' ? 'Грешка при зареждане на мениджъра на плъгини' : 'Error loading plugin manager'}>
+            <React.Suspense fallback={<TabLoader />}>
+              <PluginManager server={server} />
+            </React.Suspense>
+          </ErrorBoundary>
+        )}
 
         {activeTab === 'settings' && (
-          <ServerSettingsTab server={server} onUpdateServer={onUpdateServer} />
+          <ErrorBoundary fallbackTitle={language === 'bg' ? 'Грешка при зареждане на настройките на света' : 'Error loading world settings'}>
+            <React.Suspense fallback={<TabLoader />}>
+              <ServerSettingsTab server={server} onUpdateServer={onUpdateServer} />
+            </React.Suspense>
+          </ErrorBoundary>
+        )}
+
+        {activeTab === 'version' && (
+          <ErrorBoundary fallbackTitle={language === 'bg' ? 'Грешка при зареждане на инструмента за версия' : 'Error loading version upgrader'}>
+            <React.Suspense fallback={<TabLoader />}>
+              <VersionUpgraderTab server={server} onUpdateServer={onUpdateServer} />
+            </React.Suspense>
+          </ErrorBoundary>
         )}
 
         {activeTab === 'resources' && (
-          <ResourceMonitorTab
-            server={server}
-            serverStats={serverStats}
-            systemInfo={systemInfo ?? null}
-            onlinePlayerCount={players.length}
-          />
+          <React.Suspense fallback={<TabLoader />}>
+            <ResourceMonitorTab
+              server={server}
+              serverStats={serverStats}
+              systemInfo={systemInfo ?? null}
+              onlinePlayerCount={players.length}
+            />
+          </React.Suspense>
         )}
-
-        {activeTab === 'backups' && <BackupManager server={server} />}
 
         {activeTab === 'players' && (
-          <div className={`h-full rounded-2xl p-6 overflow-y-auto space-y-8 ${
-            theme === 'light'
-              ? 'bg-white border border-slate-200 shadow-sm'
-              : 'glass-panel'
-          }`}>
-            {/* Section 1: Online Players */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h3 className={`text-base font-extrabold flex items-center gap-2 ${
-                    theme === 'light' ? 'text-slate-900' : 'text-slate-100'
-                  }`}>
-                    <Users className="w-5 h-5 text-sky-500" />
-                    {t('dashboard.onlinePlayersNow')} ({players.length})
-                  </h3>
-                  <p className={`text-xs ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
-                    {t('dashboard.onlinePlayersSubtitle')}
-                  </p>
-                </div>
-              </div>
+          <ErrorBoundary fallbackTitle={language === 'bg' ? 'Грешка при зареждане на играчите' : 'Error loading player manager'}>
+            <React.Suspense fallback={<TabLoader />}>
+              <PlayerManagement
+                server={server}
+                onlinePlayers={players}
+                onSendCommand={onSendCommand}
+              />
+            </React.Suspense>
+          </ErrorBoundary>
+        )}
 
-              {players.length === 0 ? (
-                <div className={`py-8 text-center rounded-xl text-xs border border-dashed ${
-                  theme === 'light'
-                    ? 'bg-slate-50/70 text-slate-500 border-slate-200'
-                    : 'glass-card text-slate-400 border-white/[0.08]'
-                }`}>
-                  {t('dashboard.noConnectedPlayers')}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {players.map((player) => (
-                    <div
-                      key={player}
-                      className={`p-3 rounded-xl flex items-center justify-between shadow-xs border ${
-                        theme === 'light'
-                          ? 'bg-slate-50/80 border-slate-200'
-                          : 'glass-card'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={`https://mc-heads.net/avatar/${player}/32`}
-                          alt={player}
-                          className="w-8 h-8 rounded-md bg-slate-800"
-                        />
-                        <span className={`font-mono text-sm font-bold ${
-                          theme === 'light' ? 'text-slate-800' : 'text-slate-200'
-                        }`}>{player}</span>
-                      </div>
+        {activeTab === 'worlds' && (
+          <ErrorBoundary fallbackTitle={language === 'bg' ? 'Грешка при зареждане на световете' : 'Error loading world manager'}>
+            <React.Suspense fallback={<TabLoader />}>
+              <WorldManager server={server} onSendCommand={onSendCommand} />
+            </React.Suspense>
+          </ErrorBoundary>
+        )}
 
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => handleOpPlayer(player)}
-                          title={t('dashboard.opTooltip')}
-                          className={`p-1.5 rounded-lg transition-all text-xs flex items-center gap-1 font-semibold cursor-pointer ${
-                            theme === 'light'
-                              ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-                              : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
-                          }`}
-                        >
-                          <Crown className="w-3.5 h-3.5" /> OP
-                        </button>
-                        <button
-                          onClick={() => handleKickPlayer(player)}
-                          title={t('dashboard.kickTooltip')}
-                          className={`p-1.5 rounded-lg transition-all text-xs flex items-center gap-1 font-semibold cursor-pointer ${
-                            theme === 'light'
-                              ? 'bg-rose-100 text-rose-800 hover:bg-rose-200'
-                              : 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20'
-                          }`}
-                        >
-                          <UserX className="w-3.5 h-3.5" /> Kick
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Section 2: Whitelist Management */}
-            <div className={`pt-6 border-t space-y-4 ${
-              theme === 'light' ? 'border-slate-200' : 'border-white/[0.08]'
-            }`}>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className={`text-base font-extrabold flex items-center gap-2 ${
-                    theme === 'light' ? 'text-slate-900' : 'text-slate-100'
-                  }`}>
-                    <Shield className="w-5 h-5 text-sky-500" />
-                    {t('dashboard.whitelistTitle')}
-                  </h3>
-                  <p className={`text-xs mt-0.5 ${
-                    theme === 'light' ? 'text-slate-500' : 'text-slate-400'
-                  }`}>
-                    {t('dashboard.whitelistSubtitle')}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1.5 border ${
-                      isWhitelistEnabled
-                        ? theme === 'light'
-                          ? 'bg-sky-50 text-sky-800 border-sky-300'
-                          : 'bg-sky-500/15 text-sky-300 border-sky-400/30'
-                        : theme === 'light'
-                        ? 'bg-slate-100 text-slate-600 border-slate-200'
-                        : 'bg-white/[0.04] text-slate-400 border-white/[0.08]'
-                    }`}
-                  >
-                    {isWhitelistEnabled ? (
-                      <>
-                        <ShieldCheck className="w-3.5 h-3.5 text-sky-500" /> {t('dashboard.whitelistActive')}
-                      </>
-                    ) : (
-                      <>
-                        <ShieldAlert className="w-3.5 h-3.5 text-slate-400" /> {t('dashboard.whitelistDisabled')}
-                      </>
-                    )}
-                  </span>
-
-                  <button
-                    onClick={handleToggleWhitelist}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                      isWhitelistEnabled
-                        ? theme === 'light'
-                          ? 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100 shadow-xs'
-                          : 'bg-rose-950/40 text-rose-300 border-rose-500/30 hover:bg-rose-900/50'
-                        : 'bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white border-sky-400/40 glow-ice shadow-sm'
-                    }`}
-                  >
-                    {isWhitelistEnabled ? t('dashboard.disableWhitelist') : t('dashboard.enableWhitelist')}
-                  </button>
-                </div>
-              </div>
-
-              {/* Status information banner */}
-              <div
-                className={`p-3.5 rounded-xl border text-xs flex items-start gap-3 backdrop-blur-xl ${
-                  isWhitelistEnabled
-                    ? theme === 'light'
-                      ? 'bg-sky-50/90 border-sky-200 text-sky-900 shadow-xs'
-                      : 'bg-sky-950/30 border-sky-400/30 text-sky-200'
-                    : theme === 'light'
-                    ? 'bg-amber-50/90 border-amber-200 text-amber-900 shadow-xs'
-                    : 'bg-amber-950/30 border-amber-500/30 text-amber-300'
-                }`}
-              >
-                {isWhitelistEnabled ? (
-                  <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-sky-500" />
-                ) : (
-                  <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
-                )}
-                <div>
-                  <div className="font-bold">
-                    {isWhitelistEnabled
-                      ? t('dashboard.serverSecured')
-                      : t('dashboard.serverUnsecured')}
-                  </div>
-                  <div className={`text-[11px] mt-0.5 ${theme === 'light' ? 'text-slate-600' : 'opacity-90'}`}>
-                    {isWhitelistEnabled
-                      ? t('dashboard.serverSecuredDesc')
-                      : t('dashboard.serverUnsecuredDesc')}
-                  </div>
-                </div>
-              </div>
-
-              {/* Add player to whitelist form */}
-              <form onSubmit={handleAddWhitelist} className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder={t('dashboard.addPlayerPlaceholder')}
-                  value={newPlayerName}
-                  onChange={(e) => setNewPlayerName(e.target.value)}
-                  className={`flex-1 px-4 py-2 rounded-xl text-xs font-mono focus:outline-none focus:border-sky-500 border ${
-                    theme === 'light'
-                      ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 shadow-xs'
-                      : 'glass-input text-slate-200 focus:border-sky-400'
-                  }`}
-                />
-                <button
-                  type="submit"
-                  disabled={!newPlayerName.trim() || whitelistLoading}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 disabled:opacity-50 text-white font-bold text-xs transition-all shadow-sm shrink-0 glow-ice cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>{t('dashboard.addToWhitelist')}</span>
-                </button>
-              </form>
-
-              {/* Whitelisted Players List */}
-              {whitelist.length === 0 ? (
-                <div className={`py-8 text-center rounded-xl text-xs border border-dashed ${
-                  theme === 'light'
-                    ? 'bg-slate-50/70 text-slate-500 border-slate-200'
-                    : 'glass-card text-slate-400 border-white/[0.08]'
-                }`}>
-                  {t('dashboard.noPlayers')}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {whitelist.map((entry) => (
-                    <div
-                      key={entry.name}
-                      className={`p-3 rounded-xl flex items-center justify-between shadow-xs border ${
-                        theme === 'light'
-                          ? 'bg-slate-50/80 border-slate-200'
-                          : 'glass-card'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={`https://mc-heads.net/avatar/${entry.name}/32`}
-                          alt={entry.name}
-                          className="w-8 h-8 rounded-md bg-slate-800"
-                        />
-                        <div>
-                          <span className={`font-mono text-xs font-bold block ${
-                            theme === 'light' ? 'text-slate-800' : 'text-slate-200'
-                          }`}>
-                            {entry.name}
-                          </span>
-                          <span className={`text-[10px] font-medium ${
-                            theme === 'light' ? 'text-sky-700 font-semibold' : 'text-sky-400'
-                          }`}>{t('dashboard.allowedBadge')}</span>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => handleRemoveWhitelist(entry.name)}
-                        disabled={whitelistLoading}
-                        title={t('dashboard.removeWhitelistTooltip')}
-                        className={`p-1.5 rounded-lg transition-all text-xs flex items-center gap-1 font-semibold cursor-pointer ${
-                          theme === 'light'
-                            ? 'bg-rose-100 text-rose-700 hover:bg-rose-200'
-                            : 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20'
-                        }`}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" /> {t('common.delete')}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+        {activeTab === 'analytics' && (
+          <ErrorBoundary fallbackTitle={language === 'bg' ? 'Грешка при зареждане на анализите' : 'Error loading analytics'}>
+            <React.Suspense fallback={<TabLoader />}>
+              <AnalyticsTab
+                server={server}
+                isRunning={isRunning}
+                onSendCommand={onSendCommand}
+                onOpenCrashAnalyzer={(session?: any) => {
+                  setSelectedCrashSession(session || null);
+                  setShowCrashModal(true);
+                }}
+              />
+            </React.Suspense>
+          </ErrorBoundary>
         )}
       </main>
+
+      {/* Crash Analyzer Modal */}
+      {showCrashModal && (
+        <React.Suspense fallback={null}>
+          <CrashAnalyzerModal
+            serverId={server.id}
+            serverName={server.name}
+            isOpen={showCrashModal}
+            selectedSession={selectedCrashSession}
+            onClose={() => {
+              setShowCrashModal(false);
+              setSelectedCrashSession(null);
+            }}
+            onNavigateTab={(tab) => {
+              setShowCrashModal(false);
+              setSelectedCrashSession(null);
+              if (['console', 'plugins', 'settings', 'resources', 'players', 'worlds', 'analytics'].includes(tab)) {
+                setActiveTab(tab as any);
+              }
+            }}
+          />
+        </React.Suspense>
+      )}
     </div>
   );
 };

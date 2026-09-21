@@ -15,9 +15,23 @@ export interface AppSettings {
   // Automation
   autoRestartOnCrash: boolean; // default true
   autoStartLastServer: boolean; // default true
+  autoStartPlayitTunnel: boolean; // default true — auto launch Playit tunnel on server start
   autoUpdate: boolean; // default true — check GitHub releases on launch
   minimizeToTray: boolean; // default true — close button hides to system tray
   hasSeenTrayNotice?: boolean; // track whether 1-time tray notification was shown
+  // Smart Sleep Mode
+  sleepModeEnabled: boolean; // default true — Auto-Hibernate when empty
+  sleepIdleMinutes: number; // default 5 minutes
+  // Notifications & Sound
+  soundOnStartup: boolean; // default true — Minecraft chime on server ready
+  notifyOnServerReady: boolean; // default false — Desktop notification on ready
+  notifyOnPlayerJoinLeave: boolean; // default false — Desktop notification on join/leave
+  notifyOnCrash: boolean; // default false — Desktop notification on crash
+  notifyOnBackup: boolean; // default false — Desktop notification on auto-backup
+  // Mobile Remote Web
+  remoteServiceEnabled: boolean; // default true
+  remoteServicePort: number; // default 25577
+  remoteServicePin: string; // 4-digit PIN, e.g. '4829'
   // Appearance & Language
   theme: 'dark' | 'light';
   language: 'bg' | 'en';
@@ -31,9 +45,20 @@ const DEFAULT_SETTINGS: AppSettings = {
   defaultPort: 25565,
   autoRestartOnCrash: true,
   autoStartLastServer: true,
+  autoStartPlayitTunnel: true,
   autoUpdate: true,
   minimizeToTray: true,
   hasSeenTrayNotice: false,
+  sleepModeEnabled: true,
+  sleepIdleMinutes: 5,
+  soundOnStartup: true,
+  notifyOnServerReady: false,
+  notifyOnPlayerJoinLeave: false,
+  notifyOnCrash: false,
+  notifyOnBackup: false,
+  remoteServiceEnabled: true,
+  remoteServicePort: 25577,
+  remoteServicePin: '',
   theme: 'dark',
   language: 'bg',
 };
@@ -61,11 +86,12 @@ export function loadAppSettings(): AppSettings {
     }
     const raw = fs.readFileSync(filePath, 'utf-8');
     const parsed = JSON.parse(raw);
-    cachedSettings = {
+    const loaded: AppSettings = {
       ...DEFAULT_SETTINGS,
       ...parsed,
     };
-    return cachedSettings;
+    cachedSettings = loaded;
+    return loaded;
   } catch (e) {
     console.error('Failed to load app settings:', e);
     cachedSettings = { ...DEFAULT_SETTINGS };

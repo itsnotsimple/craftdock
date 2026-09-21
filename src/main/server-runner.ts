@@ -3,9 +3,18 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { BrowserWindow } from 'electron';
-import { updateServer, ServerProfile } from './server-store';
+import { updateServer, getServerById, ServerProfile } from './server-store';
 import { getEffectiveJavaCommand } from './java-manager';
 import { loadAppSettings } from './app-settings';
+import { uptimeTracker, playerTracker, chatTracker, perfTracker } from './analytics';
+import { startTunnelProcess, stopTunnelProcess } from './tunnel-service';
+import {
+  notifyServerReady,
+  notifyPlayerJoin,
+  notifyPlayerLeave,
+  notifyServerCrash,
+} from './notification-service';
+import { registerPlayerActivity, isServerSleeping } from './sleep-manager';
 
 export interface ServerLogEntry {
   id: string;
@@ -32,6 +41,7 @@ interface RunningInstance {
   lastSampleTime?: number;
   currentStats: ServerStats;
   status: 'starting' | 'running' | 'stopping';
+  lastPerfSampleTime?: number;
 }
 
 const activeServers = new Map<string, RunningInstance>();
@@ -44,6 +54,17 @@ function sendToWindow(channel: string, ...args: any[]) {
       win.webContents.send(channel, ...args);
     }
   }
+}
+
+export type RunnerLogListener = (entry: ServerLogEntry) => void;
+const runnerLogListeners: RunnerLogListener[] = [];
+
+export function onRunnerLog(listener: RunnerLogListener): () => void {
+  runnerLogListeners.push(listener);
+  return () => {
+    const idx = runnerLogListeners.indexOf(listener);
+    if (idx !== -1) runnerLogListeners.splice(idx, 1);
+  };
 }
 
 export function appendServerLog(serverId: string, text: string, isError = false): void {
@@ -64,6 +85,12 @@ export function appendServerLog(serverId: string, text: string, isError = false)
     list.shift();
   }
   sendToWindow('server-log', entry);
+
+  for (const listener of runnerLogListeners) {
+    try {
+      listener(entry);
+    } catch {}
+  }
 }
 
 export function getServerLogs(serverId: string): ServerLogEntry[] {
@@ -81,15 +108,19 @@ function queryPidUsage(pid: number): Promise<{ memoryMb: number; cpuSec: number 
 
     if (process.platform === 'win32') {
       exec(
-        `powershell -NoProfile -NonInteractive -Command "try { $p = Get-Process -Id ${pid} -ErrorAction Stop; [math]::Round($p.WorkingSet64/1MB,1).ToString() + '|' + [math]::Round($p.CPU,2).ToString() } catch { '0|0' }"`,
-        { timeout: 2000 },
+        `powershell -NoProfile -NonInteractive -Command "(Get-Process -Id ${pid} -ErrorAction SilentlyContinue | Select-Object -Property WorkingSet64, CPU | ConvertTo-Json -Compress)"`,
+        { timeout: 3000 },
         (err, stdout) => {
           if (err || !stdout) return resolve({ memoryMb: 0, cpuSec: 0 });
-          const parts = stdout.trim().split('|');
-          resolve({
-            memoryMb: parseFloat(parts[0]) || 0,
-            cpuSec: parseFloat(parts[1]) || 0,
-          });
+          try {
+            const data = JSON.parse(stdout.trim());
+            if (data && typeof data.WorkingSet64 === 'number') {
+              const memoryMb = Math.round(data.WorkingSet64 / (1024 * 1024));
+              const cpuSec = parseFloat(data.CPU) || 0;
+              return resolve({ memoryMb, cpuSec });
+            }
+          } catch {}
+          resolve({ memoryMb: 0, cpuSec: 0 });
         }
       );
     } else {
@@ -147,6 +178,18 @@ setInterval(async () => {
       };
 
       sendToWindow('server-stats-updated', instance.currentStats);
+
+      // Record periodic perf sample every ~10s for analytics
+      if (!instance.lastPerfSampleTime || now - instance.lastPerfSampleTime >= 10000) {
+        instance.lastPerfSampleTime = now;
+        perfTracker.recordSample(instance.server.path, {
+          timestamp: now,
+          cpuPercent,
+          memoryMb,
+          memoryPercent,
+          playerCount: instance.players.size,
+        });
+      }
     } catch (e) {}
   }
 }, 2000);
@@ -309,6 +352,22 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
       },
     };
     activeServers.set(server.id, instance);
+    uptimeTracker.onServerStart(server.id, serverDir);
+
+    // Auto-start Playit tunnel if enabled in settings
+    let lastLoggedTunnelAddress: string | null = null;
+    if (appSettings.autoStartPlayitTunnel !== false) {
+      appendServerLog(server.id, `[CraftDock] Автоматично свързване към Playit тунел за приятели на порт ${server.port}...`);
+      startTunnelProcess(server.port, (status) => {
+        sendToWindow('tunnel-status-changed', status);
+        if (status.address && status.address !== lastLoggedTunnelAddress) {
+          lastLoggedTunnelAddress = status.address;
+          appendServerLog(server.id, `[CraftDock] Playit тунелът е активен! Публичен адрес за приятели: ${status.address}`);
+        }
+      }).catch((err) => {
+        console.error('Failed to auto-start playit tunnel:', err);
+      });
+    }
 
     child.stdout.on('data', (data: Buffer) => {
       const text = data.toString();
@@ -316,6 +375,12 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
 
       for (const line of lines) {
         appendServerLog(server.id, line);
+
+        // Detect chat messages
+        const chatMsg = chatTracker.onConsoleLine(serverDir, line);
+        if (chatMsg) {
+          sendToWindow('server-chat-message', { serverId: server.id, message: chatMsg });
+        }
 
         // Detect server ready - only transition when Minecraft is 100% finished booting
         const isReadyLine =
@@ -330,6 +395,14 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
           updateServer(server.id, { status: 'running', lastPlayedAt: new Date().toISOString() });
           sendToWindow('server-status-changed', { serverId: server.id, status: 'running' });
           sendToWindow('server-profile-updated', { id: server.id, status: 'running' });
+
+          // Sound & Desktop Notifications on startup
+          const currentSettings = loadAppSettings();
+          if (currentSettings.soundOnStartup !== false) {
+            sendToWindow('play-sound', 'server-ready');
+          }
+          notifyServerReady(server.name);
+          registerPlayerActivity(server.id, instance.players.size);
         }
 
         // Detect player join
@@ -337,6 +410,8 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
         if (joinMatch) {
           const playerName = joinMatch[1];
           instance.players.add(playerName);
+          playerTracker.onPlayerJoin(server.id, serverDir, playerName);
+          notifyPlayerJoin(server.name, playerName);
           updateServer(server.id, { playerCount: instance.players.size });
           sendToWindow('server-players-changed', {
             serverId: server.id,
@@ -346,6 +421,7 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
             id: server.id,
             playerCount: instance.players.size,
           });
+          registerPlayerActivity(server.id, instance.players.size);
         }
 
         // Detect player leave
@@ -353,6 +429,8 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
         if (leaveMatch) {
           const playerName = leaveMatch[1];
           instance.players.delete(playerName);
+          playerTracker.onPlayerLeave(server.id, serverDir, playerName);
+          notifyPlayerLeave(server.name, playerName);
           updateServer(server.id, { playerCount: instance.players.size });
           sendToWindow('server-players-changed', {
             serverId: server.id,
@@ -362,6 +440,30 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
             id: server.id,
             playerCount: instance.players.size,
           });
+          registerPlayerActivity(server.id, instance.players.size);
+        }
+
+        // Detect /list player command output
+        const listMatch = line.match(/There are \d+ of a max of \d+ players online:(.*)/i);
+        if (listMatch) {
+          const namesStr = listMatch[1].trim();
+          instance.players.clear();
+          if (namesStr) {
+            const names = namesStr.split(',').map((n) => n.trim()).filter((n) => n.length > 0);
+            for (const name of names) {
+              instance.players.add(name);
+            }
+          }
+          updateServer(server.id, { playerCount: instance.players.size });
+          sendToWindow('server-players-changed', {
+            serverId: server.id,
+            players: Array.from(instance.players),
+          });
+          sendToWindow('server-profile-updated', {
+            id: server.id,
+            playerCount: instance.players.size,
+          });
+          registerPlayerActivity(server.id, instance.players.size);
         }
       }
     });
@@ -378,10 +480,23 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
       console.log(`Server ${server.id} process exited with code ${code}`);
       const wasStopping = instance.status === 'stopping';
       activeServers.delete(server.id);
-      updateServer(server.id, { status: 'stopped', playerCount: 0 });
-      sendToWindow('server-status-changed', { serverId: server.id, status: 'stopped' });
-      sendToWindow('server-players-changed', { serverId: server.id, players: [] });
-      sendToWindow('server-profile-updated', { id: server.id, status: 'stopped', playerCount: 0 });
+
+      uptimeTracker.onServerStop(server.id, serverDir, code, wasStopping);
+      playerTracker.onServerStop(server.id, serverDir);
+      perfTracker.flushSamples(serverDir);
+
+      const isSleeping = isServerSleeping(server.id);
+
+      // Auto-stop Playit tunnel when server stops normally (not during sleep mode)
+      if (!isSleeping) {
+        stopTunnelProcess();
+        sendToWindow('tunnel-status-changed', { isRunning: false, log: 'Тунелът е спрян' });
+
+        updateServer(server.id, { status: 'stopped', playerCount: 0 });
+        sendToWindow('server-status-changed', { serverId: server.id, status: 'stopped' });
+        sendToWindow('server-players-changed', { serverId: server.id, players: [] });
+        sendToWindow('server-profile-updated', { id: server.id, status: 'stopped', playerCount: 0 });
+      }
       sendToWindow('server-stats-updated', {
         serverId: server.id,
         cpuPercent: 0,
@@ -391,6 +506,13 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
       });
 
       if (!wasStopping && code !== 0 && code !== null) {
+        notifyServerCrash(server.name, code);
+        sendToWindow('server-crashed', {
+          serverId: server.id,
+          serverName: server.name,
+          code,
+        });
+
         const settings = loadAppSettings();
         if (settings.autoRestartOnCrash) {
           appendServerLog(
@@ -410,6 +532,22 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
     child.on('error', (err) => {
       console.error(`Server ${server.id} error:`, err);
       activeServers.delete(server.id);
+
+      uptimeTracker.onServerStop(server.id, serverDir, -1, false);
+      playerTracker.onServerStop(server.id, serverDir);
+      perfTracker.flushSamples(serverDir);
+
+      // Auto-stop Playit tunnel on server error
+      stopTunnelProcess();
+      sendToWindow('tunnel-status-changed', { isRunning: false, log: 'Тунелът е спрян' });
+
+      notifyServerCrash(server.name, -1);
+      sendToWindow('server-crashed', {
+        serverId: server.id,
+        serverName: server.name,
+        code: -1,
+      });
+
       updateServer(server.id, { status: 'error', playerCount: 0 });
       sendToWindow('server-status-changed', { serverId: server.id, status: 'error', error: err.message });
       sendToWindow('server-profile-updated', { id: server.id, status: 'error', playerCount: 0 });
@@ -435,10 +573,13 @@ export function stopServer(serverId: string): boolean {
   const instance = activeServers.get(serverId);
   if (!instance) return false;
 
+  const isSleeping = isServerSleeping(serverId);
   instance.status = 'stopping';
-  updateServer(serverId, { status: 'stopping' });
-  sendToWindow('server-status-changed', { serverId, status: 'stopping' });
-  sendToWindow('server-profile-updated', { id: serverId, status: 'stopping' });
+  if (!isSleeping) {
+    updateServer(serverId, { status: 'stopping' });
+    sendToWindow('server-status-changed', { serverId, status: 'stopping' });
+    sendToWindow('server-profile-updated', { id: serverId, status: 'stopping' });
+  }
 
   try {
     instance.process.stdin.write('stop\n');
@@ -461,6 +602,23 @@ export function stopServer(serverId: string): boolean {
   }
 }
 
+export async function waitForServerStop(serverId: string, timeoutMs = 15000): Promise<boolean> {
+  const start = Date.now();
+  while (activeServers.has(serverId)) {
+    if (Date.now() - start > timeoutMs) {
+      const inst = activeServers.get(serverId);
+      if (inst) {
+        try {
+          inst.process.kill();
+        } catch {}
+      }
+      break;
+    }
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  return !activeServers.has(serverId);
+}
+
 export function sendServerCommand(serverId: string, command: string): boolean {
   const instance = activeServers.get(serverId);
   if (!instance) return false;
@@ -473,6 +631,8 @@ export function sendServerCommand(serverId: string, command: string): boolean {
     return false;
   }
 }
+
+export const sendCommand = sendServerCommand;
 
 export function getActiveServerIds(): string[] {
   return Array.from(activeServers.keys());

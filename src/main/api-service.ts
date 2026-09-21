@@ -26,7 +26,8 @@ export async function fetchPaperVersions(): Promise<SoftwareVersion[]> {
       }
     }
 
-    return versions.slice(0, 35).map((v, i) => ({
+    // Keep all Paper releases down to 1.8.8 (no artificial 35 slice)
+    return versions.map((v, i) => ({
       version: v,
       type: 'release',
       isLatest: i === 0,
@@ -34,8 +35,7 @@ export async function fetchPaperVersions(): Promise<SoftwareVersion[]> {
   } catch (err) {
     console.error('Failed to fetch Paper versions, using fallback list', err);
     return [
-      { version: '26.3', type: 'release', isLatest: true },
-      { version: '1.21.4', type: 'release' },
+      { version: '1.21.4', type: 'release', isLatest: true },
       { version: '1.21.3', type: 'release' },
       { version: '1.21.1', type: 'release' },
       { version: '1.20.6', type: 'release' },
@@ -43,8 +43,16 @@ export async function fetchPaperVersions(): Promise<SoftwareVersion[]> {
       { version: '1.20.2', type: 'release' },
       { version: '1.19.4', type: 'release' },
       { version: '1.18.2', type: 'release' },
+      { version: '1.17.1', type: 'release' },
       { version: '1.16.5', type: 'release' },
+      { version: '1.15.2', type: 'release' },
+      { version: '1.14.4', type: 'release' },
+      { version: '1.13.2', type: 'release' },
       { version: '1.12.2', type: 'release' },
+      { version: '1.11.2', type: 'release' },
+      { version: '1.10.2', type: 'release' },
+      { version: '1.9.4', type: 'release' },
+      { version: '1.8.8', type: 'release' },
     ];
   }
 }
@@ -65,8 +73,14 @@ export async function fetchPurpurVersions(): Promise<SoftwareVersion[]> {
     return [
       { version: '1.21.4', type: 'release', isLatest: true },
       { version: '1.21.1', type: 'release' },
+      { version: '1.20.6', type: 'release' },
       { version: '1.20.4', type: 'release' },
       { version: '1.19.4', type: 'release' },
+      { version: '1.18.2', type: 'release' },
+      { version: '1.17.1', type: 'release' },
+      { version: '1.16.5', type: 'release' },
+      { version: '1.15.2', type: 'release' },
+      { version: '1.14.4', type: 'release' },
     ];
   }
 }
@@ -87,14 +101,34 @@ export async function fetchVanillaVersions(): Promise<SoftwareVersion[]> {
         type: 'release' as const,
         isLatest: v.id === data.latest.release,
       }));
-    return releases.slice(0, 35);
+
+    // Include all releases down to 1.8
+    const idx18 = releases.findIndex((v) => v.version === '1.8');
+    return idx18 !== -1 ? releases.slice(0, idx18 + 1) : releases;
   } catch (err) {
     console.error('Failed to fetch Vanilla versions', err);
     return [
       { version: '1.21.4', type: 'release', isLatest: true },
+      { version: '1.21.3', type: 'release' },
       { version: '1.21.1', type: 'release' },
+      { version: '1.20.6', type: 'release' },
       { version: '1.20.4', type: 'release' },
+      { version: '1.20.2', type: 'release' },
+      { version: '1.20.1', type: 'release' },
       { version: '1.19.4', type: 'release' },
+      { version: '1.18.2', type: 'release' },
+      { version: '1.17.1', type: 'release' },
+      { version: '1.16.5', type: 'release' },
+      { version: '1.15.2', type: 'release' },
+      { version: '1.14.4', type: 'release' },
+      { version: '1.13.2', type: 'release' },
+      { version: '1.12.2', type: 'release' },
+      { version: '1.11.2', type: 'release' },
+      { version: '1.10.2', type: 'release' },
+      { version: '1.9.4', type: 'release' },
+      { version: '1.8.9', type: 'release' },
+      { version: '1.8.8', type: 'release' },
+      { version: '1.8', type: 'release' },
     ];
   }
 }
@@ -111,14 +145,21 @@ export async function fetchFabricVersions(): Promise<SoftwareVersion[]> {
         type: 'release' as const,
         isLatest: i === 0,
       }));
-    return stable.slice(0, 30);
+    return stable;
   } catch (err) {
     console.error('Failed to fetch Fabric versions', err);
     return [
       { version: '1.21.4', type: 'release', isLatest: true },
+      { version: '1.21.3', type: 'release' },
       { version: '1.21.1', type: 'release' },
+      { version: '1.20.6', type: 'release' },
       { version: '1.20.4', type: 'release' },
       { version: '1.19.4', type: 'release' },
+      { version: '1.18.2', type: 'release' },
+      { version: '1.17.1', type: 'release' },
+      { version: '1.16.5', type: 'release' },
+      { version: '1.15.2', type: 'release' },
+      { version: '1.14.4', type: 'release' },
     ];
   }
 }
@@ -236,7 +277,7 @@ export async function downloadFileWithProgress(
       const client = parsedUrl.protocol === 'https:' ? https : http;
       const requestOptions = {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) CraftDock/2.3.2 (Minecraft Server Manager)',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) CraftDock/3.4.0 (Minecraft Server Manager)',
           Accept: '*/*',
         },
       };
@@ -335,7 +376,7 @@ export async function searchModrinthModpacks(query = '', limit = 24): Promise<Mo
     const url = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(query)}&facets=${encodedFacets}&limit=${limit}&index=downloads`;
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'CraftDock/2.3.2 (contact: github.com/itsnotsimple/craftdock)',
+        'User-Agent': 'CraftDock/3.4.0 (contact: github.com/itsnotsimple/craftdock)',
       },
     });
     if (!res.ok) throw new Error(`Modrinth modpacks error: ${res.status}`);
@@ -365,7 +406,7 @@ export async function searchModrinthResourcePacks(query = '', limit = 24): Promi
     const url = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(query)}&facets=${encodedFacets}&limit=${limit}&index=downloads`;
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'CraftDock/2.3.2 (contact: github.com/itsnotsimple/craftdock)',
+        'User-Agent': 'CraftDock/3.4.0 (contact: github.com/itsnotsimple/craftdock)',
       },
     });
     if (!res.ok) throw new Error(`Modrinth resourcepacks error: ${res.status}`);
@@ -421,7 +462,7 @@ export async function searchModrinthPlugins(
     const url = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(query)}&facets=${encodedFacets}&limit=${limit}&index=downloads`;
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'CraftDock/2.3.2 (contact: github.com/itsnotsimple/craftdock)',
+        'User-Agent': 'CraftDock/3.4.0 (contact: github.com/itsnotsimple/craftdock)',
       },
     });
     if (!res.ok) throw new Error(`Modrinth plugins error: ${res.status}`);
@@ -489,12 +530,12 @@ export async function getModrinthProjectVersions(
 
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'CraftDock/2.3.2 (contact: github.com/itsnotsimple/craftdock)',
+        'User-Agent': 'CraftDock/3.4.0 (contact: github.com/itsnotsimple/craftdock)',
       },
     });
     if (!res.ok) {
       const fallbackRes = await fetch(`https://api.modrinth.com/v2/project/${projectIdOrSlug}/version`, {
-        headers: { 'User-Agent': 'CraftDock/2.3.2 (contact: github.com/itsnotsimple/craftdock)' },
+        headers: { 'User-Agent': 'CraftDock/3.4.0 (contact: github.com/itsnotsimple/craftdock)' },
       });
       if (!fallbackRes.ok) return [];
       return parseModrinthVersions(await fallbackRes.json());
@@ -503,7 +544,7 @@ export async function getModrinthProjectVersions(
     const parsed = parseModrinthVersions(raw);
     if (parsed.length === 0) {
       const allRes = await fetch(`https://api.modrinth.com/v2/project/${projectIdOrSlug}/version`, {
-        headers: { 'User-Agent': 'CraftDock/2.3.2 (contact: github.com/itsnotsimple/craftdock)' },
+        headers: { 'User-Agent': 'CraftDock/3.4.0 (contact: github.com/itsnotsimple/craftdock)' },
       });
       if (allRes.ok) {
         return parseModrinthVersions(await allRes.json());
@@ -525,7 +566,7 @@ export async function getModrinthVersionFile(projectIdOrSlug: string): Promise<{
   try {
     const res = await fetch(`https://api.modrinth.com/v2/project/${projectIdOrSlug}/version`, {
       headers: {
-        'User-Agent': 'CraftDock/2.3.2 (contact: github.com/itsnotsimple/craftdock)',
+        'User-Agent': 'CraftDock/3.4.0 (contact: github.com/itsnotsimple/craftdock)',
       },
     });
     if (!res.ok) return null;

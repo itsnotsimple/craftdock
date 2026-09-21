@@ -47,14 +47,6 @@
   box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
 }
 
-.light .glass-panel {
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 16px 36px -12px rgba(15, 23, 42, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
-}
-
 .glass-card {
   background: rgba(30, 41, 59, 0.35);
   backdrop-filter: blur(16px);
@@ -64,24 +56,10 @@
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.light .glass-card {
-  background: rgba(255, 255, 255, 0.62);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
-}
-
 .glass-card:hover {
   background: rgba(30, 41, 59, 0.5);
   border-color: rgba(56, 189, 248, 0.35);
   box-shadow: 0 12px 32px -4px rgba(2, 132, 199, 0.2), inset 0 1px 0 0 rgba(255, 255, 255, 0.16);
-}
-
-.light .glass-card:hover {
-  background: rgba(255, 255, 255, 0.88);
-  border-color: rgba(2, 132, 199, 0.4);
-  box-shadow: 0 12px 32px -4px rgba(2, 132, 199, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
 }
 
 .glass-input {
@@ -92,23 +70,9 @@
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
 }
 
-.light .glass-input {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.04);
-  color: #0f172a;
-}
-
 .glass-input:focus {
   border-color: rgba(56, 189, 248, 0.6);
   box-shadow: 0 0 15px -2px rgba(56, 189, 248, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.35);
-}
-
-.light .glass-input:focus {
-  border-color: rgba(2, 132, 199, 0.6);
-  box-shadow: 0 0 15px -2px rgba(2, 132, 199, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 /* Interactive Spring Micro-Animations */
@@ -178,290 +142,32 @@
   animation: beacon-hardcore 1.8s infinite ease-in-out;
 }
 /* ==========================================================================
-   LIGHT MODE: APPLE & LINEAR QUALITY DESIGN SYSTEM
+   SMART INVERT LIGHT THEME
    ========================================================================== */
-.light {
-  color-scheme: light;
-  color: #0f172a;
+html.light {
+  filter: invert(0.92) hue-rotate(180deg) brightness(1.02) contrast(0.96);
+  background-color: #060913 !important;
 }
 
-.light ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+/* Re-invert media, avatars, skins, and Minecraft icons to preserve 100% authentic colors */
+html.light img,
+html.light video,
+html.light canvas,
+html.light .player-avatar,
+html.light .minecraft-item-icon,
+html.light .skin-viewer,
+html.light [data-no-invert],
+html.light .no-invert {
+  filter: invert(1) hue-rotate(180deg) !important;
 }
-.light ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+
+html.light ::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.8);
+}
+html.light ::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.7);
   border-radius: 9999px;
 }
-.light ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-/* Headings & Typography Hierarchy */
-.light h1, .light h2, .light h3, .light h4, .light h5, .light h6 {
-  color: #0f172a !important;
-}
-
-.light .text-slate-100 {
-  color: #0f172a !important; /* Slate 900 - Dark Bold */
-}
-.light .text-slate-200 {
-  color: #1e293b !important; /* Slate 800 */
-}
-.light .text-slate-300 {
-  color: #334155 !important; /* Slate 700 */
-}
-.light .text-slate-400 {
-  color: #64748b !important; /* Slate 500 */
-}
-.light .text-slate-500 {
-  color: #64748b !important;
-}
-
-/* Surfaces & Major Panels (Titlebar, Header, Sidebar) */
-.light .glass-panel {
-  background: rgba(255, 255, 255, 0.94) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-color: #e2e8f0 !important;
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05) !important;
-}
-
-/* Primary Cards (ServerCard, Wizard cards, Tab outer containers) */
-.light .glass-card,
-.light [class*="rounded-2xl"].bg-slate-900\/40,
-.light [class*="rounded-2xl"].bg-slate-900\/50,
-.light [class*="rounded-2xl"].bg-slate-900\/60,
-.light [class*="rounded-3xl"].bg-slate-900\/40 {
-  background-color: #ffffff !important;
-  border-color: #e2e8f0 !important;
-  box-shadow: 0 4px 18px -2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04) !important;
-}
-
-.light .glass-card:hover,
-.light [class*="rounded-2xl"].bg-slate-900\/40:hover,
-.light [class*="rounded-2xl"].bg-slate-900\/50:hover {
-  background-color: #ffffff !important;
-  border-color: #38bdf8 !important;
-  box-shadow: 0 10px 28px -4px rgba(2, 132, 199, 0.14) !important;
-}
-
-/* Inner Sub-Cards / Specs Boxes (Nested within cards for visual depth) */
-.light .bg-slate-950\/40,
-.light .bg-slate-950\/50,
-.light .bg-slate-950\/60,
-.light .bg-slate-950\/80,
-.light .bg-slate-950,
-.light .bg-slate-900\/80,
-.light .bg-slate-900 {
-  background-color: #f8fafc !important;
-  border-color: #e2e8f0 !important;
-}
-
-/* Progress bar background tracks */
-.light .bg-slate-900.rounded-full,
-.light .bg-slate-950.rounded-full,
-.light [class*="bg-slate-900"].rounded-full,
-.light [class*="bg-slate-950"].rounded-full {
-  background-color: #e2e8f0 !important;
-}
-
-/* Universal Borders in Light Mode */
-.light .border-slate-800,
-.light .border-slate-700,
-.light .border-white\/\[0\.08\],
-.light .border-white\/\[0\.06\],
-.light .border-white\/\[0\.07\],
-.light .border-white\/\[0\.1\],
-.light .border-white\/10,
-.light .border-white\/5 {
-  border-color: #e2e8f0 !important;
-}
-
-/* Secondary Action & Icon Buttons (Terminal, Globe, Folder, etc.) */
-.light [class*="p-2.5"].bg-white\/\[0\.04\],
-.light [class*="p-2.5"].bg-white\/\[0\.08\],
-.light [class*="px-4"].bg-white\/\[0\.04\],
-.light [class*="px-3"].bg-white\/\[0\.04\],
-.light button.bg-white\/\[0\.04\],
-.light button.bg-white\/\[0\.05\],
-.light button.bg-white\/5 {
-  background-color: #ffffff !important;
-  border-color: #cbd5e1 !important;
-  color: #1e293b !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
-}
-
-.light [class*="p-2.5"].bg-white\/\[0\.04\]:hover,
-.light button.bg-white\/\[0\.04\]:hover,
-.light button.bg-white\/\[0\.05\]:hover {
-  background-color: #f1f5f9 !important;
-  border-color: #94a3b8 !important;
-  color: #0f172a !important;
-}
-
-/* High Contrast Status Badges */
-.light .bg-white\/\[0\.04\].text-slate-400 {
-  background-color: #f1f5f9 !important;
-  color: #475569 !important;
-  border-color: #cbd5e1 !important;
-}
-.light .bg-emerald-500\/15 {
-  background-color: #ecfdf5 !important;
-  color: #047857 !important;
-  border-color: #a7f3d0 !important;
-}
-.light .bg-amber-500\/15,
-.light .bg-amber-500\/20 {
-  background-color: #fffbeb !important;
-  color: #b45309 !important;
-  border-color: #fde68a !important;
-}
-.light .bg-rose-500\/15,
-.light .bg-rose-500\/20 {
-  background-color: #fff1f2 !important;
-  color: #be123c !important;
-  border-color: #fecdd3 !important;
-}
-.light .bg-sky-500\/10,
-.light .bg-sky-500\/15 {
-  background-color: #f0f9ff !important;
-  color: #0369a1 !important;
-  border-color: #bae6fd !important;
-}
-.light .bg-indigo-500\/10,
-.light .bg-indigo-500\/15 {
-  background-color: #eef2ff !important;
-  color: #4338ca !important;
-  border-color: #c7d2fe !important;
-}
-.light .bg-purple-500\/10,
-.light .bg-purple-500\/15 {
-  background-color: #faf5ff !important;
-  color: #6d28d9 !important;
-  border-color: #e9d5ff !important;
-}
-
-/* Software Engine Badges */
-.light .bg-sky-500\/10.text-sky-300 {
-  background-color: #f0f9ff !important;
-  color: #0369a1 !important;
-  border-color: #7dd3fc !important;
-}
-.light .bg-indigo-500\/10.text-indigo-300 {
-  background-color: #eef2ff !important;
-  color: #4338ca !important;
-  border-color: #a5b4fc !important;
-}
-.light .bg-blue-500\/10.text-blue-300 {
-  background-color: #eff6ff !important;
-  color: #1d4ed8 !important;
-  border-color: #93c5fd !important;
-}
-.light .bg-slate-500\/10.text-slate-300 {
-  background-color: #f8fafc !important;
-  color: #334155 !important;
-  border-color: #cbd5e1 !important;
-}
-
-/* Vivid, High-Contrast SVG Icons */
-.light svg.text-cyan-400 {
-  color: #0891b2 !important;
-}
-.light svg.text-emerald-400 {
-  color: #059669 !important;
-}
-.light svg.text-amber-400 {
-  color: #d97706 !important;
-}
-.light svg.text-purple-400 {
-  color: #7c3aed !important;
-}
-.light svg.text-sky-400 {
-  color: #0284c7 !important;
-}
-.light svg.text-rose-400 {
-  color: #e11d48 !important;
-}
-.light svg.text-indigo-400 {
-  color: #4f46e5 !important;
-}
-
-/* Action CTAs (Preserve crisp white text and replace dark shadows with subtle glow) */
-.light .text-white,
-.light button[class*="from-"],
-.light button[class*="from-"] *,
-.light a[class*="from-"],
-.light a[class*="from-"] *,
-.light .bg-gradient-to-r,
-.light .bg-gradient-to-r *,
-.light [class*="bg-emerald-600"],
-.light [class*="bg-rose-600"],
-.light [class*="bg-sky-600"] {
-  color: #ffffff !important;
-}
-
-.light [class*="shadow-emerald-950"],
-.light [class*="shadow-indigo-950"],
-.light [class*="shadow-rose-950"],
-.light [class*="shadow-amber-950"],
-.light [class*="shadow-purple-950"],
-.light [class*="shadow-sky-950"] {
-  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.12) !important;
-}
-
-/* Inputs & Form Elements */
-.light .glass-input,
-.light input[type="text"],
-.light input[type="number"],
-.light select {
-  background-color: #ffffff !important;
-  border: 1px solid #cbd5e1 !important;
-  color: #0f172a !important;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
-}
-
-.light .glass-input:focus,
-.light input[type="text"]:focus,
-.light input[type="number"]:focus,
-.light select:focus {
-  border-color: #0284c7 !important;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
-}
-
-.light input::placeholder {
-  color: #94a3b8 !important;
-}
-
-/* Modals & Dialogs */
-.light .bg-\[\#0b101e\]\/90,
-.light .fixed.inset-0 .bg-slate-950\/90,
-.light .fixed.inset-0 .bg-slate-900\/90 {
-  background-color: #ffffff !important;
-  border-color: #e2e8f0 !important;
-  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.2) !important;
-}
-
-/* Terminal Console in Light Mode (Kept obsidian for vivid log highlights) */
-.light div.font-mono-code.bg-black\/30 {
-  background-color: #0b101e !important;
-  border-color: #1e293b !important;
-}
-.light div.font-mono-code.bg-black\/30 span.text-slate-500 {
-  color: #64748b !important;
-}
-.light div.font-mono-code.bg-black\/30 span.text-slate-300 {
-  color: #cbd5e1 !important;
-}
-.light div.font-mono-code.bg-black\/30 span.text-slate-400 {
-  color: #94a3b8 !important;
-}
-.light form.bg-slate-950\/60 {
-  background-color: #070a14 !important;
-  border-color: #1e293b !important;
-}
-.light form.bg-slate-950\/60 input {
-  background-color: transparent !important;
-  color: #f1f5f9 !important;
-  border: none !important;
-  box-shadow: none !important;
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.9);
 }

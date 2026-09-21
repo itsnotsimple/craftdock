@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, dialog } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { getSystemInfo } from './system-info';
@@ -25,12 +25,13 @@ import {
   addServer,
   deleteServer,
   updateServer,
+  getServerById,
   getDefaultServerFolder,
   calculateServerStorage,
   getDataDirectory,
   ServerProfile,
 } from './server-store';
-import { getSystemJavaVersion } from './java-manager';
+import { getSystemJavaVersion, checkJavaStatusForVersion } from './java-manager';
 import {
   loadAppSettings,
   saveAppSettings,
@@ -54,6 +55,8 @@ import { getNetworkStatus, startTunnelProcess, stopTunnelProcess, getTunnelStatu
 import {
   readServerProperties,
   writeServerProperties,
+  getRawServerProperties,
+  saveRawServerProperties,
   getInstalledPlugins,
   CURATED_PLUGINS,
   installPluginFromUrl,
@@ -70,7 +73,137 @@ import {
   syncWhitelistUuids,
   addToWhitelist,
   removeFromWhitelist,
+  getServerOps,
+  addOp,
+  removeOp,
+  getServerBans,
+  banPlayer,
+  pardonPlayer,
+  getServerBannedIps,
+  banIp,
+  pardonIp,
 } from './server-config';
+import {
+  getServerWorlds,
+  resetWorld,
+  importWorld,
+  getWorldBackups,
+  deleteWorldBackup,
+  restoreWorldBackup,
+  exportWorldZip,
+} from './world-manager';
+import { exportServerArchive, importServerArchive } from './server-transfer';
+import { upgradeServerVersion } from './version-upgrader';
+import { uptimeTracker, playerTracker, chatTracker, perfTracker } from './analytics';
+import { getCrashReports, analyzeCrash } from './crash-analyzer';
+import { notifyAutoBackup, sendDesktopNotification, sendTestNotification } from './notification-service';
+import { getServerPlayersArchive, getPlayerFullData } from './player-data-service';
+import {
+  cleanDroppedItems,
+  cleanHostileMonsters,
+  cleanMinecartsAndBoats,
+  checkLagSettings,
+  applyOptimalLagSettings,
+  runChunkyCommand,
+  isChunkyInstalled,
+} from './lag-buster-service';
+import { putServerToSleep, wakeServer, isServerSleeping } from './sleep-manager';
+import { analyzeWorldSlimmer, trimDistantRegions } from './world-slimmer';
+import { getWorldSeedInfo, locateNearbyStructures } from './seed-locator';
+import {
+  initRemoteService,
+  stopRemoteService,
+  getRemoteServiceStatus,
+  toggleRemoteService,
+  regenerateRemotePin,
+  setRemotePort,
+  getRemoteQrSvg,
+  startRemoteTunnel,
+  stopRemoteTunnel,
+} from './remote-service';
+import {
+  initTaskScheduler,
+  getScheduledTasks,
+  saveScheduledTask,
+  deleteScheduledTask,
+  toggleTaskEnabled,
+  runTaskNow,
+  ScheduledTask,
+} from './task-scheduler';
+
+app.name = 'CraftDock';
+
+// Point userData directly to CraftDock and migrate legacy data if present
+const appDataRoot = process.env.APPDATA || app.getPath('appData');
+const primaryUserData = path.join(appDataRoot, 'CraftDock');
+const legacyUserData = path.join(appDataRoot, 'minecraft-server-manager');
+
+try {
+  // If legacy folder exists and CraftDock doesn't, migrate servers & settings seamlessly
+  const legacyDataDir = path.join(legacyUserData, 'minecraft_servers_data');
+  const newDataDir = path.join(primaryUserData, 'minecraft_servers_data');
+
+  if (fs.existsSync(legacyDataDir) && !fs.existsSync(newDataDir)) {
+    fs.mkdirSync(primaryUserData, { recursive: true });
+    fs.cpSync(legacyDataDir, newDataDir, { recursive: true, force: true });
+
+    const serversJsonPath = path.join(newDataDir, 'servers.json');
+    if (fs.existsSync(serversJsonPath)) {
+      const raw = fs.readFileSync(serversJsonPath, 'utf-8');
+      fs.writeFileSync(serversJsonPath, raw.split('minecraft-server-manager').join('CraftDock'), 'utf-8');
+    }
+  }
+
+  app.setPath('userData', primaryUserData);
+} catch (err) {
+  console.warn('[CraftDock] Could not initialize CraftDock userData path:', err);
+}
+
+function getResourceIcon(filename: string): string {
+  const candidatePaths = [
+    path.join(__dirname, '../resources', filename),
+    path.join(process.resourcesPath || '', 'resources', filename),
+    path.join(process.resourcesPath || '', filename),
+    path.join(typeof app.getAppPath === 'function' ? app.getAppPath() : '', 'resources', filename),
+    path.resolve(process.cwd(), 'resources', filename),
+  ];
+  for (const p of candidatePaths) {
+    if (p && fs.existsSync(p)) return p;
+  }
+  return path.join(__dirname, '../resources', filename);
+}
+
+const APP_ID = 'CraftDock';
+
+// Set AppUserModelId for Windows toast notifications & grouping
+if (process.platform === 'win32') {
+  try {
+    app.setAppUserModelId(APP_ID);
+  } catch {}
+
+  try {
+    const { exec } = require('child_process');
+    const iconPng = getResourceIcon('icon.png');
+    exec(`reg delete "HKCU\\Software\\Classes\\AppUserModelId\\CraftDoc" /f`);
+    exec(`reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings\\CraftDoc" /f`);
+    exec(`reg add "HKCU\\Software\\Classes\\AppUserModelId\\CraftDock" /v DisplayName /t REG_SZ /d "CraftDock" /f`);
+    exec(`reg add "HKCU\\Software\\Classes\\AppUserModelId\\CraftDock" /v IconUri /t REG_SZ /d "${iconPng}" /f`);
+    exec(`reg add "HKCU\\Software\\Classes\\AppUserModelId\\com.craftdock.minecraftservermanager" /v DisplayName /t REG_SZ /d "CraftDock" /f`);
+    exec(`reg add "HKCU\\Software\\Classes\\AppUserModelId\\com.craftdock.minecraftservermanager" /v IconUri /t REG_SZ /d "${iconPng}" /f`);
+  } catch {}
+
+  // Clean up any stale shortcuts in dev mode so Windows Taskbar doesn't get overridden
+  try {
+    const startMenuPrograms = path.join(process.env.APPDATA || '', 'Microsoft', 'Windows', 'Start Menu', 'Programs');
+    const shortcutsToClean = ['CraftDock Dev.lnk', 'Electron.lnk', 'CraftDoc.lnk', 'CraftDoc Dev.lnk'];
+    for (const name of shortcutsToClean) {
+      const p = path.join(startMenuPrograms, name);
+      if (fs.existsSync(p)) {
+        try { fs.unlinkSync(p); } catch {}
+      }
+    }
+  } catch {}
+}
 
 // Ensure standard macOS / Linux binary paths are present in process.env.PATH
 if (process.platform === 'darwin') {
@@ -88,7 +221,7 @@ let isQuitting = false;
 
 function createTray() {
   if (tray) return;
-  const iconPath = path.join(__dirname, '../resources/icon.png');
+  const iconPath = getResourceIcon('icon.png');
   let iconImage = nativeImage.createEmpty();
   if (fs.existsSync(iconPath)) {
     iconImage = nativeImage.createFromPath(iconPath);
@@ -139,14 +272,20 @@ function createTray() {
 
 function createWindow() {
   const isMac = process.platform === 'darwin';
-  const iconPath = path.join(__dirname, '../resources/icon.png');
+  const iconPngPath = getResourceIcon('icon.png');
+  const iconIcoPath = getResourceIcon('icon.ico');
+  const hasIco = process.platform === 'win32' && fs.existsSync(iconIcoPath);
+  const windowIcon = hasIco
+    ? iconIcoPath
+    : (fs.existsSync(iconPngPath) ? nativeImage.createFromPath(iconPngPath) : undefined);
+
   mainWindow = new BrowserWindow({
     width: 1380,
     height: 880,
     minWidth: 1080,
     minHeight: 700,
     title: 'CraftDock',
-    icon: fs.existsSync(iconPath) ? iconPath : undefined,
+    icon: windowIcon,
     backgroundColor: '#060913',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -168,11 +307,40 @@ function createWindow() {
     show: false,
   });
 
+  if (hasIco) {
+    try {
+      const icoImg = nativeImage.createFromPath(iconIcoPath);
+      if (!icoImg.isEmpty()) {
+        mainWindow.setIcon(icoImg);
+      }
+    } catch {}
+  } else if (fs.existsSync(iconPngPath)) {
+    try {
+      mainWindow.setIcon(nativeImage.createFromPath(iconPngPath));
+    } catch {}
+  }
+
   if (process.env.VITE_DEV_SERVER_URL || !app.isPackaged) {
-    mainWindow.loadURL('http://localhost:5173');
+    const devServerUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
+    mainWindow.loadURL(devServerUrl).catch((err) => {
+      console.warn(`[CraftDock] Failed initial loadURL(${devServerUrl}):`, err?.message || err);
+    });
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
+
+  // Automatic retry in dev mode if Vite was still starting
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    console.warn(`[CraftDock] Page failed to load: ${validatedURL} (${errorCode}: ${errorDescription})`);
+    if (!app.isPackaged) {
+      console.log('[CraftDock] Retrying page load in 1.5s...');
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.loadURL('http://localhost:5173').catch(() => {});
+        }
+      }, 1500);
+    }
+  });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
@@ -180,8 +348,18 @@ function createWindow() {
   });
 
   mainWindow.once('ready-to-show', () => {
-    mainWindow?.show();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+    }
   });
+
+  // Safety fallback: Ensure window is shown even if ready-to-show is delayed
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+      console.log('[CraftDock] Fallback showing mainWindow after timeout');
+      mainWindow.show();
+    }
+  }, 3500);
 
   mainWindow.webContents.once('did-finish-load', () => {
     // Auto-start last played server
@@ -213,19 +391,11 @@ function createWindow() {
       event.preventDefault();
       mainWindow?.hide();
 
-      if (!appSettings.hasSeenTrayNotice) {
-        saveAppSettings({ hasSeenTrayNotice: true });
-        if (tray && process.platform === 'win32') {
-          const isBg = appSettings.language === 'bg';
-          tray.displayBalloon({
-            title: isBg ? 'CraftDock работи на заден план' : 'CraftDock is running in background',
-            content: isBg
-              ? 'Приложението е минимизирано в системната лента (до часовника). Сървърите продължават да работят.'
-              : 'CraftDock was minimized to the system tray. Your servers remain online.',
-            iconType: 'info',
-          });
-        }
-      }
+      const isBg = appSettings.language === 'bg';
+      sendDesktopNotification(
+        isBg ? 'CraftDock работи на заден план' : 'CraftDock is running in background',
+        isBg ? 'Приложението е минимизирано' : 'Application is minimized'
+      );
     }
   });
 
@@ -237,6 +407,8 @@ function createWindow() {
 app.whenReady().then(() => {
   createTray();
   createWindow();
+  initRemoteService();
+  initTaskScheduler();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -245,6 +417,7 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   isQuitting = true;
+  stopRemoteService();
 });
 
 app.on('window-all-closed', () => {
@@ -510,6 +683,20 @@ ipcMain.handle('save-server-properties', async (_event, id: string, props: any) 
   return updated;
 });
 
+ipcMain.handle('get-raw-server-properties', async (_event, id: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return '';
+  return getRawServerProperties(server.path);
+});
+
+ipcMain.handle('save-raw-server-properties', async (_event, id: string, rawContent: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return false;
+  return saveRawServerProperties(server.path, rawContent);
+});
+
 // Storage and Quota Handlers
 ipcMain.handle('get-server-storage', async (_event, id: string) => {
   const servers = loadServers();
@@ -668,6 +855,10 @@ ipcMain.handle('create-world-backup', async (_event, id: string) => {
   const servers = loadServers();
   const server = servers.find((s) => s.id === id);
   if (!server) return '';
+  if (isServerRunning(server.id)) {
+    sendServerCommand(server.id, 'save-all');
+    await new Promise((r) => setTimeout(r, 1500));
+  }
   return createWorldBackup(server.path);
 });
 
@@ -680,11 +871,11 @@ ipcMain.handle('get-whitelist', async (_event, id: string) => {
   return getWhitelist(server.path);
 });
 
-ipcMain.handle('add-to-whitelist', async (_event, id: string, name: string) => {
+ipcMain.handle('add-to-whitelist', async (_event, id: string, name: string, uuid?: string) => {
   const servers = loadServers();
   const server = servers.find((s) => s.id === id);
   if (!server) return false;
-  await addToWhitelist(server.path, name);
+  await addToWhitelist(server.path, name, uuid);
   if (isServerRunning(id)) {
     sendServerCommand(id, `whitelist add ${name}`);
     sendServerCommand(id, 'whitelist reload');
@@ -692,14 +883,385 @@ ipcMain.handle('add-to-whitelist', async (_event, id: string, name: string) => {
   return true;
 });
 
-ipcMain.handle('remove-from-whitelist', async (_event, id: string, name: string) => {
+ipcMain.handle('remove-from-whitelist', async (_event, id: string, name: string, uuid?: string) => {
   const servers = loadServers();
   const server = servers.find((s) => s.id === id);
   if (!server) return false;
-  removeFromWhitelist(server.path, name);
+  removeFromWhitelist(server.path, name, uuid);
   if (isServerRunning(id)) {
     sendServerCommand(id, `whitelist remove ${name}`);
     sendServerCommand(id, 'whitelist reload');
+  }
+  return true;
+});
+
+// Operator Management Handlers
+ipcMain.handle('get-server-ops', async (_event, id: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return [];
+  return getServerOps(server.path);
+});
+
+ipcMain.handle('add-op', async (_event, id: string, name: string, level = 4, uuid?: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return false;
+  await addOp(server.path, name, level, uuid);
+  if (isServerRunning(id)) {
+    sendServerCommand(id, `op ${name}`);
+  }
+  return true;
+});
+
+ipcMain.handle('remove-op', async (_event, id: string, name: string, uuid?: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return false;
+  removeOp(server.path, name, uuid);
+  if (isServerRunning(id)) {
+    sendServerCommand(id, `deop ${name}`);
+  }
+  return true;
+});
+
+// Ban Management Handlers
+ipcMain.handle('get-server-bans', async (_event, id: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return [];
+  return getServerBans(server.path);
+});
+
+ipcMain.handle('ban-player', async (_event, id: string, name: string, reason = 'Banned by operator', uuid?: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return false;
+  await banPlayer(server.path, name, reason, 'CraftDock', uuid);
+  if (isServerRunning(id)) {
+    sendServerCommand(id, `ban ${name} ${reason}`);
+  }
+  return true;
+});
+
+ipcMain.handle('pardon-player', async (_event, id: string, name: string, uuid?: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return false;
+  pardonPlayer(server.path, name, uuid);
+  if (isServerRunning(id)) {
+    sendServerCommand(id, `pardon ${name}`);
+  }
+  return true;
+});
+
+// Banned IPs Handlers
+ipcMain.handle('get-server-banned-ips', async (_event, id: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return [];
+  return getServerBannedIps(server.path);
+});
+
+ipcMain.handle('ban-ip', async (_event, id: string, ip: string, reason = 'Banned by operator') => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return false;
+  banIp(server.path, ip, reason);
+  if (isServerRunning(id)) {
+    sendServerCommand(id, `ban-ip ${ip} ${reason}`);
+  }
+  return true;
+});
+
+ipcMain.handle('pardon-ip', async (_event, id: string, ip: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return false;
+  pardonIp(server.path, ip);
+  if (isServerRunning(id)) {
+    sendServerCommand(id, `pardon-ip ${ip}`);
+  }
+  return true;
+});
+
+// Player Directory & Inventory Inspector Handlers
+ipcMain.handle('get-server-players-archive', async (_event, id: string, onlinePlayerNames: string[] = []) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return [];
+  let ops: string[] = [];
+  let whitelist: string[] = [];
+  let bans: string[] = [];
+  try {
+    const opsData = getServerOps(server.path);
+    ops = opsData.map((o) => o.name);
+    const wlData = getWhitelist(server.path);
+    whitelist = wlData.map((w) => w.name);
+    const banData = getServerBans(server.path);
+    bans = banData.map((b) => b.name);
+  } catch (e) {}
+  return getServerPlayersArchive(server.path, onlinePlayerNames, ops, whitelist, bans);
+});
+
+ipcMain.handle('get-player-inventory', async (_event, id: string, uuid: string, playerName?: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return null;
+
+  // If server is currently running, flush memory to disk so recent equipment & inventory are saved
+  if (server.status === 'running') {
+    try {
+      sendServerCommand(id, 'save-all flush');
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    } catch {}
+  }
+
+  return getPlayerFullData(server.path, uuid, playerName);
+});
+
+// World Manager Handlers
+ipcMain.handle('get-server-worlds', async (_event, id: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return [];
+  return getServerWorlds(server.path);
+});
+
+ipcMain.handle('reset-world', async (_event, id: string, worldName: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return false;
+  return resetWorld(server.path, worldName);
+});
+
+ipcMain.handle('import-world', async (_event, id: string, zipPath: string, targetWorldName: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return false;
+  return await importWorld(server.path, zipPath, targetWorldName);
+});
+
+ipcMain.handle('get-world-backups', async (_event, id: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return [];
+  return getWorldBackups(server.path);
+});
+
+ipcMain.handle('delete-world-backup', async (_event, id: string, fileName: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return false;
+  return deleteWorldBackup(server.path, fileName);
+});
+
+ipcMain.handle('restore-world-backup', async (_event, id: string, fileName: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return false;
+  return await restoreWorldBackup(server.path, fileName);
+});
+
+ipcMain.handle('update-server-profile', async (_event, id: string, updates: Partial<ServerProfile>) => {
+  const updated = updateServer(id, updates);
+  if (updated && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('server-profile-updated', updated);
+  }
+  return updated;
+});
+
+ipcMain.handle('pick-world-zip', async () => {
+  if (!mainWindow) return null;
+  const res = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select World ZIP Archive',
+    filters: [{ name: 'ZIP Archives', extensions: ['zip'] }],
+    properties: ['openFile'],
+  });
+  if (res.canceled || res.filePaths.length === 0) return null;
+  return res.filePaths[0];
+});
+
+// Export World Archive (.zip)
+ipcMain.handle('export-world-zip', async (_event, id: string, worldName = 'world') => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server || !mainWindow) return { success: false, error: 'Server not found' };
+
+  const sanitizedName = server.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const res = await dialog.showSaveDialog(mainWindow, {
+    title: 'Експортиране на Minecraft свят (.zip)',
+    defaultPath: `${sanitizedName}_${worldName}_${dateStr}.zip`,
+    filters: [{ name: 'ZIP Archives', extensions: ['zip'] }],
+  });
+
+  if (res.canceled || !res.filePath) {
+    return { success: false, canceled: true };
+  }
+
+  const result = await exportWorldZip(server.path, worldName, res.filePath);
+  if (result.success) {
+    const isEn = loadAppSettings().language === 'en';
+    sendDesktopNotification(
+      isEn ? 'CraftDock — World Exported 🌍' : 'CraftDock — Свят експортиран 🌍',
+      isEn
+        ? `World "${worldName}" from "${server.name}" was exported successfully (${result.sizeMb} MB).`
+        : `Светът «${worldName}» от «${server.name}» беше експортиран успешно (${result.sizeMb} MB).`
+    );
+  }
+  return result;
+});
+
+// Server Export & Import Handlers
+ipcMain.handle('export-server-zip', async (_event, id: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server || !mainWindow) return { success: false, error: 'Server not found' };
+
+  const sanitizedName = server.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const isEn = loadAppSettings().language === 'en';
+  const res = await dialog.showSaveDialog(mainWindow, {
+    title: isEn ? 'Export Minecraft Server (.zip)' : 'Експортиране на Minecraft сървър (.zip)',
+    defaultPath: `${sanitizedName}_backup_${dateStr}.zip`,
+    filters: [{ name: 'ZIP Archives', extensions: ['zip'] }],
+  });
+
+  if (res.canceled || !res.filePath) {
+    return { success: false, canceled: true };
+  }
+
+  const result = await exportServerArchive(server.path, server, res.filePath);
+  if (result.success) {
+    sendDesktopNotification({
+      title: isEn ? 'CraftDock — Export Successful 📦' : 'CraftDock — Успешен експорт 📦',
+      body: isEn
+        ? `Server "${server.name}" was exported successfully (${result.sizeMb} MB).`
+        : `Сървърът «${server.name}» беше експортиран успешно (${result.sizeMb} MB).`,
+    });
+  }
+  return result;
+});
+
+ipcMain.handle('import-server-zip', async (_event, customZipPath?: string) => {
+  if (!mainWindow) return { success: false, error: 'Window not available' };
+  let zipPath = customZipPath;
+  const isEn = loadAppSettings().language === 'en';
+
+  if (!zipPath) {
+    const res = await dialog.showOpenDialog(mainWindow, {
+      title: isEn ? 'Import Minecraft Server from .ZIP Archive' : 'Импортиране на Minecraft сървър от .ZIP архив',
+      filters: [{ name: 'ZIP Archives', extensions: ['zip'] }],
+      properties: ['openFile'],
+    });
+    if (res.canceled || res.filePaths.length === 0) {
+      return { success: false, canceled: true };
+    }
+    zipPath = res.filePaths[0];
+  }
+
+  const appSettings = loadAppSettings();
+  const destDir = appSettings.serversFolder && appSettings.serversFolder.trim() !== ''
+    ? appSettings.serversFolder
+    : path.join(getDataDirectory(), 'servers');
+
+  const result = await importServerArchive(zipPath, destDir);
+  if (result.success && result.profile) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('server-profile-updated', result.profile);
+    }
+    sendDesktopNotification({
+      title: isEn ? 'CraftDock — New Server Imported! 📥' : 'CraftDock — Нов сървър е импортиран! 📥',
+      body: isEn
+        ? `Server "${result.profile.name}" was successfully added to your library.`
+        : `Сървърът «${result.profile.name}» е добавен успешно към твоята библиотека.`,
+    });
+  }
+  return result;
+});
+
+// In-Place Server Version Upgrader
+ipcMain.handle('upgrade-server-version', async (event, id: string, targetVersion: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  const isEn = loadAppSettings().language === 'en';
+  if (!server) return { success: false, error: isEn ? 'Server not found.' : 'Сървърът не е намерен.' };
+
+  const result = await upgradeServerVersion(server, targetVersion, (progress) => {
+    event.sender.send('upgrade-progress', progress);
+  });
+
+  if (result.success) {
+    const updatedServer = loadServers().find((s) => s.id === id);
+    if (updatedServer && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('server-profile-updated', updatedServer);
+    }
+    sendDesktopNotification({
+      title: isEn ? 'CraftDock — Server Upgraded! 🚀' : 'CraftDock — Сървърът е обновен! 🚀',
+      body: isEn
+        ? `Server "${server.name}" was successfully upgraded to version v${targetVersion}.`
+        : `Сървърът «${server.name}» премина успешно към версия v${targetVersion}.`,
+    });
+  }
+
+  return result;
+});
+
+// Analytics IPC Handlers
+ipcMain.handle('get-uptime-history', async (_event, id: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return null;
+  return uptimeTracker.getUptimeHistory(server.path, isServerRunning(server.id));
+});
+
+ipcMain.handle('get-player-analytics', async (_event, id: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return { players: {}, recentSessions: [] };
+  return playerTracker.getPlayerAnalytics(server.path);
+});
+
+ipcMain.handle('get-chat-history', async (_event, id: string, limit?: number) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return [];
+  return chatTracker.getChatHistory(server.path, limit);
+});
+
+ipcMain.handle('clear-chat-history', async (_event, id: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return false;
+  return chatTracker.clearChatHistory(server.path);
+});
+
+ipcMain.handle('get-performance-history', async (_event, id: string, range?: '1h' | '6h' | '24h' | '7d') => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return [];
+  return perfTracker.getPerformanceHistory(server.path, range);
+});
+
+// Crash Analyzer & Diagnostics Handlers
+ipcMain.handle('get-crash-reports', async (_event, id: string) => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return [];
+  return getCrashReports(server.path);
+});
+
+ipcMain.handle('analyze-crash', async (_event, id: string, fileName?: string, sessionInfo?: any, requestedLang?: 'bg' | 'en') => {
+  const servers = loadServers();
+  const server = servers.find((s) => s.id === id);
+  if (!server) return null;
+  return analyzeCrash(server.path, fileName, sessionInfo, requestedLang);
+});
+
+ipcMain.handle('test-startup-sound', async () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('play-sound', 'server-ready');
   }
   return true;
 });
@@ -773,6 +1335,10 @@ ipcMain.handle('get-global-diagnostics', async () => {
   return { network, disk, java };
 });
 
+ipcMain.handle('check-java-status', async (_event, mcVersion: string) => {
+  return await checkJavaStatusForVersion(mcVersion);
+});
+
 ipcMain.handle('open-servers-folder', async () => {
   const serversBase = path.join(getDataDirectory(), 'servers');
   if (!fs.existsSync(serversBase)) {
@@ -809,10 +1375,191 @@ ipcMain.handle('cancel-app-update', async () => {
   return cancelAppUpdate();
 });
 
+ipcMain.handle('send-test-notification', async (_event, lang?: 'bg' | 'en') => {
+  return sendTestNotification(lang);
+});
+
+// Lag Buster Handlers
+ipcMain.handle('clean-dropped-items', async (_event, serverId: string) => {
+  return cleanDroppedItems(serverId);
+});
+
+ipcMain.handle('clean-hostile-monsters', async (_event, serverId: string) => {
+  return cleanHostileMonsters(serverId);
+});
+
+ipcMain.handle('clean-minecarts-boats', async (_event, serverId: string) => {
+  return cleanMinecartsAndBoats(serverId);
+});
+
+ipcMain.handle('check-lag-settings', async (_event, serverId: string) => {
+  return checkLagSettings(serverId);
+});
+
+ipcMain.handle('apply-optimal-lag-settings', async (_event, serverId: string) => {
+  return applyOptimalLagSettings(serverId);
+});
+
+ipcMain.handle('run-chunky-command', async (_event, serverId: string, action: 'radius' | 'start' | 'pause' | 'cancel', radius?: number) => {
+  return runChunkyCommand(serverId, action, radius);
+});
+
+ipcMain.handle('is-chunky-installed', async (_event, serverId: string) => {
+  const server = getServerById(serverId);
+  if (!server) return false;
+  return isChunkyInstalled(server.path);
+});
+
+// Smart Sleep Handlers
+ipcMain.handle('put-server-to-sleep', async (_event, serverId: string) => {
+  return putServerToSleep(serverId);
+});
+
+ipcMain.handle('wake-server', async (_event, serverId: string) => {
+  return wakeServer(serverId);
+});
+
+ipcMain.handle('is-server-sleeping', async (_event, serverId: string) => {
+  return isServerSleeping(serverId);
+});
+
+// World Slimmer Handlers
+ipcMain.handle('analyze-world-slimmer', async (_event, serverId: string, radiusBlocks?: number) => {
+  return analyzeWorldSlimmer(serverId, radiusBlocks);
+});
+
+ipcMain.handle('trim-distant-regions', async (_event, serverId: string, radiusBlocks?: number) => {
+  return trimDistantRegions(serverId, radiusBlocks);
+});
+
 // Periodic live RAM & System Info update (every 2.5s)
 setInterval(() => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('system-info-update', getSystemInfo());
   }
 }, 2500);
+
+// Auto-Backup Timer: checks every 60 seconds
+setInterval(async () => {
+  try {
+    const servers = loadServers();
+    const now = Date.now();
+
+    for (const server of servers) {
+      if (server.autoBackupEnabled) {
+        const intervalHours = server.autoBackupIntervalHours || 6;
+        const intervalMs = intervalHours * 3600 * 1000;
+        const lastBackupTime = server.lastAutoBackupAt ? new Date(server.lastAutoBackupAt).getTime() : 0;
+
+        if (now - lastBackupTime >= intervalMs) {
+          console.log(`[Auto-Backup] Creating scheduled backup for server "${server.name}" (every ${intervalHours}h)...`);
+          if (isServerRunning(server.id)) {
+            sendServerCommand(server.id, 'save-all');
+          }
+
+          const backupFileName = createWorldBackup(server.path);
+          if (backupFileName) {
+            updateServer(server.id, { lastAutoBackupAt: new Date().toISOString() });
+
+            // Enforce retention limit (clean up older backups)
+            const retentionCount = server.autoBackupRetentionCount || 5;
+            const existingBackups = getWorldBackups(server.path);
+            if (existingBackups.length > retentionCount) {
+              existingBackups.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+              const toDeleteCount = existingBackups.length - retentionCount;
+              for (let i = 0; i < toDeleteCount; i++) {
+                deleteWorldBackup(server.path, existingBackups[i].fileName);
+              }
+            }
+
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('auto-backup-completed', {
+                serverId: server.id,
+                serverName: server.name,
+                fileName: backupFileName,
+              });
+            }
+
+            // Desktop notification on backup
+            notifyAutoBackup(server.name, backupFileName);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Auto-backup loop error:', err);
+  }
+}, 60 * 1000);
+
+// Mobile Remote Service Handlers
+ipcMain.handle('get-remote-status', async () => {
+  return getRemoteServiceStatus();
+});
+
+ipcMain.handle('toggle-remote-service', async (_event, enabled: boolean) => {
+  return toggleRemoteService(enabled);
+});
+
+ipcMain.handle('regenerate-remote-pin', async () => {
+  return regenerateRemotePin();
+});
+
+ipcMain.handle('set-remote-port', async (_event, port: number) => {
+  return setRemotePort(port);
+});
+
+ipcMain.handle('get-remote-qr-svg', async (_event, mode?: 'local' | 'public') => {
+  return getRemoteQrSvg(mode);
+});
+
+ipcMain.handle('start-remote-tunnel', async () => {
+  return startRemoteTunnel();
+});
+
+ipcMain.handle('stop-remote-tunnel', async () => {
+  return stopRemoteTunnel();
+});
+
+// Task Scheduler Handlers
+ipcMain.handle('get-scheduled-tasks', async () => {
+  return getScheduledTasks();
+});
+
+ipcMain.handle('save-scheduled-task', async (_event, task: ScheduledTask) => {
+  return saveScheduledTask(task);
+});
+
+ipcMain.handle('delete-scheduled-task', async (_event, taskId: string) => {
+  return deleteScheduledTask(taskId);
+});
+
+ipcMain.handle('toggle-task-enabled', async (_event, taskId: string, enabled: boolean) => {
+  return toggleTaskEnabled(taskId, enabled);
+});
+
+ipcMain.handle('run-task-now', async (_event, taskId: string) => {
+  return runTaskNow(taskId);
+});
+
+// Seed Map & Structure Locator Handlers
+ipcMain.handle('get-world-seed', async (_event, serverId: string) => {
+  const server = getServerById(serverId);
+  if (!server) return null;
+  return getWorldSeedInfo(server.path, server.version);
+});
+
+ipcMain.handle(
+  'locate-structures',
+  async (
+    _event,
+    seed: string,
+    dimension: 'overworld' | 'nether' | 'the_end' = 'overworld',
+    originX = 0,
+    originZ = 0,
+    maxRadius = 6000
+  ) => {
+    return locateNearbyStructures(seed, dimension, originX, originZ, maxRadius);
+  }
+);
+
 

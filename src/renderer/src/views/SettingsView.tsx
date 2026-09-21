@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   Settings,
-  Save,
   Check,
   Coffee,
   HardDrive,
@@ -18,14 +17,22 @@ import {
   RotateCcw,
   Sun,
   Moon,
+  Bell,
+  Volume2,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { AppSettings, GlobalDiagnostics } from '../types';
+import {
+  playMinecraftStartupSound,
+  playMinecraftBackupSound,
+  playMinecraftJoinSound,
+  playMinecraftCrashSound,
+} from '../utils/sound-effects';
 
 export const SettingsView: React.FC = () => {
   const { t, language, setLanguage } = useLanguage();
-  const { theme, setTheme } = useTheme();
+  const { theme, activeTheme, setTheme } = useTheme();
 
   const [settings, setSettings] = useState<AppSettings>({
     customJavaPath: '',
@@ -35,16 +42,22 @@ export const SettingsView: React.FC = () => {
     defaultPort: 25565,
     autoRestartOnCrash: true,
     autoStartLastServer: true,
+    autoStartPlayitTunnel: true,
     autoUpdate: true,
     minimizeToTray: true,
+    soundOnStartup: true,
+    notifyOnServerReady: false,
+    notifyOnPlayerJoinLeave: false,
+    notifyOnCrash: false,
+    notifyOnBackup: false,
     theme: 'dark',
     language: 'bg',
   });
 
   const [diagnostics, setDiagnostics] = useState<GlobalDiagnostics | null>(null);
-  const [activeCategory, setActiveCategory] = useState<'all' | 'java' | 'storage' | 'network' | 'automation' | 'appearance' | 'about'>('all');
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<
+    'all' | 'java' | 'storage' | 'network' | 'automation' | 'notifications' | 'appearance' | 'about'
+  >('all');
   const [copiedLocalIp, setCopiedLocalIp] = useState(false);
   const [copiedPublicIp, setCopiedPublicIp] = useState(false);
   const [cacheNotice, setCacheNotice] = useState<string | null>(null);
@@ -68,26 +81,6 @@ export const SettingsView: React.FC = () => {
       }
     });
   }, []);
-
-  const handleSave = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const api = (window as any).api;
-    if (!api) return;
-
-    setSaving(true);
-    try {
-      const updated = await api.saveAppSettings?.(settings);
-      if (updated) {
-        setSettings(updated);
-      }
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-    } catch (err) {
-      console.error('Failed to save app settings:', err);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleCopyLocalIp = (ip: string) => {
     navigator.clipboard.writeText(ip);
@@ -166,35 +159,24 @@ export const SettingsView: React.FC = () => {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => handleSave()}
-          className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs transition-all shadow-lg shadow-indigo-950/50 glow-ice cursor-pointer btn-bounce self-start sm:self-auto"
-        >
-          {saved ? (
-            <>
-              <Check className="w-4 h-4 text-emerald-300" />
-              <span>{t('globalSettings.saved')}</span>
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4" />
-              <span>{t('globalSettings.saveChanges')}</span>
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold select-none self-start sm:self-auto">
+          <Check className="w-3.5 h-3.5 text-emerald-400" />
+          <span>{language === 'bg' ? 'Автоматично се запазват' : 'Auto-saved'}</span>
+        </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-5xl mx-auto w-full">
-        {/* Category Pills */}
-        <div className="flex items-center gap-1.5 flex-wrap pb-2 border-b border-white/[0.06]">
+      <div className="flex-1 overflow-y-auto w-full">
+        <div className="p-6 space-y-6 max-w-5xl mx-auto w-full">
+          {/* Category Pills */}
+          <div className="flex items-center gap-1.5 flex-wrap pb-2 border-b border-white/[0.06]">
           {[
             { id: 'all', label: language === 'bg' ? 'Всички' : 'All', icon: Settings },
             { id: 'java', label: t('globalSettings.tabJava'), icon: Coffee },
             { id: 'storage', label: t('globalSettings.tabStorage'), icon: HardDrive },
             { id: 'network', label: t('globalSettings.tabNetwork'), icon: Globe },
             { id: 'automation', label: t('globalSettings.tabAutomation'), icon: Zap },
+            { id: 'notifications', label: language === 'bg' ? 'Известия & Звуци' : 'Notifications & Sounds', icon: Bell },
             { id: 'appearance', label: t('globalSettings.tabAppearance'), icon: Palette },
             { id: 'about', label: t('globalSettings.tabAbout'), icon: Info },
           ].map((tab) => {
@@ -306,6 +288,7 @@ export const SettingsView: React.FC = () => {
                 type="text"
                 value={settings.customJavaPath}
                 onChange={(e) => setSettings({ ...settings, customJavaPath: e.target.value })}
+                onBlur={() => (window as any).api?.saveAppSettings?.(settings)}
                 placeholder={t('globalSettings.javaCustomPathPlaceholder')}
                 className={`w-full p-2.5 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
                   theme === 'light'
@@ -466,6 +449,7 @@ export const SettingsView: React.FC = () => {
                 max={65535}
                 value={settings.defaultPort}
                 onChange={(e) => setSettings({ ...settings, defaultPort: parseInt(e.target.value, 10) || 25565 })}
+                onBlur={() => (window as any).api?.saveAppSettings?.(settings)}
                 className={`w-full max-w-xs p-2.5 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
                   theme === 'light'
                     ? 'bg-slate-50 border-slate-300 text-slate-900 focus:border-cyan-500'
@@ -553,6 +537,90 @@ export const SettingsView: React.FC = () => {
                 </label>
               </div>
 
+              {/* Auto Start Playit Tunnel with Server */}
+              <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
+                theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/50 border-white/[0.06]'
+              }`}>
+                <div>
+                  <span className={`text-xs font-bold block ${theme === 'light' ? 'text-slate-800' : 'text-slate-200'}`}>
+                    {t('globalSettings.autoStartPlayitTitle')}
+                  </span>
+                  <p className={`text-[11px] ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {t('globalSettings.autoStartPlayitDesc')}
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={settings.autoStartPlayitTunnel !== false}
+                    onChange={(e) => {
+                      const next = { ...settings, autoStartPlayitTunnel: e.target.checked };
+                      setSettings(next);
+                      (window as any).api?.saveAppSettings?.(next);
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              {/* Smart Sleep Mode / Auto-Hibernate */}
+              <div className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/50 border-white/[0.06]'
+              }`}>
+                <div className="flex-1">
+                  <span className={`text-xs font-bold flex items-center gap-1.5 ${theme === 'light' ? 'text-slate-800' : 'text-slate-200'}`}>
+                    <Moon className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                    <span>{language === 'bg' ? 'Smart Sleep Режим (Auto-Hibernate)' : 'Smart Sleep Mode (Auto-Hibernate)'}</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-400 font-mono">0% RAM/CPU</span>
+                  </span>
+                  <p className={`text-[11px] mt-0.5 ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {language === 'bg'
+                      ? 'Автоматично приспива сървъра при 5 минути празен ход (0 играчи), освобождавайки 100% RAM памет. Автоматично събужда сървъра при опит за вход на играч.'
+                      : 'Automatically puts server to sleep when empty for 5 minutes, freeing 100% RAM and CPU. Auto-wakes when a player connects.'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  {settings.sleepModeEnabled !== false && (
+                    <div className="flex items-center gap-1">
+                      {[1, 3, 5, 10].map((mins) => (
+                        <button
+                          key={mins}
+                          type="button"
+                          onClick={() => {
+                            const next = { ...settings, sleepIdleMinutes: mins };
+                            setSettings(next);
+                            (window as any).api?.saveAppSettings?.(next);
+                          }}
+                          className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold transition-all cursor-pointer ${
+                            (settings.sleepIdleMinutes ?? 5) === mins
+                              ? 'bg-indigo-600 text-white shadow-xs'
+                              : theme === 'light'
+                              ? 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                              : 'bg-white/10 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {mins}m
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings.sleepModeEnabled !== false}
+                      onChange={(e) => {
+                        const next = { ...settings, sleepModeEnabled: e.target.checked };
+                        setSettings(next);
+                        (window as any).api?.saveAppSettings?.(next);
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+              </div>
+
               {/* Auto-Update */}
               <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
                 theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/50 border-white/[0.06]'
@@ -623,7 +691,266 @@ export const SettingsView: React.FC = () => {
           </div>
         )}
 
-        {/* ================= 5. APPEARANCE & LANGUAGE ================= */}
+        {/* ================= 5. NOTIFICATIONS & SOUNDS ================= */}
+        {(activeCategory === 'all' || activeCategory === 'notifications') && (
+          <div className={`p-5 rounded-2xl border space-y-4 shadow-xs ${
+            theme === 'light' ? 'bg-white border-slate-200' : 'bg-slate-900/40 border-white/[0.08]'
+          }`}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-violet-500/15 text-violet-400 border border-violet-500/30">
+                  <Bell className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className={`text-sm font-bold ${theme === 'light' ? 'text-slate-900' : 'text-slate-100'}`}>
+                    5. {language === 'bg' ? 'Известия & Звуци' : 'Notifications & Sounds'}
+                  </h3>
+                  <p className={`text-xs ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {language === 'bg'
+                      ? 'Звукови ефекти и Desktop нотификации (Windows & macOS)'
+                      : 'Audio feedback and native Desktop notifications (Windows & macOS)'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20">
+                  Windows & Mac Native
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-1">
+              {/* 1. Minecraft Startup Sound */}
+              <div className={`p-4 rounded-xl border flex flex-col gap-3 ${
+                theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/50 border-white/[0.06]'
+              }`}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-bold ${theme === 'light' ? 'text-slate-800' : 'text-slate-200'}`}>
+                        {language === 'bg' ? 'Minecraft звук при стартиране (Level-Up / Ding)' : 'Minecraft Startup Sound (Level-Up / Ding)'}
+                      </span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                        {language === 'bg' ? 'Препоръчително' : 'Recommended'}
+                      </span>
+                    </div>
+                    <p className={`text-[11px] mt-0.5 ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
+                      {language === 'bg'
+                        ? 'Възпроизвежда автентичния Minecraft звук в момента, в който конзолата изпише "Done!" и сървърът е готов за игра.'
+                        : 'Plays an authentic Minecraft chime as soon as the server boots and is ready for players.'}
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={settings.soundOnStartup !== false}
+                      onChange={(e) => {
+                        const next = { ...settings, soundOnStartup: e.target.checked };
+                        setSettings(next);
+                        (window as any).api?.saveAppSettings?.(next);
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+
+                {/* Sound Previews Row */}
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-white/[0.06]">
+                  <span className="text-[11px] text-slate-400 font-medium mr-1">
+                    {language === 'bg' ? 'Прослушай звуци:' : 'Preview sounds:'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => playMinecraftStartupSound()}
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all cursor-pointer flex items-center gap-1 btn-bounce bg-slate-800/80 hover:bg-slate-700 text-slate-200 border-white/[0.1]"
+                    title={language === 'bg' ? 'Стартиране на сървър (Level-Up chime)' : 'Server start (Level-Up chime)'}
+                  >
+                    <Volume2 className="w-3 h-3 text-emerald-400" />
+                    <span>{language === 'bg' ? 'Старт (Start)' : 'Start'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => playMinecraftBackupSound()}
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all cursor-pointer flex items-center gap-1 btn-bounce bg-slate-800/80 hover:bg-slate-700 text-slate-200 border-white/[0.1]"
+                    title={language === 'bg' ? 'Завършен бекъп (Backup chime)' : 'Backup completed chime'}
+                  >
+                    <Volume2 className="w-3 h-3 text-cyan-400" />
+                    <span>{language === 'bg' ? 'Бекъп (Backup)' : 'Backup'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => playMinecraftJoinSound()}
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all cursor-pointer flex items-center gap-1 btn-bounce bg-slate-800/80 hover:bg-slate-700 text-slate-200 border-white/[0.1]"
+                    title={language === 'bg' ? 'Играч влиза в сървъра (Join)' : 'Player joins server (Join)'}
+                  >
+                    <Volume2 className="w-3 h-3 text-violet-400" />
+                    <span>{language === 'bg' ? 'Влизане (Join)' : 'Join'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => playMinecraftCrashSound()}
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all cursor-pointer flex items-center gap-1 btn-bounce bg-slate-800/80 hover:bg-slate-700 text-slate-200 border-white/[0.1]"
+                    title={language === 'bg' ? 'Предупреждение при срив (Crash)' : 'Server crash warning alarm'}
+                  >
+                    <Volume2 className="w-3 h-3 text-rose-400" />
+                    <span>{language === 'bg' ? 'Краш (Crash)' : 'Crash'}</span>
+                  </button>
+                </div>
+
+                <div className={`p-2.5 rounded-lg text-[11px] leading-relaxed flex items-start gap-2 ${
+                  theme === 'light' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-amber-500/10 text-amber-300/90 border border-amber-500/20'
+                }`}>
+                  <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-400" />
+                  <span>
+                    {language === 'bg'
+                      ? 'Всички звуци се генерират автоматично чрез вграден Web Audio синтезатор — не се налага да слагате аудио файлове! За собствен звук можете да поставите файл "startup.mp3" в папка "resources/sounds/".'
+                      : 'All sounds are synthesized automatically via Web Audio API — zero sound files needed! For custom audio, place a "startup.mp3" into "resources/sounds/".'}
+                  </span>
+                </div>
+              </div>
+
+              {/* 2. Desktop Notification on Ready */}
+              <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
+                theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/50 border-white/[0.06]'
+              }`}>
+                <div>
+                  <span className={`text-xs font-bold block ${theme === 'light' ? 'text-slate-800' : 'text-slate-200'}`}>
+                    {language === 'bg' ? 'Desktop известие при готовност на сървъра' : 'Desktop notification on server ready'}
+                  </span>
+                  <p className={`text-[11px] ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {language === 'bg'
+                      ? 'Показва известие в Windows Action Center / macOS Notification Center при успешно зареждане.'
+                      : 'Shows a system notification in Windows or macOS when server finishes booting.'}
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={!!settings.notifyOnServerReady}
+                    onChange={(e) => {
+                      const next = { ...settings, notifyOnServerReady: e.target.checked };
+                      setSettings(next);
+                      (window as any).api?.saveAppSettings?.(next);
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              {/* 3. Desktop Notification on Player Join / Leave */}
+              <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
+                theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/50 border-white/[0.06]'
+              }`}>
+                <div>
+                  <span className={`text-xs font-bold block ${theme === 'light' ? 'text-slate-800' : 'text-slate-200'}`}>
+                    {language === 'bg' ? 'Desktop известие при влизане / излизане на играч' : 'Desktop notification on player join/leave'}
+                  </span>
+                  <p className={`text-[11px] ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {language === 'bg'
+                      ? 'Известява веднага, когато приятел или играч влезе или напусне сървъра.'
+                      : 'Alerts you instantly when a player connects to or disconnects from your server.'}
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={!!settings.notifyOnPlayerJoinLeave}
+                    onChange={(e) => {
+                      const next = { ...settings, notifyOnPlayerJoinLeave: e.target.checked };
+                      setSettings(next);
+                      (window as any).api?.saveAppSettings?.(next);
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              {/* 4. Desktop Notification on Unexpected Crash */}
+              <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
+                theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/50 border-white/[0.06]'
+              }`}>
+                <div>
+                  <span className={`text-xs font-bold block ${theme === 'light' ? 'text-slate-800' : 'text-slate-200'}`}>
+                    {language === 'bg' ? 'Desktop известие при неочакван срив (Crash)' : 'Desktop notification on server crash'}
+                  </span>
+                  <p className={`text-[11px] ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {language === 'bg'
+                      ? 'Предупреждава, ако сървърът спре аварийно поради краш или критична грешка.'
+                      : 'Warns you if the server stops unexpectedly due to an exception or crash.'}
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={!!settings.notifyOnCrash}
+                    onChange={(e) => {
+                      const next = { ...settings, notifyOnCrash: e.target.checked };
+                      setSettings(next);
+                      (window as any).api?.saveAppSettings?.(next);
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              {/* 5. Desktop Notification on Auto Backup */}
+              <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
+                theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/50 border-white/[0.06]'
+              }`}>
+                <div>
+                  <span className={`text-xs font-bold block ${theme === 'light' ? 'text-slate-800' : 'text-slate-200'}`}>
+                    {language === 'bg' ? 'Desktop известие при завършен бекъп' : 'Desktop notification on auto-backup'}
+                  </span>
+                  <p className={`text-[11px] ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {language === 'bg'
+                      ? 'Потвърждава, че автоматичният архив на света е създаден успешно.'
+                      : 'Confirms when a scheduled backup archive has been created.'}
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={!!settings.notifyOnBackup}
+                    onChange={(e) => {
+                      const next = { ...settings, notifyOnBackup: e.target.checked };
+                      setSettings(next);
+                      (window as any).api?.saveAppSettings?.(next);
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              {/* Test Desktop Notification Button */}
+              <div className="pt-1 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    (window as any).api?.sendTestNotification?.(language);
+                  }}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all cursor-pointer flex items-center gap-2 btn-bounce ${
+                    theme === 'light'
+                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-2xs'
+                      : 'bg-slate-800/80 hover:bg-slate-700 text-slate-200 border-white/10 hover:border-white/20'
+                  }`}
+                >
+                  <Bell className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>
+                    {language === 'bg' ? 'Тествай настолно известие' : 'Test desktop notification'}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= 6. APPEARANCE & LANGUAGE ================= */}
         {(activeCategory === 'all' || activeCategory === 'appearance') && (
           <div className={`p-5 rounded-2xl border space-y-4 shadow-xs ${
             theme === 'light' ? 'bg-white border-slate-200' : 'bg-slate-900/40 border-white/[0.08]'
@@ -634,7 +961,7 @@ export const SettingsView: React.FC = () => {
               </div>
               <div>
                 <h3 className={`text-sm font-bold ${theme === 'light' ? 'text-slate-900' : 'text-slate-100'}`}>
-                  5. {t('globalSettings.tabAppearance')}
+                  6. {t('globalSettings.tabAppearance')}
                 </h3>
                 <p className={`text-xs ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
                   {language === 'bg' ? 'Персонализирай външния вид и езика на CraftDock' : 'Customize theme and interface language'}
@@ -651,9 +978,14 @@ export const SettingsView: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setTheme('dark')}
+                    onClick={() => {
+                      setTheme('dark');
+                      const next = { ...settings, theme: 'dark' as const };
+                      setSettings(next);
+                      (window as any).api?.saveAppSettings?.(next);
+                    }}
                     className={`p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer btn-bounce ${
-                      theme === 'dark'
+                      activeTheme === 'dark'
                         ? 'bg-sky-500/20 text-sky-300 border-sky-500/50 shadow-xs'
                         : 'bg-slate-900/40 text-slate-400 border-white/[0.06] hover:text-slate-200'
                     }`}
@@ -664,11 +996,16 @@ export const SettingsView: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => setTheme('light')}
+                    onClick={() => {
+                      setTheme('light');
+                      const next = { ...settings, theme: 'light' as const };
+                      setSettings(next);
+                      (window as any).api?.saveAppSettings?.(next);
+                    }}
                     className={`p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer btn-bounce ${
-                      theme === 'light'
-                        ? 'bg-sky-50 text-sky-800 border-sky-300 shadow-xs'
-                        : 'bg-white/5 text-slate-400 border-white/[0.06] hover:text-slate-200'
+                      activeTheme === 'light'
+                        ? 'bg-sky-500/20 text-sky-300 border-sky-500/50 shadow-xs'
+                        : 'bg-slate-900/40 text-slate-400 border-white/[0.06] hover:text-slate-200'
                     }`}
                   >
                     <Sun className="w-4 h-4 text-amber-500" />
@@ -685,7 +1022,12 @@ export const SettingsView: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setLanguage('bg')}
+                    onClick={() => {
+                      setLanguage('bg');
+                      const next = { ...settings, language: 'bg' as const };
+                      setSettings(next);
+                      (window as any).api?.saveAppSettings?.(next);
+                    }}
                     className={`p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer btn-bounce ${
                       language === 'bg'
                         ? theme === 'light'
@@ -702,7 +1044,12 @@ export const SettingsView: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => setLanguage('en')}
+                    onClick={() => {
+                      setLanguage('en');
+                      const next = { ...settings, language: 'en' as const };
+                      setSettings(next);
+                      (window as any).api?.saveAppSettings?.(next);
+                    }}
                     className={`p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer btn-bounce ${
                       language === 'en'
                         ? theme === 'light'
@@ -722,7 +1069,7 @@ export const SettingsView: React.FC = () => {
           </div>
         )}
 
-        {/* ================= 6. ABOUT & TOOLS ================= */}
+        {/* ================= 7. ABOUT & TOOLS ================= */}
         {(activeCategory === 'all' || activeCategory === 'about') && (
           <div className={`p-5 rounded-2xl border space-y-4 shadow-xs ${
             theme === 'light' ? 'bg-white border-slate-200' : 'bg-slate-900/40 border-white/[0.08]'
@@ -734,7 +1081,7 @@ export const SettingsView: React.FC = () => {
                 </div>
                 <div>
                   <h3 className={`text-sm font-bold ${theme === 'light' ? 'text-slate-900' : 'text-slate-100'}`}>
-                    6. {t('globalSettings.tabAbout')}
+                    7. {t('globalSettings.tabAbout')}
                   </h3>
                   <p className={`text-xs ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
                     CraftDock • Free & Self-Hosted Minecraft Control Panel
@@ -743,7 +1090,7 @@ export const SettingsView: React.FC = () => {
               </div>
 
               <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-lg bg-sky-500/15 text-sky-300 border border-sky-500/30">
-                v2.3.2 Release
+                v3.4.0 Release
               </span>
             </div>
 
@@ -866,6 +1213,7 @@ export const SettingsView: React.FC = () => {
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
