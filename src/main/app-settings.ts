@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { getDataDirectory } from './server-store';
+import { readJsonFile, writeJsonFile } from './json-file';
 
 export interface AppSettings {
   // Java
@@ -84,8 +85,7 @@ export function loadAppSettings(): AppSettings {
       saveAppSettings(cachedSettings);
       return cachedSettings;
     }
-    const raw = fs.readFileSync(filePath, 'utf-8');
-    const parsed = JSON.parse(raw);
+    const parsed = readJsonFile<Partial<AppSettings>>(filePath, {});
     const loaded: AppSettings = {
       ...DEFAULT_SETTINGS,
       ...parsed,
@@ -106,8 +106,7 @@ export function saveAppSettings(updates: Partial<AppSettings>): AppSettings {
     ...updates,
   };
   try {
-    const filePath = getSettingsFilePath();
-    fs.writeFileSync(filePath, JSON.stringify(next, null, 2), 'utf-8');
+    writeJsonFile(getSettingsFilePath(), next);
     cachedSettings = next;
   } catch (e) {
     console.error('Failed to save app settings:', e);

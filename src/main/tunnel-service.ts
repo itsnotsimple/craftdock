@@ -96,10 +96,23 @@ export async function startTunnelProcess(
   currentTunnelStatus = { isRunning: true, log: 'Подготовка на Playit тунел...' };
   onStatusChange({ ...currentTunnelStatus });
 
-  const exePath = await ensurePlayitBinary((p, msg) => {
-    currentTunnelStatus = { isRunning: true, log: msg };
+  let exePath: string;
+  try {
+    exePath = await ensurePlayitBinary((p, msg) => {
+      currentTunnelStatus = { isRunning: true, log: msg };
+      onStatusChange({ ...currentTunnelStatus });
+    });
+  } catch (err: any) {
+    // Without this the status stayed "running" forever (e.g. on macOS without Playit installed)
+    currentTunnelStatus = { isRunning: false, log: err.message };
     onStatusChange({ ...currentTunnelStatus });
-  });
+    throw err;
+  }
+
+  // Another start may have spawned the agent while the binary was downloading
+  if (activeTunnelProcess) {
+    return currentTunnelStatus;
+  }
 
   const runDir = path.dirname(exePath);
   const secretPath = path.join(runDir, 'playit.toml');
@@ -160,13 +173,16 @@ export async function startTunnelProcess(
   proc.stdout.on('data', (chunk: Buffer) => handleOutput(chunk, 'stdout'));
   proc.stderr.on('data', (chunk: Buffer) => handleOutput(chunk, 'stderr'));
 
+  // After stopTunnelProcess a quick restart may already run a new agent; the old one must not reset it
   proc.on('close', () => {
+    if (activeTunnelProcess !== proc) return;
     activeTunnelProcess = null;
     currentTunnelStatus = { isRunning: false, log: 'Тунелът е спрян' };
     onStatusChange({ ...currentTunnelStatus });
   });
 
   proc.on('error', (err) => {
+    if (activeTunnelProcess !== proc) return;
     activeTunnelProcess = null;
     currentTunnelStatus = { isRunning: false, log: `Грешка при тунела: ${err.message}` };
     onStatusChange({ ...currentTunnelStatus });

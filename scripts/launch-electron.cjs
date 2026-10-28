@@ -15,10 +15,14 @@ if (process.platform === 'win32') {
   }
 }
 
+// Terminals inside Electron apps (VS Code, Cursor) may export this, which makes Electron run as plain Node
+const env = { ...process.env };
+delete env.ELECTRON_RUN_AS_NODE;
+
 const child = spawn(executable, ['.'], {
   cwd: root,
   stdio: 'inherit',
-  env: process.env,
+  env,
 });
 
 child.on('close', (code) => {

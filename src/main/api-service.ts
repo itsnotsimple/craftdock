@@ -277,7 +277,7 @@ export async function downloadFileWithProgress(
       const client = parsedUrl.protocol === 'https:' ? https : http;
       const requestOptions = {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) CraftDock/3.4.0 (Minecraft Server Manager)',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) CraftDock/3.5.0 (Minecraft Server Manager)',
           Accept: '*/*',
         },
       };
@@ -376,7 +376,7 @@ export async function searchModrinthModpacks(query = '', limit = 24): Promise<Mo
     const url = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(query)}&facets=${encodedFacets}&limit=${limit}&index=downloads`;
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'CraftDock/3.4.0 (contact: github.com/itsnotsimple/craftdock)',
+        'User-Agent': 'CraftDock/3.5.0 (contact: github.com/itsnotsimple/craftdock)',
       },
     });
     if (!res.ok) throw new Error(`Modrinth modpacks error: ${res.status}`);
@@ -406,7 +406,7 @@ export async function searchModrinthResourcePacks(query = '', limit = 24): Promi
     const url = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(query)}&facets=${encodedFacets}&limit=${limit}&index=downloads`;
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'CraftDock/3.4.0 (contact: github.com/itsnotsimple/craftdock)',
+        'User-Agent': 'CraftDock/3.5.0 (contact: github.com/itsnotsimple/craftdock)',
       },
     });
     if (!res.ok) throw new Error(`Modrinth resourcepacks error: ${res.status}`);
@@ -462,7 +462,7 @@ export async function searchModrinthPlugins(
     const url = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(query)}&facets=${encodedFacets}&limit=${limit}&index=downloads`;
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'CraftDock/3.4.0 (contact: github.com/itsnotsimple/craftdock)',
+        'User-Agent': 'CraftDock/3.5.0 (contact: github.com/itsnotsimple/craftdock)',
       },
     });
     if (!res.ok) throw new Error(`Modrinth plugins error: ${res.status}`);
@@ -530,12 +530,12 @@ export async function getModrinthProjectVersions(
 
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'CraftDock/3.4.0 (contact: github.com/itsnotsimple/craftdock)',
+        'User-Agent': 'CraftDock/3.5.0 (contact: github.com/itsnotsimple/craftdock)',
       },
     });
     if (!res.ok) {
       const fallbackRes = await fetch(`https://api.modrinth.com/v2/project/${projectIdOrSlug}/version`, {
-        headers: { 'User-Agent': 'CraftDock/3.4.0 (contact: github.com/itsnotsimple/craftdock)' },
+        headers: { 'User-Agent': 'CraftDock/3.5.0 (contact: github.com/itsnotsimple/craftdock)' },
       });
       if (!fallbackRes.ok) return [];
       return parseModrinthVersions(await fallbackRes.json());
@@ -544,7 +544,7 @@ export async function getModrinthProjectVersions(
     const parsed = parseModrinthVersions(raw);
     if (parsed.length === 0) {
       const allRes = await fetch(`https://api.modrinth.com/v2/project/${projectIdOrSlug}/version`, {
-        headers: { 'User-Agent': 'CraftDock/3.4.0 (contact: github.com/itsnotsimple/craftdock)' },
+        headers: { 'User-Agent': 'CraftDock/3.5.0 (contact: github.com/itsnotsimple/craftdock)' },
       });
       if (allRes.ok) {
         return parseModrinthVersions(await allRes.json());
@@ -566,7 +566,7 @@ export async function getModrinthVersionFile(projectIdOrSlug: string): Promise<{
   try {
     const res = await fetch(`https://api.modrinth.com/v2/project/${projectIdOrSlug}/version`, {
       headers: {
-        'User-Agent': 'CraftDock/3.4.0 (contact: github.com/itsnotsimple/craftdock)',
+        'User-Agent': 'CraftDock/3.5.0 (contact: github.com/itsnotsimple/craftdock)',
       },
     });
     if (!res.ok) return null;

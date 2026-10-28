@@ -2,7 +2,8 @@ import http from 'http';
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
-import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
+import { spawn, execFile, ChildProcessWithoutNullStreams } from 'child_process';
+import { promisify } from 'util';
 import { URL } from 'url';
 import { loadServers, getServerById, getDataDirectory } from './server-store';
 import {
@@ -82,8 +83,24 @@ export function getCloudflaredExePath(): string {
   return path.join(dir, process.platform === 'win32' ? 'cloudflared.exe' : 'cloudflared');
 }
 
+function isGzipFile(filePath: string): boolean {
+  try {
+    const fd = fs.openSync(filePath, 'r');
+    const header = Buffer.alloc(2);
+    fs.readSync(fd, header, 0, 2, 0);
+    fs.closeSync(fd);
+    return header[0] === 0x1f && header[1] === 0x8b;
+  } catch {
+    return false;
+  }
+}
+
 export async function ensureCloudflaredBinary(): Promise<string> {
   const exePath = getCloudflaredExePath();
+  // Earlier versions saved the macOS .tgz itself as the binary; replace it with the real one
+  if (fs.existsSync(exePath) && isGzipFile(exePath)) {
+    fs.unlinkSync(exePath);
+  }
   if (fs.existsSync(exePath)) {
     if (process.platform !== 'win32') {
       try { fs.chmodSync(exePath, 0o755); } catch {}
@@ -97,7 +114,21 @@ export async function ensureCloudflaredBinary(): Promise<string> {
         ? 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-arm64.tgz'
         : 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-amd64.tgz');
 
-  await downloadFileWithProgress(downloadUrl, exePath, () => {});
+  if (downloadUrl.endsWith('.tgz')) {
+    // macOS builds ship as a .tgz holding a single `cloudflared` binary
+    const archivePath = `${exePath}.tgz`;
+    await downloadFileWithProgress(downloadUrl, archivePath, () => {});
+    try {
+      await promisify(execFile)('tar', ['-xzf', archivePath, '-C', path.dirname(exePath)]);
+    } finally {
+      try { fs.unlinkSync(archivePath); } catch {}
+    }
+    if (!fs.existsSync(exePath)) {
+      throw new Error('cloudflared was downloaded but the binary was not found in the archive');
+    }
+  } else {
+    await downloadFileWithProgress(downloadUrl, exePath, () => {});
+  }
   if (process.platform !== 'win32') {
     try { fs.chmodSync(exePath, 0o755); } catch {}
   }
@@ -155,29 +186,24 @@ export async function startRemoteTunnel(): Promise<{ success: boolean; url?: str
       proc.stdout.on('data', onData);
       proc.stderr.on('data', onData);
 
-      proc.on('close', (code) => {
-        cloudflaredProcess = null;
-        cloudflarePublicUrl = null;
-        isTunnelStarting = false;
+      // After a stop or restart another tunnel owns the shared state, so only the current one resets it
+      const endTunnel = (error: string) => {
+        const isCurrent = cloudflaredProcess === proc;
+        if (isCurrent) {
+          cloudflaredProcess = null;
+          cloudflarePublicUrl = null;
+          isTunnelStarting = false;
+        }
         if (!resolved) {
           resolved = true;
           clearTimeout(timeout);
-          tunnelError = `Tunnel exited with code ${code}`;
-          resolve({ success: false, error: tunnelError });
+          if (isCurrent) tunnelError = error;
+          resolve({ success: false, error });
         }
-      });
+      };
 
-      proc.on('error', (err) => {
-        cloudflaredProcess = null;
-        cloudflarePublicUrl = null;
-        isTunnelStarting = false;
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(timeout);
-          tunnelError = err.message;
-          resolve({ success: false, error: err.message });
-        }
-      });
+      proc.on('close', (code) => endTunnel(`Tunnel exited with code ${code}`));
+      proc.on('error', (err) => endTunnel(err.message));
     });
   } catch (err: any) {
     isTunnelStarting = false;
@@ -235,18 +261,50 @@ export async function getRemoteQrSvg(mode: 'local' | 'public' = 'local'): Promis
 }
 
 
+// A 4-digit PIN falls to guessing in seconds, so a client that tries too many different
+// wrong PINs is locked out. Counting distinct PINs keeps a phone polling with a stale PIN from locking itself out.
+const MAX_WRONG_PINS = 10;
+const PIN_LOCKOUT_MS = 10 * 60 * 1000;
+const pinFailures = new Map<string, { wrongPins: Set<string>; lockedUntil: number }>();
+
+function getClientKey(req: http.IncomingMessage): string {
+  const remote = req.socket.remoteAddress || '';
+  // Everything through the Cloudflare tunnel arrives from localhost; Cloudflare names the real client
+  const cfIp = req.headers['cf-connecting-ip'];
+  const isLoopback = remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1';
+  return isLoopback && typeof cfIp === 'string' ? cfIp : remote;
+}
+
 function verifyRequestPin(req: http.IncomingMessage, parsedUrl: URL): boolean {
-  const correctPin = ensurePin();
+  const clientKey = getClientKey(req);
+  const failures = pinFailures.get(clientKey);
+  if (failures && failures.lockedUntil > Date.now()) return false;
+
+  const supplied: string[] = [];
   const pinFromQuery = parsedUrl.searchParams.get('pin');
-  if (pinFromQuery === correctPin) return true;
+  if (pinFromQuery) supplied.push(pinFromQuery);
 
   const pinFromHeader = req.headers['x-craftdock-pin'];
-  if (typeof pinFromHeader === 'string' && pinFromHeader === correctPin) return true;
+  if (typeof pinFromHeader === 'string' && pinFromHeader) supplied.push(pinFromHeader);
 
-  const cookieHeader = req.headers['cookie'];
-  if (cookieHeader) {
-    const match = cookieHeader.match(/craftdock_pin=(\d{4})/);
-    if (match && match[1] === correctPin) return true;
+  const cookieMatch = req.headers['cookie']?.match(/craftdock_pin=(\d{4})/);
+  if (cookieMatch) supplied.push(cookieMatch[1]);
+
+  if (supplied.includes(ensurePin())) {
+    pinFailures.delete(clientKey);
+    return true;
+  }
+
+  if (supplied.length > 0) {
+    if (pinFailures.size > 1000) pinFailures.clear();
+    const record = failures && failures.lockedUntil === 0 ? failures : { wrongPins: new Set<string>(), lockedUntil: 0 };
+    supplied.forEach((pin) => record.wrongPins.add(pin));
+    if (record.wrongPins.size >= MAX_WRONG_PINS) {
+      record.wrongPins.clear();
+      record.lockedUntil = Date.now() + PIN_LOCKOUT_MS;
+      console.warn(`[CraftDock Mobile Remote] Too many wrong PINs from ${clientKey}, locked for 10 minutes`);
+    }
+    pinFailures.set(clientKey, record);
   }
 
   return false;
@@ -1152,11 +1210,8 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse) 
   const parsedUrl = new URL(req.url || '/', `http://${host}`);
   const pathname = parsedUrl.pathname;
 
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-craftdock-pin');
-
+  // No CORS headers: the dashboard is served from this same origin, and allowing any origin
+  // would let every website open in the PC's browser query and guess the PIN on this port
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
     res.end();

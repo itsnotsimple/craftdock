@@ -4,15 +4,12 @@ import fs from 'fs';
 import os from 'os';
 import { spawn } from 'child_process';
 import { getDataDirectory } from './server-store';
-import { getActiveServerIds, stopServer } from './server-runner';
+import { stopAllServers } from './server-runner';
 
 export async function performUninstallAndErase(): Promise<boolean> {
-  // 1. Forcefully stop all active servers
+  // 1. Stop all active servers and wait for them, so no Java process keeps the files open
   try {
-    const runningIds = getActiveServerIds();
-    for (const id of runningIds) {
-      stopServer(id);
-    }
+    await stopAllServers();
   } catch (e) {
     console.warn('[Uninstall] Error stopping servers:', e);
   }
@@ -51,7 +48,6 @@ export async function performUninstallAndErase(): Promise<boolean> {
 
     const psContent = `
 Start-Sleep -Seconds 2
-Stop-Process -Name "java", "javaw" -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "${safeData}", "${safeUserData}", "${safeHome}", "${safeTemp}" -Recurse -Force -ErrorAction SilentlyContinue
 ${hasUninstaller ? `Start-Process -FilePath "${safeUninstaller}" -ArgumentList "/S"` : ''}
 Remove-Item -Path $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue

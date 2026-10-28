@@ -1,8 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { execSync } from 'child_process';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import { downloadFileWithProgress } from './api-service';
+
+const execFileAsync = promisify(execFile);
 
 export interface ServerProperties {
   // Core
@@ -427,7 +430,8 @@ export function deletePlugin(serverDir: string, fileName: string): boolean {
   return false;
 }
 
-export function createWorldBackup(serverDir: string): string {
+// Archiving runs in the background (async), so a big world no longer freezes the app while it zips
+export async function createWorldBackup(serverDir: string): Promise<string> {
   const backupsDir = path.join(serverDir, 'backups');
   if (!fs.existsSync(backupsDir)) {
     fs.mkdirSync(backupsDir, { recursive: true });
@@ -467,8 +471,7 @@ export function createWorldBackup(serverDir: string): string {
   }
 
   try {
-    const foldersArg = targetFolders.map((f) => `"${f}"`).join(' ');
-    execSync(`tar -a -cf "${backupPath}" --exclude "session.lock" -C "${serverDir}" ${foldersArg}`, { stdio: 'ignore' });
+    await execFileAsync('tar', ['-a', '-cf', backupPath, '--exclude', 'session.lock', '-C', serverDir, ...targetFolders]);
     if (fs.existsSync(backupPath) && fs.statSync(backupPath).size > 0) {
       return backupFileName;
     }
@@ -477,7 +480,11 @@ export function createWorldBackup(serverDir: string): string {
     if (process.platform === 'win32') {
       try {
         const fullPaths = targetFolders.map((f) => `'${path.join(serverDir, f)}'`).join(',');
-        execSync(`powershell.exe -NoProfile -Command "Compress-Archive -Path ${fullPaths} -DestinationPath '${backupPath}' -Force"`, { stdio: 'ignore' });
+        await execFileAsync('powershell.exe', [
+          '-NoProfile',
+          '-Command',
+          `Compress-Archive -Path ${fullPaths} -DestinationPath '${backupPath}' -Force`,
+        ]);
         if (fs.existsSync(backupPath) && fs.statSync(backupPath).size > 0) {
           return backupFileName;
         }
@@ -486,6 +493,10 @@ export function createWorldBackup(serverDir: string): string {
       }
     }
   }
+  // Don't leave a half-written zip that would show up as a restorable backup
+  try {
+    if (fs.existsSync(backupPath)) fs.unlinkSync(backupPath);
+  } catch {}
   return '';
 }
 

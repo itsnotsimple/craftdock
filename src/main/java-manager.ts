@@ -1,9 +1,12 @@
-import { spawn, execSync } from 'child_process';
+import { spawn, execFile } from 'child_process';
+import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { app } from 'electron';
 import { downloadFileWithProgress } from './api-service';
+
+const execFileAsync = promisify(execFile);
 
 function getAppDirectory(): string {
   try {
@@ -79,6 +82,18 @@ export function getRequiredJavaVersion(mcVersion: string): number {
   return 8;
 }
 
+/**
+ * Newest Java a Minecraft version accepts. Paper/Purpur 1.16 and older refuse to start on a newer Java
+ * ("Unsupported Java detected"), so those always get Java 8 even when the Mac has a newer one installed.
+ */
+export function getMaxJavaVersion(mcVersion: string): number {
+  return getRequiredJavaVersion(mcVersion) === 8 ? 8 : Number.POSITIVE_INFINITY;
+}
+
+export function isJavaSuitable(javaVersion: number, mcVersion: string): boolean {
+  return javaVersion >= getRequiredJavaVersion(mcVersion) && javaVersion <= getMaxJavaVersion(mcVersion);
+}
+
 export function findPortableJavaExe(majorVersion: number): string | null {
   const runtimesDir = path.join(getAppDirectory(), 'runtimes', `java${majorVersion}`);
   if (!fs.existsSync(runtimesDir)) return null;
@@ -109,7 +124,7 @@ export async function checkJavaStatusForVersion(mcVersion: string): Promise<Java
   const reqVer = getRequiredJavaVersion(mcVersion);
   const portable = findPortableJavaExe(reqVer);
 
-  const isCompatible = sysVer >= reqVer || !!portable;
+  const isCompatible = isJavaSuitable(sysVer, mcVersion) || !!portable;
 
   return {
     systemJavaVersion: sysVer,
@@ -119,6 +134,22 @@ export async function checkJavaStatusForVersion(mcVersion: string): Promise<Java
     isCompatible,
     requiredVersion: reqVer,
   };
+}
+
+async function getJavaDownloadUrl(version: number, platform: string, arch: string): Promise<string> {
+  // Adoptium (Temurin) has no Java 8 build for Apple Silicon; Azul Zulu does
+  if (version === 8 && platform === 'mac' && arch === 'aarch64') {
+    const res = await fetch(
+      'https://api.azul.com/metadata/v1/zulu/packages/?java_version=8&os=macos&arch=aarch64&archive_type=tar.gz' +
+        '&java_package_type=jdk&latest=true&release_status=ga&availability_types=CA&page_size=1'
+    );
+    const packages = res.ok ? ((await res.json()) as Array<{ download_url?: string }>) : [];
+    if (!packages[0]?.download_url) {
+      throw new Error('Не може да бъде намерена Java 8 за Apple Silicon (Azul Zulu).');
+    }
+    return packages[0].download_url;
+  }
+  return `https://api.adoptium.net/v3/binary/latest/${version}/ga/${platform}/${arch}/jdk/hotspot/normal/eclipse`;
 }
 
 export async function downloadPortableJava(
@@ -137,16 +168,16 @@ export async function downloadPortableJava(
 
   const platform = isWin ? 'windows' : isMac ? 'mac' : 'linux';
   const arch = (process.arch as string) === 'arm64' || (process.arch as string) === 'aarch64' ? 'aarch64' : 'x64';
-  const adoptiumUrl = `https://api.adoptium.net/v3/binary/latest/${version}/ga/${platform}/${arch}/jdk/hotspot/normal/eclipse`;
+  const downloadUrl = await getJavaDownloadUrl(version, platform, arch);
 
-  await downloadFileWithProgress(adoptiumUrl, tempArchive, (percent, downloadedMb, totalMb) => {
+  await downloadFileWithProgress(downloadUrl, tempArchive, (percent, downloadedMb, totalMb) => {
     onProgress(percent, downloadedMb, totalMb, `Изтегляне на Java ${version} (${percent}% - ${downloadedMb}MB / ${totalMb}MB)...`);
   });
 
   onProgress(92, 0, 0, `Разархивиране на преносимата Java ${version}...`);
 
   try {
-    execSync(`tar -xf "${tempArchive}" -C "${targetDir}"`, { stdio: 'ignore' });
+    await execFileAsync('tar', ['-xf', tempArchive, '-C', targetDir]);
     fs.unlinkSync(tempArchive);
   } catch (err) {
     console.error(`Failed to extract java ${version} with tar:`, err);
@@ -177,8 +208,8 @@ export async function getEffectiveJavaCommand(
   const reqVer = getRequiredJavaVersion(mcVersion);
   const { version: sysVer } = await getSystemJavaVersion();
 
-  // If system java is new enough, use system java
-  if (sysVer >= reqVer) {
+  // Use the system Java only when this Minecraft version accepts it (not too old, not too new)
+  if (isJavaSuitable(sysVer, mcVersion)) {
     return 'java';
   }
 

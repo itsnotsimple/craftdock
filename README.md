@@ -2,12 +2,12 @@
 
 <div align="center">
   <img src="resources/icon.png" width="130" height="130" alt="CraftDock Logo" style="border-radius: 28px; box-shadow: 0 10px 30px rgba(14, 165, 233, 0.3);" />
-  <h1 style="margin-top: 12px; margin-bottom: 4px;">CraftDock v3.4.0</h1>
+  <h1 style="margin-top: 12px; margin-bottom: 4px;">CraftDock v3.5.0</h1>
   <p><b>The ultimate, ultra-fast, and beautiful desktop Minecraft Server Manager for Windows & macOS.</b></p>
   <p><i>Host, optimize, automate, control from your phone, and play with friends in under 60 seconds — 100% on your own hardware, zero subscription fees.</i></p>
 
   <p>
-    <a href="https://github.com/itsnotsimple/craftdock/releases/latest"><img src="https://img.shields.io/badge/version-3.4.0-sky.svg?style=for-the-badge&logo=electron" alt="Version 3.4.0" /></a>
+    <a href="https://github.com/itsnotsimple/craftdock/releases/latest"><img src="https://img.shields.io/badge/version-3.5.0-sky.svg?style=for-the-badge&logo=electron" alt="Version 3.5.0" /></a>
     <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-blue.svg?style=for-the-badge&logo=apple" alt="Platform" />
     <img src="https://img.shields.io/badge/react-18.3.1-61dafb.svg?style=for-the-badge&logo=react" alt="React" />
     <img src="https://img.shields.io/badge/typescript-5.5-3178c6.svg?style=for-the-badge&logo=typescript" alt="TypeScript" />
@@ -34,9 +34,9 @@ Download the official compiled release for your operating system:
 
 | Platform | Processor Architecture | Download Link |
 |:---|:---|:---|
-| 🪟 **Windows** | 64-bit (x64) | [**`CraftDock-3.4.0-Windows-Setup.exe`**](https://github.com/itsnotsimple/craftdock/releases/latest) |
-| 🍏 **macOS** | Apple Silicon (**M1 / M2 / M3 / M4**) | [**`CraftDock-3.4.0-macOS-arm64.dmg`**](https://github.com/itsnotsimple/craftdock/releases/latest) |
-| 🍏 **macOS** | Intel Processor (x64) | [**`CraftDock-3.4.0-macOS-x64.dmg`**](https://github.com/itsnotsimple/craftdock/releases/latest) |
+| 🪟 **Windows** | 64-bit (x64) | [**`CraftDock-3.5.0-Windows-Setup.exe`**](https://github.com/itsnotsimple/craftdock/releases/latest) |
+| 🍏 **macOS** | Apple Silicon (**M1 / M2 / M3 / M4**) | [**`CraftDock-3.5.0-macOS-arm64.dmg`**](https://github.com/itsnotsimple/craftdock/releases/latest) |
+| 🍏 **macOS** | Intel Processor (x64) | [**`CraftDock-3.5.0-macOS-x64.dmg`**](https://github.com/itsnotsimple/craftdock/releases/latest) |
 
 > [!TIP]
 > **🍏 First-Time Launch on macOS (Apple Gatekeeper):**  
@@ -54,7 +54,7 @@ Download the official compiled release for your operating system:
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════════════════╗
-║                                CRAFTDOCK v3.4.0                                   ║
+║                                CRAFTDOCK v3.5.0                                   ║
 ╠═════════════════════════════╦═════════════════════════════╦═══════════════════════╣
 ║ 🚀 SERVER MANAGEMENT        ║ 📱 REMOTE & AUTOMATION      ║ ⚡ OPTIMIZATION & RADAR║
 ║ • Paper, Purpur, Fabric,    ║ • Mobile Web Remote (Wi-Fi) ║ • Lag Buster & Chunky ║
@@ -131,7 +131,7 @@ Instant Minecraft Java Edition world exploration directly from your server's lev
   * When no players are online for 5 minutes (configurable), automatically puts the server to sleep to save CPU and RAM.
   * Wakes up in seconds the moment any player attempts to join.
 * **🧹 World Slimmer (Chunk Pruning)**:
-  * Scans MCA region files and prunes untouched chunks outside player activity radii, reclaiming gigabytes of disk space without resetting player builds.
+  * Scans MCA region files (Overworld, Nether and End) and prunes chunks outside a chosen radius around the world spawn, reclaiming gigabytes of disk space. A full safety backup is taken first.
 * **📈 Performance Analytics & Crash Analyzer**:
   * Live SVG graphs for CPU %, RAM MB, and online players with smart downsampling.
   * Complete session uptime history and playtime leaderboard with 3D player skins.
@@ -239,7 +239,7 @@ craftdock/
 │   │   ├── player-data-service.ts # NBT inventory & ender chest reader
 │   │   ├── crash-analyzer.ts   # Crash report heuristic resolver
 │   │   ├── api-service.ts      # Paper/Purpur/Fabric/Vanilla & Modrinth API clients
-│   │   ├── java-manager.ts     # Automated Adoptium OpenJDK runtime downloader
+│   │   ├── java-manager.ts     # Picks the right Java per version (Java 8 for 1.16 and older), downloads Temurin / Zulu
 │   │   ├── server-runner.ts    # Process lifecycle, live log streaming, CPU/RAM telemetry
 │   │   ├── server-config.ts    # server.properties read/write & plugin installer
 │   │   ├── server-store.ts     # Server profiles persistence & storage tracking

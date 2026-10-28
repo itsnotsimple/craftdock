@@ -1,6 +1,10 @@
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+
+// Archiving runs asynchronously so the app stays responsive while a big world is zipped or unzipped
+const execFileAsync = promisify(execFile);
 
 export interface WorldInfo {
   name: string;           // 'world', 'world_nether', 'world_the_end', or custom name
@@ -150,11 +154,28 @@ export async function importWorld(serverDir: string, zipPath: string, targetWorl
     fs.mkdirSync(targetPath, { recursive: true });
     
     if (process.platform === 'win32') {
-      execSync(`powershell.exe -NoProfile -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${targetPath}' -Force"`);
+      await execFileAsync('powershell.exe', [
+        '-NoProfile',
+        '-Command',
+        `Expand-Archive -Path '${zipPath}' -DestinationPath '${targetPath}' -Force`,
+      ]);
     } else {
-      execSync(`tar -xf "${zipPath}" -C "${targetPath}"`);
+      await execFileAsync('tar', ['-xf', zipPath, '-C', targetPath]);
     }
-    
+
+    // Most world archives (CraftDock's own exports too) hold one top-level folder with level.dat inside;
+    // left as is, the server would not find the world and generate a new one
+    if (!fs.existsSync(path.join(targetPath, 'level.dat'))) {
+      const entries = fs.readdirSync(targetPath, { withFileTypes: true }).filter((e) => e.name !== '__MACOSX');
+      const nested = entries.length === 1 && entries[0].isDirectory() ? path.join(targetPath, entries[0].name) : '';
+      if (nested && fs.existsSync(path.join(nested, 'level.dat'))) {
+        for (const f of fs.readdirSync(nested)) {
+          fs.renameSync(path.join(nested, f), path.join(targetPath, f));
+        }
+        fs.rmdirSync(nested);
+      }
+    }
+
     return true;
   } catch (error) {
     console.error('Error importing world:', error);
@@ -228,9 +249,13 @@ export async function restoreWorldBackup(serverDir: string, fileName: string): P
 
     try {
       if (process.platform === 'win32') {
-        execSync(`powershell.exe -NoProfile -Command "Expand-Archive -Path '${backupPath}' -DestinationPath '${serverDir}' -Force"`);
+        await execFileAsync('powershell.exe', [
+          '-NoProfile',
+          '-Command',
+          `Expand-Archive -Path '${backupPath}' -DestinationPath '${serverDir}' -Force`,
+        ]);
       } else {
-        execSync(`tar -xf "${backupPath}" -C "${serverDir}"`);
+        await execFileAsync('tar', ['-xf', backupPath, '-C', serverDir]);
       }
 
       if (fs.existsSync(tempBackup)) {
@@ -268,11 +293,9 @@ export async function exportWorldZip(
       fs.mkdirSync(destDir, { recursive: true });
     }
 
-    if (process.platform === 'win32') {
-      execSync(`tar -a -cf "${destZipPath}" -C "${serverDir}" "${worldName}"`);
-    } else {
-      execSync(`tar -czf "${destZipPath}" -C "${serverDir}" "${worldName}"`);
-    }
+    // bsdtar (macOS and Windows 10+) picks the real ZIP format from the .zip suffix with -a;
+    // -z would write a .tar.gz under a .zip name that Windows cannot open
+    await execFileAsync('tar', ['-a', '-cf', destZipPath, '-C', serverDir, worldName]);
 
     const stat = fs.statSync(destZipPath);
     const sizeMb = Math.round((stat.size / (1024 * 1024)) * 10) / 10;

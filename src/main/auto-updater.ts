@@ -4,7 +4,7 @@ import fs from 'fs';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import { spawn } from 'child_process';
-import { getActiveServerIds, stopServer } from './server-runner';
+import { stopAllServers } from './server-runner';
 
 const GITHUB_RELEASES_URL = 'https://api.github.com/repos/itsnotsimple/craftdock/releases/latest';
 
@@ -210,12 +210,9 @@ export async function startAppUpdate(): Promise<{ success: boolean; error?: stri
       total: totalBytes,
     });
 
-    // Gracefully stop any active servers before restarting
+    // Gracefully stop any active servers and wait for their world save before app.exit below
     try {
-      const runningIds = getActiveServerIds();
-      for (const id of runningIds) {
-        stopServer(id);
-      }
+      await stopAllServers();
     } catch (err) {
       console.warn('[AutoUpdater] Error stopping servers before update:', err);
     }

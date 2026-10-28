@@ -2345,8 +2345,8 @@ export const ServerSettingsTab: React.FC<ServerSettingsProps> = ({ server, onUpd
                   theme === 'light' ? 'text-amber-800' : 'text-amber-300/80'
                 }`}>
                   {language === 'bg'
-                    ? 'Vanilla Minecraft чете лимита на чанковете (View Distance) и снимката на сървъра (server-icon.png) само при стартиране. Рестартирай сървъра (Спиране и повторно Стартиране), за да се заредят в играта.'
-                    : 'Minecraft loads view distance and server-icon.png only during server startup. Restart the server (Stop and then Start) for changes to appear in-game.'}
+                    ? 'Minecraft чете максималния брой играчи, лимита на чанковете (View Distance) и снимката на сървъра (server-icon.png) само при стартиране. Рестартирай сървъра (Спиране и повторно Стартиране), за да се заредят в играта.'
+                    : 'Minecraft loads max players, view distance and server-icon.png only during server startup. Restart the server (Stop and then Start) for changes to appear in-game.'}
                 </p>
               </div>
             </div>

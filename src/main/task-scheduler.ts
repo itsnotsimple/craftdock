@@ -12,6 +12,7 @@ import {
 import { createWorldBackup } from './server-config';
 import { getWorldBackups, deleteWorldBackup } from './world-manager';
 import { notifyAutoBackup } from './notification-service';
+import { readJsonFile, writeJsonFile } from './json-file';
 
 export type TaskAction = 'restart' | 'backup' | 'broadcast' | 'command';
 export type TaskScheduleType = 'interval' | 'daily' | 'weekly';
@@ -95,7 +96,9 @@ export function calculateNextRun(task: ScheduledTask, fromDate: Date = new Date(
     candidate.setHours(isNaN(hh) ? 4 : hh, isNaN(mm) ? 0 : mm, 0, 0);
 
     for (let dayOffset = 0; dayOffset <= 7; dayOffset++) {
-      const testDate = new Date(candidate.getTime() + dayOffset * 24 * 60 * 60 * 1000);
+      // Calendar days, not 24h steps, so a DST change in between keeps the wall-clock time
+      const testDate = new Date(candidate);
+      testDate.setDate(candidate.getDate() + dayOffset);
       if (targetDays.includes(testDate.getDay())) {
         if (testDate.getTime() > now) {
           return testDate.toISOString();
@@ -115,8 +118,7 @@ export function loadTasks(): ScheduledTask[] {
   const filePath = getTasksFilePath();
   try {
     if (fs.existsSync(filePath)) {
-      const data = fs.readFileSync(filePath, 'utf-8');
-      const list: ScheduledTask[] = JSON.parse(data);
+      const list = readJsonFile<ScheduledTask[]>(filePath, []);
       if (Array.isArray(list)) {
         tasksCache = list.map((t) => {
           if (!t.nextRunAt && t.enabled) {
@@ -138,7 +140,7 @@ export function loadTasks(): ScheduledTask[] {
 export function saveTasks(tasks: ScheduledTask[]): void {
   tasksCache = tasks;
   try {
-    fs.writeFileSync(getTasksFilePath(), JSON.stringify(tasks, null, 2), 'utf-8');
+    writeJsonFile(getTasksFilePath(), tasks);
   } catch (err) {
     console.error('Failed to save tasks.json:', err);
   }
@@ -253,7 +255,7 @@ export async function executeTask(task: ScheduledTask): Promise<{ success: boole
             sendServerCommand(server.id, 'save-all');
             await new Promise((r) => setTimeout(r, 1500));
           }
-          const backupFileName = createWorldBackup(server.path);
+          const backupFileName = await createWorldBackup(server.path);
           if (backupFileName) {
             // Retention check
             const retentionCount = server.autoBackupRetentionCount || 5;
@@ -324,10 +326,15 @@ export async function runTaskNow(taskId: string): Promise<{ success: boolean; me
   return executeTask(task);
 }
 
+let isTickRunning = false;
+
 /**
  * 30-second evaluation tick loop
  */
 async function tickScheduler() {
+  // A restart task can outlast the 30s tick; overlapping ticks would run it again before nextRunAt moves
+  if (isTickRunning) return;
+  isTickRunning = true;
   try {
     const list = loadTasks();
     const now = Date.now();
@@ -342,6 +349,8 @@ async function tickScheduler() {
     }
   } catch (err) {
     console.error('Error in task scheduler tick:', err);
+  } finally {
+    isTickRunning = false;
   }
 }
 

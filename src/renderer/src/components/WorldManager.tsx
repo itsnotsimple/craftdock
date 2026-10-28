@@ -957,6 +957,11 @@ export const WorldManager: React.FC<WorldManagerProps> = ({ server, onSendComman
                 <span>{language === 'bg' ? 'Запази чанковете в радиус от Spawn:' : 'Preserve chunks within radius of Spawn:'}</span>
                 <span className="text-purple-400 font-mono">{slimmerRadius} {language === 'bg' ? 'блока' : 'blocks'}</span>
               </label>
+              {slimmerAnalysis && typeof slimmerAnalysis.spawnX === 'number' && (
+                <p className="text-[11px] text-slate-400 font-mono">
+                  Spawn: X {slimmerAnalysis.spawnX}, Z {slimmerAnalysis.spawnZ}
+                </p>
+              )}
 
               <div className="grid grid-cols-4 gap-2">
                 {[1500, 2500, 4000, 6000].map((r) => (

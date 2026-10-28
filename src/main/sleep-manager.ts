@@ -74,6 +74,7 @@ export function registerPlayerActivity(serverId: string, playerCount: number): v
     const idleMs = idleMinutes * 60 * 1000;
 
     entry.idleTimer = setTimeout(() => {
+      entry.idleTimer = undefined;
       putServerToSleep(serverId);
     }, idleMs);
   }
@@ -98,6 +99,10 @@ export async function putServerToSleep(serverId: string): Promise<boolean> {
     clearTimeout(entry.idleTimer);
     entry.idleTimer = undefined;
   }
+
+  // Only a running server can fall asleep; a server stopped by hand must stay stopped
+  // (otherwise its idle timer would open the wake listener and the tunnel minutes later)
+  if (!isServerRunning(serverId)) return false;
 
   // Pre-flag sleeping in registry so server-runner preserves sleep state and keeps Playit tunnel alive
   entry.isSleeping = true;
@@ -179,6 +184,33 @@ export async function wakeServer(serverId: string): Promise<boolean> {
     return success;
   } finally {
     wakeLock.delete(serverId);
+  }
+}
+
+/**
+ * Ends Sleep Mode for every sleeping server without starting it: closes the wake listener
+ * so another start can use the game port, and marks the server stopped.
+ */
+export function releaseSleepingServers(): void {
+  for (const entry of sleepRegistry.values()) {
+    if (!entry.isSleeping) continue;
+    entry.isSleeping = false;
+
+    if (entry.tcpServer) {
+      try {
+        entry.tcpServer.close();
+      } catch {}
+      entry.tcpServer = undefined;
+    }
+    for (const socket of entry.activeSockets) {
+      try {
+        socket.destroy();
+      } catch {}
+    }
+    entry.activeSockets.clear();
+
+    updateServer(entry.serverId, { status: 'stopped' });
+    sendToWindow('server-status-changed', { serverId: entry.serverId, status: 'stopped' });
   }
 }
 
@@ -301,6 +333,8 @@ function startAutoWakeSocket(entry: SleepEntry) {
   const maxRetries = 6;
 
   function bindPort() {
+    // A retry can fire after the server was woken or released
+    if (!entry.isSleeping) return;
     attempts++;
     try {
       server.listen(entry.port, '0.0.0.0', () => {

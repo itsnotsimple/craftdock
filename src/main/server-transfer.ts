@@ -1,9 +1,13 @@
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import { ServerProfile, addServer, loadServers, getDefaultServerFolder } from './server-store';
 import { readServerProperties } from './server-config';
 import { autoAcceptEula } from './server-runner';
+
+// Archiving runs asynchronously so the app stays responsive while a whole server is zipped or unzipped
+const execFileAsync = promisify(execFile);
 
 export interface ExportResult {
   success: boolean;
@@ -40,7 +44,7 @@ export async function exportServerArchive(
     // Create temporary craftdock-profile.json manifest inside server folder
     const manifestPath = path.join(serverPath, 'craftdock-profile.json');
     const manifestData = {
-      craftdockVersion: '3.3.0',
+      craftdockVersion: '3.5.0',
       exportedAt: new Date().toISOString(),
       name: profile.name,
       software: profile.software,
@@ -58,15 +62,26 @@ export async function exportServerArchive(
 
     // Use native tar (bsdtar) to archive with exclusion of heavy backup directories and old logs
     try {
-      execSync(
-        `tar -a -cf "${targetZipPath}" -C "${serverPath}" --exclude="backups" --exclude="*.log" --exclude="*.log.gz" --exclude="playit" .`,
-        { stdio: 'ignore' }
-      );
+      await execFileAsync('tar', [
+        '-a',
+        '-cf',
+        targetZipPath,
+        '-C',
+        serverPath,
+        '--exclude=backups',
+        '--exclude=*.log',
+        '--exclude=*.log.gz',
+        '--exclude=playit',
+        '.',
+      ]);
     } catch (tarErr) {
       // Fallback to PowerShell Compress-Archive on Windows if tar had any parameter issue
       if (process.platform === 'win32') {
-        const psCommand = `powershell.exe -NoProfile -Command "Compress-Archive -Path '${serverPath}\\*' -DestinationPath '${targetZipPath}' -Force"`;
-        execSync(psCommand, { stdio: 'ignore' });
+        await execFileAsync('powershell.exe', [
+          '-NoProfile',
+          '-Command',
+          `Compress-Archive -Path '${serverPath}\\*' -DestinationPath '${targetZipPath}' -Force`,
+        ]);
       } else {
         throw tarErr;
       }
@@ -135,11 +150,14 @@ export async function importServerArchive(
 
     // Extract archive using tar
     try {
-      execSync(`tar -xf "${zipPath}" -C "${destPath}"`, { stdio: 'ignore' });
+      await execFileAsync('tar', ['-xf', zipPath, '-C', destPath]);
     } catch (tarErr) {
       if (process.platform === 'win32') {
-        const psCommand = `powershell.exe -NoProfile -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${destPath}' -Force"`;
-        execSync(psCommand, { stdio: 'ignore' });
+        await execFileAsync('powershell.exe', [
+          '-NoProfile',
+          '-Command',
+          `Expand-Archive -Path '${zipPath}' -DestinationPath '${destPath}' -Force`,
+        ]);
       } else {
         throw tarErr;
       }

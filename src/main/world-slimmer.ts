@@ -1,7 +1,9 @@
 import fs from 'fs';
 import path from 'path';
+import zlib from 'zlib';
 import { getServerById } from './server-store';
 import { createWorldBackup } from './server-config';
+import { readNBT } from './player-data-service';
 
 export interface WorldSlimmerAnalysis {
   totalRegions: number;
@@ -12,6 +14,8 @@ export interface WorldSlimmerAnalysis {
   distantRegions: number;
   estimatedSavableMb: number;
   radiusBlocks: number;
+  spawnX: number;
+  spawnZ: number;
 }
 
 export interface WorldSlimmerResult {
@@ -42,7 +46,33 @@ function parseRegionFileName(fileName: string): { regX: number; regZ: number } |
   };
 }
 
-function scanDimensionRegions(dimDir: string, dimension: 'overworld' | 'nether' | 'the_end'): RegionFileInfo[] {
+/**
+ * World spawn from the overworld's level.dat: SpawnX/SpawnZ, or the `spawn.pos` array newer versions write.
+ * Falls back to 0,0 when the file can't be read.
+ */
+function readWorldSpawn(overworldDir: string): { x: number; z: number } {
+  try {
+    const nbt = readNBT(zlib.gunzipSync(fs.readFileSync(path.join(overworldDir, 'level.dat'))));
+    const data = nbt?.Data || {};
+    if (typeof data.SpawnX === 'number' && typeof data.SpawnZ === 'number') {
+      return { x: data.SpawnX, z: data.SpawnZ };
+    }
+    const spawn = data.spawn;
+    const inOverworld = !spawn?.dimension || spawn.dimension === 'minecraft:overworld';
+    if (inOverworld && Array.isArray(spawn?.pos) && spawn.pos.length >= 3) {
+      return { x: spawn.pos[0], z: spawn.pos[2] };
+    }
+  } catch (err) {
+    console.warn('[World Slimmer] Could not read the world spawn from level.dat, measuring from 0,0:', err);
+  }
+  return { x: 0, z: 0 };
+}
+
+function scanDimensionRegions(
+  dimDir: string,
+  dimension: 'overworld' | 'nether' | 'the_end',
+  center: { x: number; z: number }
+): RegionFileInfo[] {
   const list: RegionFileInfo[] = [];
   const regionDir = path.join(dimDir, 'region');
   if (!fs.existsSync(regionDir)) return list;
@@ -66,7 +96,7 @@ function scanDimensionRegions(dimDir: string, dimension: 'overworld' | 'nether' 
 
       const blockX = parsed.regX * 512 + 256;
       const blockZ = parsed.regZ * 512 + 256;
-      const distBlocks = Math.round(Math.hypot(blockX, blockZ));
+      const distBlocks = Math.round(Math.hypot(blockX - center.x, blockZ - center.z));
 
       const relatedPaths: string[] = [];
       const entityPath = path.join(entitiesDir, f);
@@ -93,34 +123,41 @@ function scanDimensionRegions(dimDir: string, dimension: 'overworld' | 'nether' 
   return list;
 }
 
-function getAllWorldRegions(serverDir: string): RegionFileInfo[] {
+function getAllWorldRegions(serverDir: string): { regions: RegionFileInfo[]; spawn: { x: number; z: number } } {
   const all: RegionFileInfo[] = [];
 
   // Overworld (standard: world/ or ./)
   const overworldPath = fs.existsSync(path.join(serverDir, 'world', 'region'))
     ? path.join(serverDir, 'world')
     : serverDir;
-  all.push(...scanDimensionRegions(overworldPath, 'overworld'));
+
+  // Distances are measured from the world spawn (where bases usually are), not from 0,0.
+  // Nether coordinates are 1/8 of the overworld's; the End's main island is always at 0,0.
+  const spawn = readWorldSpawn(overworldPath);
+  const netherCenter = { x: Math.round(spawn.x / 8), z: Math.round(spawn.z / 8) };
+  const endCenter = { x: 0, z: 0 };
+
+  all.push(...scanDimensionRegions(overworldPath, 'overworld', spawn));
 
   // Nether (Paper/Purpur: world_nether/, Vanilla: world/DIM-1/)
-  const paperNether = path.join(serverDir, 'world_nether');
+  const paperNether = path.join(serverDir, 'world_nether', 'DIM-1');
   const vanillaNether = path.join(overworldPath, 'DIM-1');
   if (fs.existsSync(paperNether)) {
-    all.push(...scanDimensionRegions(paperNether, 'nether'));
+    all.push(...scanDimensionRegions(paperNether, 'nether', netherCenter));
   } else if (fs.existsSync(vanillaNether)) {
-    all.push(...scanDimensionRegions(vanillaNether, 'nether'));
+    all.push(...scanDimensionRegions(vanillaNether, 'nether', netherCenter));
   }
 
   // End (Paper/Purpur: world_the_end/, Vanilla: world/DIM1/)
-  const paperEnd = path.join(serverDir, 'world_the_end');
+  const paperEnd = path.join(serverDir, 'world_the_end', 'DIM1');
   const vanillaEnd = path.join(overworldPath, 'DIM1');
   if (fs.existsSync(paperEnd)) {
-    all.push(...scanDimensionRegions(paperEnd, 'the_end'));
+    all.push(...scanDimensionRegions(paperEnd, 'the_end', endCenter));
   } else if (fs.existsSync(vanillaEnd)) {
-    all.push(...scanDimensionRegions(vanillaEnd, 'the_end'));
+    all.push(...scanDimensionRegions(vanillaEnd, 'the_end', endCenter));
   }
 
-  return all;
+  return { regions: all, spawn };
 }
 
 /**
@@ -138,10 +175,12 @@ export function analyzeWorldSlimmer(serverId: string, radiusBlocks = 2500): Worl
       distantRegions: 0,
       estimatedSavableMb: 0,
       radiusBlocks,
+      spawnX: 0,
+      spawnZ: 0,
     };
   }
 
-  const regions = getAllWorldRegions(server.path);
+  const { regions, spawn } = getAllWorldRegions(server.path);
   const totalSizeBytes = regions.reduce((acc, r) => acc + r.sizeBytes, 0);
 
   const overworld = regions.filter((r) => r.dimension === 'overworld');
@@ -161,6 +200,8 @@ export function analyzeWorldSlimmer(serverId: string, radiusBlocks = 2500): Worl
     distantRegions: distant.length,
     estimatedSavableMb: Math.round((savableBytes / (1024 * 1024)) * 10) / 10,
     radiusBlocks,
+    spawnX: spawn.x,
+    spawnZ: spawn.z,
   };
 }
 
@@ -177,7 +218,7 @@ export async function trimDistantRegions(serverId: string, radiusBlocks = 2500):
   // 1. SAFETY BACKUP FIRST!
   let backupName = '';
   try {
-    backupName = createWorldBackup(server.path);
+    backupName = await createWorldBackup(server.path);
   } catch (err: any) {
     return {
       success: false,
@@ -186,9 +227,18 @@ export async function trimDistantRegions(serverId: string, radiusBlocks = 2500):
       error: `Failed to create safety backup: ${err.message}`,
     };
   }
+  // createWorldBackup reports failure with an empty name instead of throwing
+  if (!backupName) {
+    return {
+      success: false,
+      removedCount: 0,
+      freedMb: 0,
+      error: 'Failed to create safety backup, nothing was deleted.',
+    };
+  }
 
   // 2. Scan and find regions to trim
-  const regions = getAllWorldRegions(server.path);
+  const { regions } = getAllWorldRegions(server.path);
   const toTrim = regions.filter((r) => r.distBlocks > radiusBlocks);
 
   let removedCount = 0;

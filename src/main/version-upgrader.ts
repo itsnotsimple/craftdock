@@ -55,7 +55,7 @@ export async function upgradeServerVersion(
 
     let backupFileName = '';
     try {
-      backupFileName = createWorldBackup(server.path);
+      backupFileName = await createWorldBackup(server.path);
     } catch (bErr) {
       console.warn('Pre-upgrade world backup warning:', bErr);
     }

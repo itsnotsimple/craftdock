@@ -46,6 +46,10 @@ import {
   autoAcceptEula,
   updateServerProperties,
   isServerRunning,
+  isServerProcessActive,
+  waitForServerStop,
+  stopAllServers,
+  getActiveServerIds,
   getServerActiveStatus,
   getServerPlayers,
   getServerLogs,
@@ -107,7 +111,7 @@ import {
   runChunkyCommand,
   isChunkyInstalled,
 } from './lag-buster-service';
-import { putServerToSleep, wakeServer, isServerSleeping } from './sleep-manager';
+import { putServerToSleep, wakeServer, isServerSleeping, releaseSleepingServers } from './sleep-manager';
 import { analyzeWorldSlimmer, trimDistantRegions } from './world-slimmer';
 import { getWorldSeedInfo, locateNearbyStructures } from './seed-locator';
 import {
@@ -405,6 +409,14 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // In dev the Dock shows Electron's own icon; packaged builds get the icon from icon.icns
+  if (process.platform === 'darwin' && !app.isPackaged) {
+    try {
+      const dockIcon = nativeImage.createFromPath(getResourceIcon('icon.iconset/icon_512x512@2x.png'));
+      if (!dockIcon.isEmpty()) app.dock?.setIcon(dockIcon);
+    } catch {}
+  }
+
   createTray();
   createWindow();
   initRemoteService();
@@ -415,9 +427,22 @@ app.whenReady().then(() => {
   });
 });
 
-app.on('before-quit', () => {
+let serversStoppedForQuit = false;
+
+app.on('before-quit', (event) => {
   isQuitting = true;
   stopRemoteService();
+
+  // Java servers would outlive the app (keeping the world open and the port taken), so stop them first
+  if (!serversStoppedForQuit && getActiveServerIds().length > 0) {
+    event.preventDefault();
+    serversStoppedForQuit = true;
+    stopAllServers().finally(() => app.quit());
+    return;
+  }
+
+  // The Playit agent keeps running while a server sleeps
+  stopTunnelProcess();
 });
 
 app.on('window-all-closed', () => {
@@ -456,6 +481,8 @@ ipcMain.handle('get-servers', async () => {
     const resolvedStatus =
       activeStatus !== 'stopped'
         ? activeStatus
+        : isServerSleeping(s.id)
+        ? 'sleeping'
         : s.status === 'starting' || s.status === 'stopping'
         ? s.status
         : 'stopped';
@@ -587,7 +614,13 @@ ipcMain.handle(
 );
 
 ipcMain.handle('delete-server', async (_event, id: string, deleteFiles: boolean) => {
-  stopServer(id);
+  // Deleting files under a live Java process fails on Windows and races its last save everywhere
+  if (stopServer(id)) {
+    await waitForServerStop(id, 30000);
+  }
+  if (isServerSleeping(id)) {
+    releaseSleepingServers();
+  }
   return deleteServer(id, deleteFiles);
 });
 
@@ -640,26 +673,23 @@ ipcMain.handle('save-server-properties', async (_event, id: string, props: any) 
   const server = servers.find((s) => s.id === id);
   if (!server) return null;
 
+  const previous = readServerProperties(server.path);
   writeServerProperties(server.path, props);
 
+  // Max players and view distance have no console command in vanilla or Paper; they apply on the next start.
+  // Difficulty and default game mode do, and are sent only when changed (the settings tab autosaves often).
   const updates: Partial<ServerProfile> = {};
   if (props.maxPlayers !== undefined) {
     updates.maxPlayers = parseInt(props.maxPlayers, 10) || 20;
-    // Live update running server if Paper/Purpur
-    sendServerCommand(id, `setmaxplayers ${updates.maxPlayers}`);
   }
   if (props.motd !== undefined) {
     updates.motd = props.motd;
   }
-  if (props.difficulty) {
+  if (props.difficulty && props.difficulty !== previous.difficulty && !props.hardcore) {
     sendServerCommand(id, `difficulty ${props.difficulty}`);
   }
-  if (props.gamemode) {
+  if (props.gamemode && props.gamemode !== previous.gamemode) {
     sendServerCommand(id, `defaultgamemode ${props.gamemode}`);
-  }
-  if (props.viewDistance !== undefined) {
-    sendServerCommand(id, `setviewdistance ${props.viewDistance}`);
-    sendServerCommand(id, `setsimulationdistance ${props.viewDistance}`);
   }
   if (props.storageQuotaGb !== undefined) {
     updates.storageQuotaGb = Number(props.storageQuotaGb) || 0;
@@ -694,7 +724,21 @@ ipcMain.handle('save-raw-server-properties', async (_event, id: string, rawConte
   const servers = loadServers();
   const server = servers.find((s) => s.id === id);
   if (!server) return false;
-  return saveRawServerProperties(server.path, rawContent);
+  const saved = saveRawServerProperties(server.path, rawContent);
+  if (saved) {
+    // startServer rewrites port, motd, max-players and hardcore from the profile, so keep it in step with the file
+    const props = readServerProperties(server.path);
+    const updated = updateServer(id, {
+      port: props.port || server.port,
+      motd: props.motd,
+      maxPlayers: props.maxPlayers || server.maxPlayers,
+      hardcore: !!props.hardcore,
+    });
+    if (updated && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('server-profile-updated', updated);
+    }
+  }
+  return saved;
 });
 
 // Storage and Quota Handlers
@@ -859,7 +903,7 @@ ipcMain.handle('create-world-backup', async (_event, id: string) => {
     sendServerCommand(server.id, 'save-all');
     await new Promise((r) => setTimeout(r, 1500));
   }
-  return createWorldBackup(server.path);
+  return await createWorldBackup(server.path);
 });
 
 // Whitelist Handlers
@@ -1028,17 +1072,18 @@ ipcMain.handle('get-server-worlds', async (_event, id: string) => {
   return getServerWorlds(server.path);
 });
 
+// World files may only be replaced while no Java process has them open (the UI checks only 'running')
 ipcMain.handle('reset-world', async (_event, id: string, worldName: string) => {
   const servers = loadServers();
   const server = servers.find((s) => s.id === id);
-  if (!server) return false;
+  if (!server || isServerProcessActive(server.id)) return false;
   return resetWorld(server.path, worldName);
 });
 
 ipcMain.handle('import-world', async (_event, id: string, zipPath: string, targetWorldName: string) => {
   const servers = loadServers();
   const server = servers.find((s) => s.id === id);
-  if (!server) return false;
+  if (!server || isServerProcessActive(server.id)) return false;
   return await importWorld(server.path, zipPath, targetWorldName);
 });
 
@@ -1059,7 +1104,7 @@ ipcMain.handle('delete-world-backup', async (_event, id: string, fileName: strin
 ipcMain.handle('restore-world-backup', async (_event, id: string, fileName: string) => {
   const servers = loadServers();
   const server = servers.find((s) => s.id === id);
-  if (!server) return false;
+  if (!server || isServerProcessActive(server.id)) return false;
   return await restoreWorldBackup(server.path, fileName);
 });
 
@@ -1429,6 +1474,10 @@ ipcMain.handle('analyze-world-slimmer', async (_event, serverId: string, radiusB
 });
 
 ipcMain.handle('trim-distant-regions', async (_event, serverId: string, radiusBlocks?: number) => {
+  if (isServerProcessActive(serverId)) {
+    const isEn = loadAppSettings().language === 'en';
+    return { success: false, removedCount: 0, freedMb: 0, error: isEn ? 'Stop the server first.' : 'Първо спри сървъра.' };
+  }
   return trimDistantRegions(serverId, radiusBlocks);
 });
 
@@ -1439,8 +1488,17 @@ setInterval(() => {
   }
 }, 2500);
 
+// A failed auto-backup is retried after 30 minutes, not on every 60-second tick
+const autoBackupFailedAt = new Map<string, number>();
+const AUTO_BACKUP_RETRY_MS = 30 * 60 * 1000;
+
+// A big world can take longer than one tick to zip; the next tick must not start a second backup
+let isAutoBackupRunning = false;
+
 // Auto-Backup Timer: checks every 60 seconds
 setInterval(async () => {
+  if (isAutoBackupRunning) return;
+  isAutoBackupRunning = true;
   try {
     const servers = loadServers();
     const now = Date.now();
@@ -1450,15 +1508,22 @@ setInterval(async () => {
         const intervalHours = server.autoBackupIntervalHours || 6;
         const intervalMs = intervalHours * 3600 * 1000;
         const lastBackupTime = server.lastAutoBackupAt ? new Date(server.lastAutoBackupAt).getTime() : 0;
+        const lastFailure = autoBackupFailedAt.get(server.id) || 0;
 
-        if (now - lastBackupTime >= intervalMs) {
+        if (now - lastBackupTime >= intervalMs && now - lastFailure >= AUTO_BACKUP_RETRY_MS) {
           console.log(`[Auto-Backup] Creating scheduled backup for server "${server.name}" (every ${intervalHours}h)...`);
           if (isServerRunning(server.id)) {
+            // Same pause as the manual backup, so the zip holds the freshly saved chunks
             sendServerCommand(server.id, 'save-all');
+            await new Promise((r) => setTimeout(r, 1500));
           }
 
-          const backupFileName = createWorldBackup(server.path);
-          if (backupFileName) {
+          const backupFileName = await createWorldBackup(server.path);
+          if (!backupFileName) {
+            autoBackupFailedAt.set(server.id, now);
+            console.warn(`[Auto-Backup] Backup failed for server "${server.name}", retrying in 30 minutes`);
+          } else {
+            autoBackupFailedAt.delete(server.id);
             updateServer(server.id, { lastAutoBackupAt: new Date().toISOString() });
 
             // Enforce retention limit (clean up older backups)
@@ -1488,6 +1553,8 @@ setInterval(async () => {
     }
   } catch (err) {
     console.error('Auto-backup loop error:', err);
+  } finally {
+    isAutoBackupRunning = false;
   }
 }, 60 * 1000);
 

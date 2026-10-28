@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { app } from 'electron';
+import { readJsonFile, writeJsonFile } from './json-file';
 
 export interface ServerProfile {
   id: string;
@@ -74,15 +75,9 @@ export function loadServers(): ServerProfile[] {
     return cachedServers;
   }
   try {
-    const filePath = getStoreFilePath();
-    if (!fs.existsSync(filePath)) {
-      cachedServers = [];
-      return [];
-    }
-    const raw = fs.readFileSync(filePath, 'utf-8');
-    const servers = JSON.parse(raw) as ServerProfile[];
+    const servers = readJsonFile<ServerProfile[]>(getStoreFilePath(), []);
     // Mark servers as stopped on initial cold boot
-    cachedServers = servers.map(s => ({ ...s, status: 'stopped', playerCount: 0 }));
+    cachedServers = (Array.isArray(servers) ? servers : []).map(s => ({ ...s, status: 'stopped', playerCount: 0 }));
     return cachedServers;
   } catch (err) {
     console.error('Error loading servers:', err);
@@ -97,8 +92,7 @@ export function getServerById(id: string): ServerProfile | undefined {
 export function saveServers(servers: ServerProfile[]): void {
   try {
     cachedServers = servers;
-    const filePath = getStoreFilePath();
-    fs.writeFileSync(filePath, JSON.stringify(servers, null, 2), 'utf-8');
+    writeJsonFile(getStoreFilePath(), servers);
   } catch (err) {
     console.error('Error saving servers:', err);
   }

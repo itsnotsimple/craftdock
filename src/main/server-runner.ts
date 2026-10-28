@@ -14,7 +14,7 @@ import {
   notifyPlayerLeave,
   notifyServerCrash,
 } from './notification-service';
-import { registerPlayerActivity, isServerSleeping } from './sleep-manager';
+import { registerPlayerActivity, isServerSleeping, releaseSleepingServers } from './sleep-manager';
 
 export interface ServerLogEntry {
   id: string;
@@ -46,6 +46,12 @@ interface RunningInstance {
 
 const activeServers = new Map<string, RunningInstance>();
 const serverLogs = new Map<string, ServerLogEntry[]>();
+// Servers still preparing Java (it may be downloading) and not yet in activeServers
+const startingServers = new Set<string>();
+// Recent crash auto-restart times per server, to stop a crash loop
+const crashRestartTimes = new Map<string, number[]>();
+const MAX_CRASH_RESTARTS = 3;
+const CRASH_RESTART_WINDOW_MS = 10 * 60 * 1000;
 
 function sendToWindow(channel: string, ...args: any[]) {
   const windows = BrowserWindow.getAllWindows();
@@ -124,18 +130,25 @@ function queryPidUsage(pid: number): Promise<{ memoryMb: number; cpuSec: number 
         }
       );
     } else {
-      exec(`ps -p ${pid} -o %cpu,rss`, { timeout: 2000 }, (err, stdout) => {
+      // `time` is the cumulative CPU time like on Windows; `%cpu` is a decaying average and can't be diffed
+      exec(`ps -p ${pid} -o time=,rss=`, { timeout: 2000 }, (err, stdout) => {
         if (err || !stdout) return resolve({ memoryMb: 0, cpuSec: 0 });
-        const lines = stdout.trim().split('\n');
-        if (lines.length < 2) return resolve({ memoryMb: 0, cpuSec: 0 });
-        const [cpu, rss] = lines[1].trim().split(/\s+/);
+        const [cpuTime, rss] = stdout.trim().split(/\s+/);
+        if (!cpuTime || !rss) return resolve({ memoryMb: 0, cpuSec: 0 });
         resolve({
           memoryMb: Math.round(parseInt(rss, 10) / 1024),
-          cpuSec: parseFloat(cpu) || 0,
+          cpuSec: parsePsCpuTime(cpuTime),
         });
       });
     }
   });
+}
+
+// ps prints CPU time as [[dd-]hh:]mm:ss.ss (macOS keeps counting minutes past 59)
+function parsePsCpuTime(value: string): number {
+  const [days, clock] = value.includes('-') ? value.split('-') : ['0', value];
+  const seconds = clock.split(':').reduce((acc, part) => acc * 60 + (parseFloat(part) || 0), 0);
+  return (parseInt(days, 10) || 0) * 86400 + seconds;
 }
 
 // Background sampler for active server CPU and RAM metrics
@@ -208,6 +221,8 @@ export function updateServerProperties(
   maxPlayers?: number
 ) {
   const propPath = path.join(serverDir, 'server.properties');
+  // A two-line MOTD must stay on one line in the file, written as \n like writeServerProperties does
+  if (motd) motd = motd.replace(/\r?\n/g, '\\n');
   let content = '';
   if (fs.existsSync(propPath)) {
     content = fs.readFileSync(propPath, 'utf-8');
@@ -244,8 +259,15 @@ export function updateServerProperties(
 }
 
 export async function startServer(server: ServerProfile): Promise<boolean> {
+  // A server that is still shutting down (switching servers, restart) gets time to exit first
+  for (const [activeId, active] of activeServers.entries()) {
+    if (active.status === 'stopping') {
+      await waitForServerStop(activeId, 30000);
+    }
+  }
+
   // Prevent running multiple servers simultaneously
-  for (const [activeId] of activeServers.entries()) {
+  for (const activeId of [...activeServers.keys(), ...startingServers]) {
     if (activeId !== server.id) {
       console.warn(`Cannot start server ${server.id}: Server ${activeId} is already running.`);
       appendServerLog(
@@ -257,7 +279,7 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
     }
   }
 
-  if (activeServers.has(server.id)) {
+  if (activeServers.has(server.id) || startingServers.has(server.id)) {
     console.warn(`Server ${server.id} is already running.`);
     return false;
   }
@@ -269,10 +291,14 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
     throw new Error(`Server jar not found at ${jarPath}. Make sure the server files are downloaded.`);
   }
 
+  // A sleeping server's wake listener holds the game port; only one server runs at a time anyway
+  releaseSleepingServers();
+
   // Ensure EULA is accepted
   autoAcceptEula(serverDir);
   updateServerProperties(serverDir, server.port, server.motd, server.hardcore, server.maxPlayers);
 
+  startingServers.add(server.id);
   updateServer(server.id, { status: 'starting' });
   sendToWindow('server-status-changed', { serverId: server.id, status: 'starting' });
 
@@ -298,6 +324,7 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
       appendServerLog(server.id, `[CraftDock] Успешно подготвена Java среда: ${javaExe}`);
     } catch (javaErr: any) {
       appendServerLog(server.id, `[CraftDock Грешка] Неуспешно стартиране на Java: ${javaErr.message}`, true);
+      startingServers.delete(server.id);
       updateServer(server.id, { status: 'error' });
       sendToWindow('server-status-changed', { serverId: server.id, status: 'error', error: javaErr.message });
       return false;
@@ -352,6 +379,7 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
       },
     };
     activeServers.set(server.id, instance);
+    startingServers.delete(server.id);
     uptimeTracker.onServerStart(server.id, serverDir);
 
     // Auto-start Playit tunnel if enabled in settings
@@ -369,11 +397,17 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
       });
     }
 
+    // A chunk can end mid-line, so the unfinished tail waits for the next chunk
+    let stdoutRemainder = '';
     child.stdout.on('data', (data: Buffer) => {
-      const text = data.toString();
-      const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
+      const parts = (stdoutRemainder + data.toString()).split(/\r?\n/);
+      stdoutRemainder = parts.pop() ?? '';
+      const lines = parts.filter((line) => line.trim().length > 0);
 
       for (const line of lines) {
+        // Join/leave/list lines come from the server itself ("...]: Steve joined the game");
+        // anchoring to that keeps chat like "<Steve> Alex left the game" from faking players
+        const plainLine = line.replace(/\x1b\[[0-9;]*m/g, '');
         appendServerLog(server.id, line);
 
         // Detect chat messages
@@ -406,7 +440,7 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
         }
 
         // Detect player join
-        const joinMatch = line.match(/([a-zA-Z0-9_.*~-]{2,24}) joined the game/i);
+        const joinMatch = plainLine.match(/(?:^|\]:\s*)([a-zA-Z0-9_.*~-]{2,24}) joined the game\s*$/i);
         if (joinMatch) {
           const playerName = joinMatch[1];
           instance.players.add(playerName);
@@ -425,7 +459,7 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
         }
 
         // Detect player leave
-        const leaveMatch = line.match(/([a-zA-Z0-9_.*~-]{2,24}) left the game/i);
+        const leaveMatch = plainLine.match(/(?:^|\]:\s*)([a-zA-Z0-9_.*~-]{2,24}) left the game\s*$/i);
         if (leaveMatch) {
           const playerName = leaveMatch[1];
           instance.players.delete(playerName);
@@ -444,7 +478,7 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
         }
 
         // Detect /list player command output
-        const listMatch = line.match(/There are \d+ of a max of \d+ players online:(.*)/i);
+        const listMatch = plainLine.match(/(?:^|\]:\s*)There are \d+ of a max of \d+ players online:(.*)/i);
         if (listMatch) {
           const namesStr = listMatch[1].trim();
           instance.players.clear();
@@ -514,7 +548,16 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
         });
 
         const settings = loadAppSettings();
-        if (settings.autoRestartOnCrash) {
+        const now = Date.now();
+        const recentRestarts = (crashRestartTimes.get(server.id) || []).filter((t) => now - t < CRASH_RESTART_WINDOW_MS);
+        if (settings.autoRestartOnCrash && recentRestarts.length >= MAX_CRASH_RESTARTS) {
+          appendServerLog(
+            server.id,
+            `[CraftDock Грешка] Сървърът се срина ${recentRestarts.length + 1} пъти за 10 минути. Автоматичният рестарт е спрян — виж Crash Analyzer.`,
+            true
+          );
+        } else if (settings.autoRestartOnCrash) {
+          crashRestartTimes.set(server.id, [...recentRestarts, now]);
           appendServerLog(
             server.id,
             `[CraftDock] Засечен неочакван срив на сървъра (код ${code}). Автоматичен рестарт след 5 секунди...`,
@@ -522,7 +565,9 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
           );
           setTimeout(() => {
             if (!activeServers.has(server.id)) {
-              startServer(server);
+              startServer(getServerById(server.id) || server).catch((err) => {
+                appendServerLog(server.id, `[CraftDock Грешка] Автоматичният рестарт не успя: ${err.message}`, true);
+              });
             }
           }, 5000);
         }
@@ -563,6 +608,7 @@ export async function startServer(server: ServerProfile): Promise<boolean> {
     return true;
   } catch (err: any) {
     console.error('Failed to spawn java process:', err);
+    startingServers.delete(server.id);
     updateServer(server.id, { status: 'error' });
     sendToWindow('server-status-changed', { serverId: server.id, status: 'error', error: err.message });
     return false;
@@ -584,13 +630,14 @@ export function stopServer(serverId: string): boolean {
   try {
     instance.process.stdin.write('stop\n');
 
+    // Saving a big world can take a while; killing earlier risks corrupting chunks
     setTimeout(() => {
-      if (activeServers.has(serverId)) {
+      if (activeServers.get(serverId) === instance) {
         try {
           instance.process.kill();
         } catch (e) {}
       }
-    }, 15000);
+    }, 30000);
 
     return true;
   } catch (err) {
@@ -617,6 +664,17 @@ export async function waitForServerStop(serverId: string, timeoutMs = 15000): Pr
     await new Promise((r) => setTimeout(r, 200));
   }
   return !activeServers.has(serverId);
+}
+
+/**
+ * Gracefully stops every running server and waits until their Java processes have exited
+ */
+export async function stopAllServers(timeoutMs = 30000): Promise<void> {
+  const ids = getActiveServerIds();
+  for (const id of ids) {
+    stopServer(id);
+  }
+  await Promise.all(ids.map((id) => waitForServerStop(id, timeoutMs)));
 }
 
 export function sendServerCommand(serverId: string, command: string): boolean {

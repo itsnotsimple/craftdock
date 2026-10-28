@@ -70,7 +70,7 @@ export interface PlayerArchiveEntry {
 // -------------------------------------------------------------
 // Pure TypeScript NBT Binary Reader (Fast, Zero Dependencies)
 // -------------------------------------------------------------
-function readNBT(buffer: Buffer): any {
+export function readNBT(buffer: Buffer): any {
   let offset = 0;
 
   function readString(): string {

@@ -40,7 +40,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ activeServer, onOpenMobileRe
           CraftDock
         </span>
         <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-500 dark:text-sky-300 border border-sky-400/20 font-bold">
-          v3.4.0
+          v3.5.0
         </span>
         <span className="text-slate-400 dark:text-slate-600 text-xs hidden sm:inline">•</span>
         <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden sm:inline">
@@ -68,11 +68,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ activeServer, onOpenMobileRe
               ({activeServer.software} v{activeServer.version})
             </span>
           </div>
-        ) : (
-          <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono tracking-wider opacity-60">
-            {language === 'en' ? 'CraftDock • Drag window from here' : 'CraftDock • Премести прозореца оттук'}
-          </span>
-        )}
+        ) : null}
       </div>
 
       {/* Right side: Theme Toggle + Language Switcher + reserved 140px space for native Windows controls */}

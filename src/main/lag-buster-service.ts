@@ -32,6 +32,13 @@ export async function cleanDroppedItems(serverId: string): Promise<{ success: bo
   };
 }
 
+const HOSTILE_MOB_TYPES = [
+  'zombie', 'husk', 'drowned', 'zombie_villager', 'skeleton', 'stray', 'bogged', 'wither_skeleton',
+  'creeper', 'spider', 'cave_spider', 'enderman', 'endermite', 'silverfish', 'witch', 'slime',
+  'magma_cube', 'phantom', 'blaze', 'ghast', 'hoglin', 'zoglin', 'piglin_brute', 'pillager',
+  'vindicator', 'evoker', 'vex', 'ravager', 'guardian', 'breeze', 'creaking',
+];
+
 /**
  * Safely removes hostile monsters in emergencies
  */
@@ -40,11 +47,13 @@ export async function cleanHostileMonsters(serverId: string): Promise<{ success:
     return { success: false, message: 'Server must be running to clear monsters.' };
   }
 
-  // Kill hostile mobs while explicitly sparing players, pets, villagers, items, golems
-  sendCommand(
-    serverId,
-    'kill @e[type=!player,type=!item,type=!armor_stand,type=!wolf,type=!cat,type=!horse,type=!donkey,type=!mule,type=!villager,type=!iron_golem,type=!allay]'
-  );
+  // Name the hostile types instead of "everything except a few": the exclusion list also killed farm
+  // animals, item frames, paintings and chest minecarts (spilling their items). Mobs that are named or
+  // otherwise persistent are spared; bosses, shulkers and elder guardians are left out on purpose.
+  // Types missing in older versions just fail with "Unknown entity" in the console.
+  for (const type of HOSTILE_MOB_TYPES) {
+    sendCommand(serverId, `kill @e[type=minecraft:${type},nbt=!{PersistenceRequired:1b}]`);
+  }
 
   return {
     success: true,
