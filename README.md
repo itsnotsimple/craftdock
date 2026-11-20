@@ -13,6 +13,7 @@
   <p>
     <a href="#-quick-download"><b>Download</b></a> •
     <a href="#-key-features-overview"><b>Features</b></a> •
+    <a href="#-screenshots"><b>Screenshots</b></a> •
     <a href="#-mobile-remote-web-app-control-from-smartphone"><b>Phone remote</b></a> •
     <a href="#-task-scheduler--cron-engine"><b>Scheduler</b></a> •
     <a href="#-seed-map--interactive-structure-radar"><b>Seed radar</b></a> •
@@ -20,6 +21,10 @@
     <a href="#-faq"><b>FAQ</b></a>
   </p>
 </div>
+
+<p align="center">
+  <img src="docs/screenshots/console.jpg" width="900" alt="CraftDock running a Paper 26.3 Minecraft server: live console, Java 25 installed automatically, IP for friends and one-click stop">
+</p>
 
 ---
 
@@ -51,11 +56,24 @@ Most free server tools are either Windows-only or a web panel you install on a L
 
 | 🚀 Server management | 📱 Remote & automation | ⚡ Optimization & tools |
 |:---|:---|:---|
-| Paper, Purpur, Fabric, Vanilla 1.12–1.21.x | Phone remote over Wi-Fi or 4G/5G | Lag Buster and Chunky pre-generation |
+| Paper, Purpur, Fabric, Vanilla, from 1.8 to the latest 26.x | Phone remote over Wi-Fi or 4G/5G | Lag Buster and Chunky pre-generation |
 | Java installed for you (Adoptium OpenJDK) | 4-digit security PIN | Auto-sleep after 5 minutes without players |
 | Visual `server.properties` editor | Task scheduler (cron) | World Slimmer chunk pruning |
 | 1-click version upgrader | Automatic backups | Seed map and structure radar with live `/tp` |
 | 1-click world import and export | Live playtime leaderboard | Player inventory and Ender Chest viewer |
+
+## 📸 Screenshots
+
+| | |
+|:---:|:---:|
+| <img src="docs/screenshots/wizard.jpg" alt="Server wizard: pick Paper, Purpur, Fabric or Vanilla and any version"> | <img src="docs/screenshots/library.jpg" alt="Server library with a server asleep after 5 minutes without players"> |
+| **Create a server in 3 steps.** Paper, Purpur, Fabric or Vanilla, any version. | **Auto-sleep.** No players for 5 minutes, the server sleeps and frees your RAM. |
+| <img src="docs/screenshots/performance.jpg" alt="Real-time performance monitor: CPU, RAM, TPS and players"> | <img src="docs/screenshots/analytics.jpg" alt="Performance history chart of CPU and RAM"> |
+| **Live performance.** CPU, RAM, TPS and players at a glance. | **History.** CPU, RAM and player charts over hours or days. |
+| <img src="docs/screenshots/motd.jpg" alt="Server settings with icon and MOTD designer"> | <img src="docs/screenshots/plugins.jpg" alt="One-click plugins: SkinsRestorer, GeyserMC, Floodgate, EssentialsX"> |
+| **Icon and MOTD designer** with a live preview of the server list. | **One-click plugins** like GeyserMC, Floodgate and EssentialsX. |
+| <img src="docs/screenshots/scheduler.jpg" alt="Scheduler with daily restart, backups and announcements"> | <img src="docs/screenshots/mobile-remote.jpg" alt="Mobile remote: QR code and 4-digit PIN"> |
+| **Scheduler.** Daily restarts, backups every 6 hours, chat announcements. | **Phone remote.** Scan the QR code, enter the PIN, run the server from your phone. |
 
 ---
 
