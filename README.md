@@ -1,28 +1,23 @@
-# 🎮 CraftDock — Next-Gen Minecraft Server Manager
-
 <div align="center">
-  <img src="resources/icon.png" width="130" height="130" alt="CraftDock Logo" style="border-radius: 28px; box-shadow: 0 10px 30px rgba(14, 165, 233, 0.3);" />
-  <h1 style="margin-top: 12px; margin-bottom: 4px;">CraftDock v3.5.0</h1>
-  <p><b>The ultimate, ultra-fast, and beautiful desktop Minecraft Server Manager for Windows & macOS.</b></p>
-  <p><i>Host, optimize, automate, control from your phone, and play with friends in under 60 seconds — 100% on your own hardware, zero subscription fees.</i></p>
+  <img src="resources/icon.png" width="128" height="128" alt="CraftDock icon" />
+  <h1>CraftDock</h1>
+  <p><b>A free Minecraft server manager for Windows and macOS.</b><br>
+  Host Paper, Fabric, Purpur or Vanilla on your own computer in 60 seconds, play with friends without port forwarding,<br>and run it all from your phone. No subscription, no rented server.</p>
 
   <p>
-    <a href="https://github.com/itsnotsimple/craftdock/releases/latest"><img src="https://img.shields.io/badge/version-3.5.0-sky.svg?style=for-the-badge&logo=electron" alt="Version 3.5.0" /></a>
-    <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-blue.svg?style=for-the-badge&logo=apple" alt="Platform" />
-    <img src="https://img.shields.io/badge/react-18.3.1-61dafb.svg?style=for-the-badge&logo=react" alt="React" />
-    <img src="https://img.shields.io/badge/typescript-5.5-3178c6.svg?style=for-the-badge&logo=typescript" alt="TypeScript" />
-    <img src="https://img.shields.io/badge/license-MIT-emerald.svg?style=for-the-badge" alt="License" />
+    <a href="https://github.com/itsnotsimple/craftdock/releases/latest"><img src="https://img.shields.io/github/v/release/itsnotsimple/craftdock?style=for-the-badge&label=download&color=0ea5e9" alt="Latest release" /></a>
+    <img src="https://img.shields.io/badge/Windows%20%7C%20macOS-blue?style=for-the-badge" alt="Windows and macOS" />
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-10b981?style=for-the-badge" alt="MIT license" /></a>
   </p>
 
   <p>
-    <a href="#-quick-download"><b>⚡ Quick Download</b></a> •
-    <a href="#-key-features"><b>✨ Features</b></a> •
-    <a href="#-mobile-remote-web-app"><b>📱 Mobile Remote</b></a> •
-    <a href="#-task-scheduler--cron"><b>⏰ Scheduler</b></a> •
-    <a href="#-seed-map--structure-radar"><b>🧭 Seed Radar</b></a> •
-    <a href="#-performance--optimization"><b>⚡ Optimization</b></a> •
-    <a href="#-development--building"><b>🛠️ Development</b></a> •
-    <a href="#-faq"><b>❓ FAQ</b></a>
+    <a href="#-quick-download"><b>Download</b></a> •
+    <a href="#-key-features-overview"><b>Features</b></a> •
+    <a href="#-mobile-remote-web-app-control-from-smartphone"><b>Phone remote</b></a> •
+    <a href="#-task-scheduler--cron-engine"><b>Scheduler</b></a> •
+    <a href="#-seed-map--interactive-structure-radar"><b>Seed radar</b></a> •
+    <a href="#-performance--optimization-suite"><b>Optimization</b></a> •
+    <a href="#-faq"><b>FAQ</b></a>
   </p>
 </div>
 
@@ -52,19 +47,15 @@ Download the official compiled release for your operating system:
 
 ## ✨ Key Features Overview
 
-```
-╔═══════════════════════════════════════════════════════════════════════════════════╗
-║                                CRAFTDOCK v3.5.0                                   ║
-╠═════════════════════════════╦═════════════════════════════╦═══════════════════════╣
-║ 🚀 SERVER MANAGEMENT        ║ 📱 REMOTE & AUTOMATION      ║ ⚡ OPTIMIZATION & RADAR║
-║ • Paper, Purpur, Fabric,    ║ • Mobile Web Remote (Wi-Fi) ║ • Lag Buster & Chunky ║
-║   Vanilla 1.12 - 1.21.x     ║ • Worldwide 4G/5G Tunnel    ║ • 5-min Auto-Hibernate║
-║ • Auto Adoptium OpenJDK     ║ • 4-Digit Security PIN      ║ • World Slimmer Pruning║
-║ • Visual server.properties  ║ • Task Scheduler / Cron     ║ • Seed Map & Structure║
-║ • 1-Click Version Upgrader  ║ • Automated Backups         ║   Radar with /tp live ║
-║ • 1-Click World Import/Export║ • Live Playtime Leaderboard ║ • Player Inventory NBT║
-╚═════════════════════════════╩═════════════════════════════╩═══════════════════════╝
-```
+Most free server tools are either Windows-only or a web panel you install on a Linux box. CraftDock is a normal desktop app for Windows and Mac: install it, pick a version, press Start.
+
+| 🚀 Server management | 📱 Remote & automation | ⚡ Optimization & tools |
+|:---|:---|:---|
+| Paper, Purpur, Fabric, Vanilla 1.12–1.21.x | Phone remote over Wi-Fi or 4G/5G | Lag Buster and Chunky pre-generation |
+| Java installed for you (Adoptium OpenJDK) | 4-digit security PIN | Auto-sleep after 5 minutes without players |
+| Visual `server.properties` editor | Task scheduler (cron) | World Slimmer chunk pruning |
+| 1-click version upgrader | Automatic backups | Seed map and structure radar with live `/tp` |
+| 1-click world import and export | Live playtime leaderboard | Player inventory and Ender Chest viewer |
 
 ---
 
